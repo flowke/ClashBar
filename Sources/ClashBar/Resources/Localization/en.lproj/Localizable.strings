@@ -166,6 +166,11 @@
 "ui.settings.appearance.system" = "Follow System";
 "ui.settings.appearance.light" = "Light";
 "ui.settings.appearance.dark" = "Dark";
+"ui.settings.theme" = "Color Theme";
+"ui.settings.theme.sage" = "Sage";
+"ui.settings.theme.ocean" = "Coastal Blue";
+"ui.settings.theme.clay" = "Warm Clay";
+"ui.settings.theme.graphite" = "Graphite";
 "ui.settings.allow_lan" = "Allow LAN";
 "ui.settings.ipv6" = "IPv6";
 "ui.settings.tcp_concurrent" = "TCP Concurrent";
@@ -175,6 +180,7 @@
 "ui.settings.port.mixed" = "Mixed Port";
 "ui.settings.port.redir" = "Redir Port";
 "ui.settings.port.tproxy" = "TProxy Port";
+"ui.settings.proxy_ports_hint" = "Enable at least one HTTP, SOCKS, or Mixed port. 0 disables a port. Restart the core after changing ports.";
 "ui.settings.system_proxy_exceptions_hint" = "These entries are written to macOS proxy bypass domains and preserved when system proxy is re-applied.";
 "ui.settings.system_proxy_exceptions_empty" = "No bypass rules yet.";
 "ui.settings.ssid_strategy.current_ssid.none" = "No Wi-Fi Connected";
@@ -256,7 +262,7 @@
 "app.system_proxy.error.helper_connection_failed" = "Failed to connect privileged helper: %@";
 "app.system_proxy.error.helper_operation_failed" = "Privileged helper operation failed: %@";
 "app.system_proxy.alert.invalid_host" = "Invalid proxy host";
-"app.system_proxy.alert.invalid_port" = "Invalid proxy port";
+"app.system_proxy.alert.invalid_port" = "No valid proxy port. Set Mixed Port (default 7890) and restart the core.";
 "app.system_proxy.alert.helper_not_registered" = "Helper not installed";
 "app.system_proxy.alert.helper_start_timed_out" = "Helper did not start";
 "app.system_proxy.alert.helper_authorization_cancelled" = "Administrator authorization cancelled";

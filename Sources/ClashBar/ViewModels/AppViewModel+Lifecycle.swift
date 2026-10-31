@@ -183,6 +183,12 @@ extension AppViewModel {
         self.applyAppAppearance()
     }
 
+    func setAppTheme(_ theme: AppTheme) {
+        guard appTheme != theme else { return }
+        appTheme = theme
+        defaults.set(theme.rawValue, forKey: appThemeKey)
+    }
+
     func quitApp() async {
         self.prepareForTermination()
         self.isPanelPresented = false

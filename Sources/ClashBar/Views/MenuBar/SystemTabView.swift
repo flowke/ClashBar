@@ -9,6 +9,7 @@ private struct SettingsSelectionRowConfiguration<Option: Hashable> {
     let valueText: String
     let options: [Option]
     let optionTitle: (Option) -> String
+    let optionLeadingTint: ((Option) -> Color)?
     let isSelected: (Option) -> Bool
     let onSelect: (Option) -> Void
 }
@@ -111,7 +112,10 @@ struct SystemTabView: TranslatingView {
             ForEach(configuration.options, id: \.self) { option in
                 AttachedPopoverMenuItem(
                     title: configuration.optionTitle(option),
-                    selected: configuration.isSelected(option))
+                    leadingTint: configuration.optionLeadingTint?(option) ?? .secondary,
+                    showLeadingDot: configuration.optionLeadingTint != nil,
+                    selected: configuration.isSelected(option),
+                    selectionIndicatorPlacement: configuration.optionLeadingTint != nil ? .trailing : .leading)
                 {
                     configuration.onSelect(option)
                     dismiss()
@@ -244,6 +248,19 @@ struct SystemTabView: TranslatingView {
             self.tr("ui.settings.appearance.light")
         case .dark:
             self.tr("ui.settings.appearance.dark")
+        }
+    }
+
+    func appThemeLabel(_ theme: AppTheme) -> String {
+        switch theme {
+        case .sage:
+            self.tr("ui.settings.theme.sage")
+        case .ocean:
+            self.tr("ui.settings.theme.ocean")
+        case .clay:
+            self.tr("ui.settings.theme.clay")
+        case .graphite:
+            self.tr("ui.settings.theme.graphite")
         }
     }
 
@@ -386,6 +403,7 @@ struct SystemTabView: TranslatingView {
                     valueText: self.statusBarModeLabel(self.appViewModel.statusBarDisplayMode),
                     options: StatusBarDisplayMode.allCases,
                     optionTitle: self.statusBarModeLabel,
+                    optionLeadingTint: nil,
                     isSelected: { self.appViewModel.statusBarDisplayMode == $0 },
                     onSelect: { self.appViewModel.statusBarDisplayMode = $0 }))
                 self.settingsSelectionRow(.init(
@@ -395,6 +413,7 @@ struct SystemTabView: TranslatingView {
                         .tr("ui.language.en"),
                     options: AppLanguage.allCases,
                     optionTitle: { $0 == .zhHans ? self.tr("ui.language.zh_hans") : self.tr("ui.language.en") },
+                    optionLeadingTint: nil,
                     isSelected: { self.appViewModel.uiLanguage == $0 },
                     onSelect: self.appViewModel.setUILanguage))
                 self.settingsSelectionRow(.init(
@@ -403,14 +422,25 @@ struct SystemTabView: TranslatingView {
                     valueText: self.appearanceModeLabel(self.appViewModel.appearanceMode),
                     options: AppAppearanceMode.allCases,
                     optionTitle: self.appearanceModeLabel,
+                    optionLeadingTint: nil,
                     isSelected: { self.appViewModel.appearanceMode == $0 },
                     onSelect: self.appViewModel.setAppearanceMode))
+                self.settingsSelectionRow(.init(
+                    title: self.tr("ui.settings.theme"),
+                    symbol: "paintpalette",
+                    valueText: self.appThemeLabel(self.appViewModel.appTheme),
+                    options: AppTheme.allCases,
+                    optionTitle: self.appThemeLabel,
+                    optionLeadingTint: { $0.palette(isDark: self.isDarkAppearance).accent },
+                    isSelected: { self.appViewModel.appTheme == $0 },
+                    onSelect: self.appViewModel.setAppTheme))
                 self.settingsSelectionRow(.init(
                     title: self.tr("ui.settings.log_level"),
                     symbol: "text.alignleft",
                     valueText: selectedLogLevel,
                     options: ConfigLogLevel.allCases,
                     optionTitle: \.rawValue,
+                    optionLeadingTint: nil,
                     isSelected: { selectedLogLevel.caseInsensitiveCompare($0.rawValue) == .orderedSame },
                     onSelect: { level in
                         Task { await self.appViewModel.applyEditableCoreSetting(.logLevel, to: level.rawValue) }
@@ -535,6 +565,11 @@ struct SystemTabView: TranslatingView {
                             symbol: item.symbol,
                             text: item.text)
                     }
+
+                    Text(self.tr("ui.settings.proxy_ports_hint"))
+                        .font(.app(size: T.FontSize.caption, weight: .regular))
+                        .foregroundStyle(self.nativeSecondaryLabel)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 .menuRowPadding(vertical: T.space4)
             }

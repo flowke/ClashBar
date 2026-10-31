@@ -193,6 +193,7 @@ final class AppViewModel: ObservableObject {
 
     @Published var uiLanguage: AppLanguage = .zhHans
     @Published var appearanceMode: AppAppearanceMode = .system
+    @Published var appTheme: AppTheme = .sage
     @Published var isPanelPresented: Bool = false
     @Published var activeMenuTab: RootTab = .proxy
     @Published var launchAtLoginEnabled: Bool = false
@@ -418,6 +419,7 @@ final class AppViewModel: ObservableObject {
     let ssidStrategyRulesKey = "clashbar.ssid.strategy.rules.v1"
     let uiLanguageKey = "clashbar.ui.language"
     let appearanceModeKey = "clashbar.ui.appearance.mode"
+    let appThemeKey = "clashbar.ui.theme"
 
     let maxInMemoryLogEntries = 5000
     let hiddenPanelMaxInMemoryLogEntries = 20
@@ -483,6 +485,7 @@ final class AppViewModel: ObservableObject {
         self.bundlesMihomoCore = Self.resolveBundledMihomoCoreFlag()
         self.uiLanguage = loadPersistedUILanguage()
         self.appearanceMode = loadPersistedAppearanceMode()
+        self.appTheme = loadPersistedAppTheme()
         applyAppAppearance()
         configureStreamCoordinator()
         refreshLaunchAtLoginStatus()

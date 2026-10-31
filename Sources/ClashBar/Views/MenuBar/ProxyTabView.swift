@@ -640,11 +640,23 @@ struct ProxyTabView: TranslatingView {
 
             if let detailText = self.systemProxyRowDetailText {
                 Text(detailText)
-                    .font(.app(size: T.FontSize.caption, weight: .medium))
+                    .font(.app(size: T.FontSize.caption, weight: .semibold))
                     .foregroundStyle(self.systemProxyRowDetailColor)
                     .lineLimit(1)
-                    .truncationMode(.middle)
-                    .minimumScaleFactor(T.minimumScale)
+                    .truncationMode(.tail)
+                    .minimumScaleFactor(0.78)
+                    .padding(.horizontal, T.space4)
+                    .padding(.vertical, T.space1)
+                    .background {
+                        Capsule(style: .continuous)
+                            .fill(self.nativeWarning.opacity(0.14))
+                            .overlay {
+                                Capsule(style: .continuous)
+                                    .stroke(self.nativeWarning.opacity(0.34), lineWidth: T.stroke)
+                            }
+                    }
+                    .help(detailText)
+                    .accessibilityLabel(detailText)
             }
 
             Spacer(minLength: 0)

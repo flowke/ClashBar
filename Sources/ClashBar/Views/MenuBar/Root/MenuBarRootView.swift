@@ -228,16 +228,30 @@ struct MenuBarRootView: TranslatingView {
     }
 
     var panelBackground: some View {
-        AppMaterialSurface(
+        RoundedRectangle(
             cornerRadius: T.panelCornerRadius,
-            fallbackStyle: .material(.regularMaterial),
-            stroke: nativeSeparator)
+            style: .continuous)
+            .fill(self.panelSurfaceGradient)
+            .overlay {
+                RoundedRectangle(
+                    cornerRadius: T.panelCornerRadius,
+                    style: .continuous)
+                    .stroke(self.panelSurfaceBorder, lineWidth: T.stroke)
+            }
             .shadow(
                 color: self.nativeShadow.opacity(
                     T.Shadow.standard.opacity),
                 radius: T.Shadow.standard.radius,
                 x: T.Shadow.standard.x,
                 y: T.Shadow.standard.y)
+    }
+
+    private var panelSurfaceGradient: LinearGradient {
+        self.appViewModel.appTheme.palette(isDark: self.isDarkAppearance).backgroundGradient
+    }
+
+    private var panelSurfaceBorder: Color {
+        self.appViewModel.appTheme.palette(isDark: self.isDarkAppearance).border
     }
 
     func refreshDerivedData(for tab: RootTab) {

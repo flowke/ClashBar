@@ -126,6 +126,16 @@ extension AppViewModel {
         return .system
     }
 
+    func loadPersistedAppTheme() -> AppTheme {
+        if let raw = defaults.string(forKey: appThemeKey),
+           let theme = AppTheme(rawValue: raw)
+        {
+            return theme
+        }
+        defaults.set(AppTheme.sage.rawValue, forKey: appThemeKey)
+        return .sage
+    }
+
     func loadPersistedRemoteConfigSubscriptions() -> [String: RemoteConfigSubscription] {
         if let subscriptions = self.decodeFromDefaults(
             [String: RemoteConfigSubscription].self,

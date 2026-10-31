@@ -233,9 +233,8 @@ extension MenuBarRootView {
     }
 
     private func segmentedAccentColor(style: SegmentedControlStyle) -> Color {
-        isDarkAppearance
-            ? (style.isMode ? Color(red: 0.56, green: 0.77, blue: 0.98) : Color(red: 0.50, green: 0.72, blue: 0.95))
-            : (style.isMode ? Color(red: 0.16, green: 0.36, blue: 0.67) : Color(red: 0.20, green: 0.40, blue: 0.71))
+        let accent = self.appViewModel.appTheme.palette(isDark: self.isDarkAppearance).accent
+        return style.isMode ? accent : accent.opacity(0.88)
     }
 
     private func segmentedSelectionFill(style: SegmentedControlStyle) -> Color {
