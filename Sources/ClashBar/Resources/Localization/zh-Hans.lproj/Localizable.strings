@@ -50,6 +50,7 @@
 "ui.action.flush_fakeip_cache" = "清理 FakeIP 缓存";
 "ui.action.flush_dns_cache" = "清理 DNS 缓存";
 "ui.action.open_core_directory" = "打开内核目录";
+"ui.action.open_webui" = "打开 WebUI";
 "ui.action.enable_tun" = "开启 TUN 模式";
 "ui.action.disable_tun" = "关闭 TUN 模式";
 "ui.action.upgrade_core" = "升级 Core";

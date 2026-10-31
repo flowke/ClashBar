@@ -52,7 +52,6 @@ struct MenuBarHeaderView: TranslatingView {
 
                     HStack(spacing: T.space6) {
                         self.headerConnectionControl
-                        self.headerControllerWebUIButton
                         if self.appViewModel.isExternalControllerWildcardIPv4 {
                             self.headerControllerWarningIcon
                         }
@@ -63,10 +62,13 @@ struct MenuBarHeaderView: TranslatingView {
             Spacer(minLength: T.space6)
 
             HStack(spacing: T.space6) {
+                self.headerControllerWebUIButton
+
                 self.compactTopIcon(
                     self.appViewModel.isPinned ? "pin.fill" : "pin",
                     label: self.appViewModel.isPinned ? self.tr("ui.action.unpin") : self.tr("ui.action.pin"),
-                    toneOverride: self.appViewModel.isPinned ? nativeInfo : nativeTertiaryLabel)
+                    toneOverride: self.appViewModel.isPinned ? nativeInfo : nativeTertiaryLabel,
+                    baseTint: self.appViewModel.isPinned ? nativeInfo : nil)
                 {
                     self.appViewModel.togglePinned()
                 }
@@ -216,13 +218,16 @@ struct MenuBarHeaderView: TranslatingView {
         Button {
             self.appViewModel.openControllerWebUI()
         } label: {
-            Image(systemName: "safari")
-                .font(.app(size: T.FontSize.caption, weight: .semibold))
-                .foregroundStyle(self.nativeSecondaryLabel)
+            Image(systemName: "globe.americas.fill")
+                .font(.system(size: 18, weight: .semibold))
+                .symbolRenderingMode(.monochrome)
+                .foregroundStyle(self.nativeInfo)
+                .frame(width: 26, height: 26)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help("Open WebUI")
-        .accessibilityLabel("Open WebUI")
+        .help(self.tr("ui.action.open_webui"))
+        .accessibilityLabel(self.tr("ui.action.open_webui"))
         .disabled(self.isSwitchingMachine)
         .opacity(self.isSwitchingMachine ? 0.6 : 1)
     }

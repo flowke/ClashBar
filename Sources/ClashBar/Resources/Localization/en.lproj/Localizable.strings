@@ -48,6 +48,7 @@
 "ui.action.flush_fakeip_cache" = "Flush FakeIP Cache";
 "ui.action.flush_dns_cache" = "Flush DNS Cache";
 "ui.action.open_core_directory" = "Open Core Directory";
+"ui.action.open_webui" = "Open WebUI";
 "ui.action.enable_tun" = "Enable TUN Mode";
 "ui.action.disable_tun" = "Disable TUN Mode";
 "ui.action.upgrade_core" = "Upgrade Core";

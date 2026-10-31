@@ -487,6 +487,7 @@ extension View {
             hierarchicalSymbol: hierarchicalSymbol,
             action: action)
             .accessibilityLabel(label)
+            .help(label)
     }
 
     func compactTopIcon(
@@ -495,6 +496,7 @@ extension View {
         role: ButtonRole? = nil,
         warning: Bool = false,
         toneOverride: Color? = nil,
+        baseTint: Color? = nil,
         isLoading: Bool = false,
         action: @escaping () async -> Void) -> some View
     {
@@ -510,6 +512,7 @@ extension View {
             symbol: symbol,
             label: label,
             tint: tone.opacity(T.Opacity.solid),
+            baseTint: baseTint,
             role: role,
             isLoading: isLoading,
             action: action)
