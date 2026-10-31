@@ -60,6 +60,7 @@ struct MenuBarRootView: TranslatingView {
     @State var showRemoteMachineManager = false
     @State var hoveredMode: CoreMode?
     @State var hoveredTab: RootTab?
+    @State var hoveredModeAction: String?
     @State var topHeaderHeight: CGFloat = 0
     @State var modeAndTabSectionHeight: CGFloat = 0
     @State var footerBarHeight: CGFloat = 0

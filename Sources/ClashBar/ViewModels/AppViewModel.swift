@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import ProxyHelperShared
 import SwiftUI
 
 @MainActor
@@ -60,6 +61,7 @@ final class AppViewModel: ObservableObject {
     @Published var mixedPort: Int = 7890
 
     @Published var mihomoBinaryPath: String = "-"
+    @Published var isMihomoCoreAvailable = false
     @Published var selectedConfigName: String = "-"
     @Published var configDirectoryPath: String = "-"
     @Published var availableConfigFileNames: [String] = []
@@ -146,6 +148,11 @@ final class AppViewModel: ObservableObject {
     @Published var systemProxyHelperFailureMessage: String?
     @Published var systemProxyHelperInstalled: Bool?
     @Published var systemProxyHelperProcessRunning: Bool?
+    @Published var systemProxyHelperInstalledVersion: Int?
+    @Published var systemProxyHelperExpectedVersion: Int = ProxyHelperConstants.helperVersion
+    @Published var systemProxyHelperInstallInFlight = false
+    @Published var systemProxyHelperInstallMessage: String?
+    @Published var systemProxyHelperInstallMessageIsError = false
     @Published var systemProxyActiveDisplay: String?
     @Published var systemProxyOpenFailureHint: String?
     @Published var systemProxyExceptions: [EditableSystemProxyException] = []
@@ -322,7 +329,9 @@ final class AppViewModel: ObservableObject {
     }
 
     var isModeSwitchEnabled: Bool {
-        (self.isRemoteTarget || self.processManager.isRunning) && self.apiStatus == .healthy
+        (self.isRemoteTarget || self.isRuntimeRunning)
+            && self.apiStatus == .healthy
+            && !self.isCoreActionProcessing
     }
 
     var isTunToggleEnabled: Bool {
@@ -353,7 +362,8 @@ final class AppViewModel: ObservableObject {
     }
 
     var isPrimaryCoreActionEnabled: Bool {
-        !self.isCoreActionProcessing
+        !self.isCoreActionProcessing &&
+            (self.isRuntimeRunning || self.isRemoteTarget || self.isMihomoCoreAvailable)
     }
 
     let processManager: any MihomoControlling

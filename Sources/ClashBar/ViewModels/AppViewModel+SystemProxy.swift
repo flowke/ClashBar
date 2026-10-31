@@ -1,4 +1,5 @@
 import Foundation
+import ProxyHelperShared
 
 @MainActor
 extension AppViewModel {
@@ -116,6 +117,8 @@ extension AppViewModel {
     func resetSystemProxyObservedState() {
         self.systemProxyHelperInstalled = nil
         self.systemProxyHelperProcessRunning = nil
+        self.systemProxyHelperInstalledVersion = nil
+        self.systemProxyHelperExpectedVersion = ProxyHelperConstants.helperVersion
         self.systemProxyHelperFailureReason = nil
         self.systemProxyHelperFailureMessage = nil
         if !self.isSystemProxyEnabled {
@@ -129,6 +132,8 @@ extension AppViewModel {
 
         self.systemProxyHelperInstalled = snapshot.helperInstalled
         self.systemProxyHelperProcessRunning = snapshot.processRunning
+        self.systemProxyHelperInstalledVersion = snapshot.installedVersion
+        self.systemProxyHelperExpectedVersion = snapshot.expectedVersion
         self.systemProxyHelperFailureReason = snapshot.failureReason
         self.systemProxyHelperFailureMessage = snapshot.rawMessage
 
@@ -160,13 +165,36 @@ extension AppViewModel {
         try await self.systemProxyService.isConfigured(host: host, ports: ports)
     }
 
-    func refreshSystemProxyHelperStatus() async {
-        guard self.hasSystemProxyOpenIntent else {
+    func refreshSystemProxyHelperStatus(always: Bool = false) async {
+        guard always || self.hasSystemProxyOpenIntent else {
             self.resetSystemProxyObservedState()
             return
         }
         let snapshot = await self.systemProxyService.readHelperHealthSnapshot()
         self.applyHelperHealthSnapshot(snapshot)
+    }
+
+    func installOrUpdateSystemProxyHelper() async {
+        guard !self.systemProxyHelperInstallInFlight else { return }
+
+        self.systemProxyHelperInstallInFlight = true
+        self.systemProxyHelperInstallMessage = nil
+        self.systemProxyHelperInstallMessageIsError = false
+        defer { self.systemProxyHelperInstallInFlight = false }
+
+        do {
+            try await self.systemProxyService.installOrUpdateHelper()
+            await self.refreshSystemProxyHelperStatus(always: true)
+            self.systemProxyHelperInstallMessage = self.tr(
+                "ui.settings.helper_install_success",
+                self.systemProxyHelperExpectedVersion)
+        } catch {
+            self.systemProxyHelperInstallMessage = self.tr(
+                "ui.settings.helper_install_failed",
+                self.systemProxyErrorMessage(error))
+            self.systemProxyHelperInstallMessageIsError = true
+            await self.refreshSystemProxyHelperStatus(always: true)
+        }
     }
 
     func refreshSystemProxyHelperRuntimeSnapshot() async {
@@ -302,6 +330,8 @@ extension AppViewModel {
         case .helperStartTimedOut: return tr("app.system_proxy.error.helper_start_timed_out")
         case .helperAuthorizationCancelled: return tr("app.system_proxy.error.helper_authorization_cancelled")
         case .helperNotRegistered: return tr("app.system_proxy.error.helper_not_registered")
+        case let .helperNeedsUpdate(installed, expected):
+            return tr("app.system_proxy.error.helper_needs_update", installed, expected)
         case let .helperInstallFailed(message): return tr("app.system_proxy.error.helper_install_failed", message)
         case let .helperConnectionFailed(message): return tr("app.system_proxy.error.helper_connection_failed", message)
         case let .helperOperationFailed(message): return tr("app.system_proxy.error.helper_operation_failed", message)
@@ -316,6 +346,7 @@ extension AppViewModel {
         case .helperNotBundled: return tr("app.system_proxy.alert.helper_not_bundled")
         case .helperRequiresInstallToApplications: return tr("app.system_proxy.alert.helper_install_location")
         case .helperNotRegistered: return tr("app.system_proxy.alert.helper_not_registered")
+        case .helperNeedsUpdate: return tr("app.system_proxy.alert.helper_needs_update")
         case .helperStartTimedOut: return tr("app.system_proxy.alert.helper_start_timed_out")
         case .helperAuthorizationCancelled: return tr("app.system_proxy.alert.helper_authorization_cancelled")
         case .helperInstallFailed: return tr("app.system_proxy.alert.helper_install_failed")
@@ -327,6 +358,7 @@ extension AppViewModel {
     private func systemProxyFailureReasonMessage(for reason: SystemProxyHelperFailureReason) -> String {
         switch reason {
         case .helperNotRegistered: tr("app.system_proxy.alert.helper_not_registered")
+        case .helperNeedsUpdate: tr("app.system_proxy.alert.helper_needs_update")
         case .helperStartTimedOut: tr("app.system_proxy.alert.helper_start_timed_out")
         case .helperConnectionFailed: tr("app.system_proxy.alert.helper_connection_failed")
         case .helperOperationFailed: tr("app.system_proxy.alert.helper_operation_failed")

@@ -20,7 +20,16 @@ final class ClashBarAppDelegate: NSObject, NSApplicationDelegate {
         self.setupWindowSuppression()
         self.suppressNonPanelWindows()
 
+        let shouldBootstrapDevelopmentAppBundle =
+            self.appViewModel.shouldBootstrapDevelopmentAppBundleAtLaunch
         self.appViewModel.start()
+
+        // The raw Xcode process hands off to a real app bundle. Do not create a
+        // status item in the short-lived process or both instances appear briefly.
+        if shouldBootstrapDevelopmentAppBundle {
+            return
+        }
+
         self.statusItemController = StatusItemController(appViewModel: self.appViewModel)
         self.appViewModel.presentInitialNoCoreSetupGuideIfNeeded()
 
@@ -37,7 +46,8 @@ final class ClashBarAppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        self.statusItemController?.presentPopover()
+        // Launch Services can deliver the handoff from Xcode as a reopen event.
+        // A menu bar app should wait for an explicit click on its status item.
         return false
     }
 

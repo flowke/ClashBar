@@ -4,11 +4,26 @@ import ProxyHelperShared
 import ServiceManagement
 
 enum ProxyHelperInstaller {
+    private struct HelperSource {
+        let binaryURL: URL
+        let plistURL: URL?
+    }
+
+    static func installedHelperVersion() -> Int? {
+        guard let raw = try? String(
+            contentsOfFile: ProxyHelperConstants.installedVersionPath,
+            encoding: .utf8),
+            let version = Int(raw.trimmingCharacters(in: .whitespacesAndNewlines))
+        else {
+            return nil
+        }
+        return version
+    }
+
     static func installedHelperIsCurrent() -> Bool {
-        let recorded = try? String(contentsOfFile: ProxyHelperConstants.installedVersionPath, encoding: .utf8)
         return FileManager.default.isExecutableFile(atPath: ProxyHelperConstants.installedHelperPath)
             && FileManager.default.fileExists(atPath: ProxyHelperConstants.installedPlistPath)
-            && recorded?.trimmingCharacters(in: .whitespacesAndNewlines) == String(ProxyHelperConstants.helperVersion)
+            && self.installedHelperVersion() == ProxyHelperConstants.helperVersion
             && !self.hasQuarantine(atPath: ProxyHelperConstants.installedHelperPath)
             && !self.hasQuarantine(atPath: ProxyHelperConstants.installedPlistPath)
     }
@@ -17,11 +32,40 @@ enum ProxyHelperInstaller {
         getxattr(path, "com.apple.quarantine", nil, 0, 0, 0) >= 0
     }
 
+    static func helperSourceAvailable() -> Bool {
+        self.resolveHelperSource() != nil
+    }
+
+    static func helperBinaryURL() -> URL? {
+        self.resolveHelperSource()?.binaryURL
+    }
+
     static func installBundledHelper() async throws {
-        let bundleURL = Bundle.main.bundleURL
+        guard let source = self.resolveHelperSource() else {
+            throw SystemProxyServiceError.helperNotBundled
+        }
+
+        let temporaryPlistURL: URL?
+        let plistURL: URL
+        if let sourcePlistURL = source.plistURL {
+            temporaryPlistURL = nil
+            plistURL = sourcePlistURL
+        } else {
+            let generatedPlistURL = FileManager.default.temporaryDirectory
+                .appendingPathComponent("ClashBar-Helper-\(UUID().uuidString).plist")
+            try self.writeDevelopmentHelperPlist(to: generatedPlistURL)
+            temporaryPlistURL = generatedPlistURL
+            plistURL = generatedPlistURL
+        }
+        defer {
+            if let temporaryPlistURL {
+                try? FileManager.default.removeItem(at: temporaryPlistURL)
+            }
+        }
+
         let command = self.installShellCommand(
-            sourceBinary: bundleURL.appendingPathComponent(ProxyHelperConstants.helperBundleProgram).path,
-            sourcePlist: bundleURL.appendingPathComponent(ProxyHelperConstants.helperBundlePlist).path)
+            sourceBinary: source.binaryURL.path,
+            sourcePlist: plistURL.path)
 
         try? await SMAppService.daemon(plistName: ProxyHelperConstants.daemonPlistName).unregister()
         try await Task.detached(priority: .userInitiated) {
@@ -30,6 +74,68 @@ enum ProxyHelperInstaller {
                 cancelled: SystemProxyServiceError.helperAuthorizationCancelled,
                 failed: SystemProxyServiceError.helperInstallFailed)
         }.value
+    }
+
+    private static func resolveHelperSource() -> HelperSource? {
+        let bundleURL = Bundle.main.bundleURL
+        let bundledBinaryURL = bundleURL.appendingPathComponent(ProxyHelperConstants.helperBundleProgram)
+        let bundledPlistURL = bundleURL.appendingPathComponent(ProxyHelperConstants.helperBundlePlist)
+        if FileManager.default.isExecutableFile(atPath: bundledBinaryURL.path),
+           FileManager.default.fileExists(atPath: bundledPlistURL.path)
+        {
+            return HelperSource(binaryURL: bundledBinaryURL, plistURL: bundledPlistURL)
+        }
+
+#if DEBUG
+        let executableDirectory = Bundle.main.executableURL?.deletingLastPathComponent()
+        let bundleDirectory = bundleURL.deletingLastPathComponent()
+        let workingDirectory = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+        let projectRoots = [
+            workingDirectory,
+            workingDirectory.deletingLastPathComponent(),
+            workingDirectory.deletingLastPathComponent().deletingLastPathComponent(),
+        ]
+        var developmentCandidates = [bundleDirectory.appendingPathComponent("ClashBarProxyHelper")]
+        if let executableDirectory {
+            developmentCandidates.append(executableDirectory.appendingPathComponent("ClashBarProxyHelper"))
+        }
+        developmentCandidates += projectRoots.flatMap { root in
+            [
+                root.appendingPathComponent(".build/out/Products/Debug/ClashBarProxyHelper"),
+                root.appendingPathComponent(".build/arm64-apple-macosx/debug/ClashBarProxyHelper"),
+                root.appendingPathComponent(".build/debug/ClashBarProxyHelper"),
+            ]
+        }
+
+        if let binaryURL = developmentCandidates.compactMap({ $0 }).first(where: {
+            FileManager.default.isExecutableFile(atPath: $0.path)
+        }) {
+            return HelperSource(binaryURL: binaryURL, plistURL: nil)
+        }
+#endif
+
+        return nil
+    }
+
+    private static func writeDevelopmentHelperPlist(to url: URL) throws {
+        let plist = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+            <key>Label</key>
+            <string>\(ProxyHelperConstants.machServiceName)</string>
+            <key>MachServices</key>
+            <dict>
+                <key>\(ProxyHelperConstants.machServiceName)</key>
+                <true/>
+            </dict>
+            <key>Program</key>
+            <string>\(ProxyHelperConstants.installedHelperPath)</string>
+        </dict>
+        </plist>
+        """
+        try plist.write(to: url, atomically: true, encoding: .utf8)
     }
 
     private static func installShellCommand(sourceBinary: String, sourcePlist: String) -> String {

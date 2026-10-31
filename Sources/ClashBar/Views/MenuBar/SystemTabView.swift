@@ -278,6 +278,78 @@ struct SystemTabView: TranslatingView {
         SystemTabViewModel.maintenanceActionEnabled(session: self.appViewModel)
     }
 
+    var systemProxyHelperStatusText: String {
+        guard let installedVersion = self.appViewModel.systemProxyHelperInstalledVersion else {
+            return self.tr("ui.settings.helper_not_installed")
+        }
+
+        let expectedVersion = self.appViewModel.systemProxyHelperExpectedVersion
+        guard installedVersion == expectedVersion else {
+            return self.tr("ui.settings.helper_needs_update", installedVersion, expectedVersion)
+        }
+
+        return self.appViewModel.systemProxyHelperProcessRunning == true
+            ? self.tr("ui.settings.helper_running")
+            : self.tr("ui.settings.helper_stopped")
+    }
+
+    var systemProxyHelperStatusColor: Color {
+        guard let installedVersion = self.appViewModel.systemProxyHelperInstalledVersion else {
+            return nativeCritical.opacity(T.Opacity.solid)
+        }
+
+        let expectedVersion = self.appViewModel.systemProxyHelperExpectedVersion
+        guard installedVersion == expectedVersion else {
+            return nativeWarning.opacity(T.Opacity.solid)
+        }
+
+        return self.appViewModel.systemProxyHelperProcessRunning == true
+            ? nativePositive.opacity(T.Opacity.solid)
+            : nativeWarning.opacity(T.Opacity.solid)
+    }
+
+    var systemProxyHelperVersionText: String {
+        guard let installedVersion = self.appViewModel.systemProxyHelperInstalledVersion else {
+            return self.tr("ui.common.unknown")
+        }
+        return self.tr(
+            "ui.settings.helper_version_detail",
+            installedVersion,
+            self.appViewModel.systemProxyHelperExpectedVersion)
+    }
+
+    var systemProxyHelperActionTitle: String {
+        guard let installedVersion = self.appViewModel.systemProxyHelperInstalledVersion else {
+            return self.tr("ui.action.install_helper")
+        }
+        return installedVersion == self.appViewModel.systemProxyHelperExpectedVersion
+            ? self.tr("ui.action.reinstall_helper")
+            : self.tr("ui.action.update_helper")
+    }
+
+    var systemProxyHelperActionSymbol: String {
+        guard let installedVersion = self.appViewModel.systemProxyHelperInstalledVersion else {
+            return "plus.circle"
+        }
+        return installedVersion == self.appViewModel.systemProxyHelperExpectedVersion
+            ? "arrow.counterclockwise"
+            : "arrow.triangle.2.circlepath"
+    }
+
+    var systemProxyHelperInstallFeedback: (message: String, color: Color, symbol: String)? {
+        guard let message = self.appViewModel.systemProxyHelperInstallMessage?.trimmedNonEmpty else {
+            return nil
+        }
+        return (
+            message: message,
+            color: self.appViewModel.systemProxyHelperInstallMessageIsError
+                ? nativeCritical.opacity(T.Opacity.solid)
+                : nativePositive.opacity(T.Opacity.solid),
+            symbol: self.appViewModel.systemProxyHelperInstallMessageIsError
+                ? "exclamationmark.triangle.fill"
+                : "checkmark.circle.fill")
+    }
+
     var geoUpdateActionEnabled: Bool {
         self.appViewModel.isRuntimeRunning && !self.appViewModel.isGeoUpdateInFlight
     }
@@ -555,6 +627,85 @@ struct SystemTabView: TranslatingView {
 
             VStack(spacing: 0) {
                 self.settingsCardHeader(
+                    self.tr("ui.section.system_proxy_helper"),
+                    symbol: "lock.shield")
+
+                VStack(alignment: .leading, spacing: T.space4) {
+                    HStack(spacing: T.space8) {
+                        self.settingsRowLabel(
+                            symbol: "checkmark.shield",
+                            title: self.tr("ui.settings.helper_status"))
+                            .layoutPriority(1)
+                        Spacer(minLength: 0)
+                        Text(self.systemProxyHelperStatusText)
+                            .font(.app(size: T.FontSize.caption, weight: .semibold))
+                            .foregroundStyle(self.systemProxyHelperStatusColor)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                    }
+
+                    HStack(spacing: T.space8) {
+                        self.settingsRowLabel(
+                            symbol: "number",
+                            title: self.tr("ui.settings.helper_version"))
+                            .layoutPriority(1)
+                        Spacer(minLength: 0)
+                        Text(self.systemProxyHelperVersionText)
+                            .font(.app(size: T.FontSize.caption, weight: .regular))
+                            .foregroundStyle(nativeSecondaryLabel)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                    }
+
+                    Text(self.tr("ui.settings.helper_description"))
+                        .font(.app(size: T.FontSize.caption, weight: .regular))
+                        .foregroundStyle(nativeSecondaryLabel)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    HStack(spacing: T.space8) {
+                        self.settingsRowLabel(
+                            symbol: "folder",
+                            title: self.tr("ui.settings.helper_location"))
+                            .layoutPriority(1)
+                        Spacer(minLength: 0)
+                        Text(self.tr("ui.settings.helper_location_hint"))
+                            .font(.app(size: T.FontSize.caption, weight: .regular))
+                            .foregroundStyle(nativeSecondaryLabel)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                            .help(self.tr("ui.settings.helper_location_hint"))
+                    }
+
+                    Button {
+                        Task { await self.appViewModel.installOrUpdateSystemProxyHelper() }
+                    } label: {
+                        HStack(spacing: T.space4) {
+                            if self.appViewModel.systemProxyHelperInstallInFlight {
+                                ProgressView()
+                                    .controlSize(.mini)
+                            } else {
+                                Image(systemName: self.systemProxyHelperActionSymbol)
+                            }
+                            Text(self.systemProxyHelperActionTitle)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .center)
+                    }
+                    .appBorderedButtonStyle()
+                    .controlSize(.small)
+                    .disabled(self.appViewModel.systemProxyHelperInstallInFlight)
+
+                    if let feedback = self.systemProxyHelperInstallFeedback {
+                        self.settingsFeedbackBanner(
+                            text: feedback.message,
+                            color: feedback.color,
+                            symbol: feedback.symbol)
+                    }
+                }
+                .menuRowPadding(vertical: T.space4)
+            }
+
+            VStack(spacing: 0) {
+                self.settingsCardHeader(
                     self.tr("ui.section.proxy_ports"),
                     symbol: "point.3.connected.trianglepath.dotted")
 
@@ -634,6 +785,9 @@ struct SystemTabView: TranslatingView {
                     color: feedback.color,
                     symbol: feedback.symbol)
             }
+        }
+        .task {
+            await self.appViewModel.refreshSystemProxyHelperStatus(always: true)
         }
     }
 }

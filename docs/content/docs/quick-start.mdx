@@ -41,7 +41,7 @@ brew uninstall --zap --cask clashbar
 
 1. **同一时间只保留一个** mihomo / Clash 系客户端接管系统代理。请先退出 ClashX、Clash Verge、Clash Nyanpasu、Clash Party、FlClash 等同类软件。
 2. 系统代理依赖打包后的 `.app`。优先使用 Release 的 `.app` / `.dmg`，并把应用放到 `/Applications` 后再打开。
-3. 第一次开启系统代理时，macOS 会要求管理员密码，把特权 helper 装到系统目录。装好之后，更新 app 不会再让它失效。只有 helper 本身升级时才会再要一次密码。
+3. 第一次使用系统代理前，请在设置的“系统代理 Helper”区域点击“安装 Helper”。macOS 会要求管理员密码，把 Helper 装到系统目录。装好之后，更新 app 不会再让它失效；设置页会检测版本，只有 Helper 本身升级时才会再要一次密码。
 4. 开机启动仍可能要求在 **系统设置 → 通用 → 登录项** 允许 ClashBar。这和系统代理 helper 不是一回事。
 5. 切换配置、替换内核、批量更新订阅后若行为异常，先执行一次 **重启内核**，把运行态清干净再继续排查。
 

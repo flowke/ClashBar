@@ -85,6 +85,7 @@ extension AppViewModel {
         self.updateDataAcquisitionPolicy()
 
         guard presented else { return }
+        self.refreshManagedCoreMetadata()
         self.flushPendingTrafficSnapshotIfNeeded(immediately: true)
         self.scheduleRefreshForActivatedTab(activeMenuTab)
         Task { [weak self] in

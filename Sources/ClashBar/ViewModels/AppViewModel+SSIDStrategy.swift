@@ -15,6 +15,10 @@ extension AppViewModel {
         self.ssidStrategyAuthorizationStatus == .authorized
     }
 
+    var shouldBootstrapDevelopmentAppBundleAtLaunch: Bool {
+        self.ssidStrategyEnabled && self.ssidMonitorService.shouldBootstrapDevelopmentBundle
+    }
+
     @discardableResult
     func startSSIDStrategyMonitoringIfNeeded() -> Bool {
         guard !self.isSSIDStrategyMonitoring else { return false }

@@ -3,7 +3,7 @@ import Foundation
 @MainActor
 extension AppViewModel {
     func configureManagedProcessCallbacks() {
-        self.mihomoBinaryPath = self.processManager.detectedBinaryPath ?? "-"
+        self.refreshManagedCoreMetadata()
         if let managedProcess = self.processManager as? MihomoProcessManager {
             managedProcess.onLog = { [weak self] line in
                 Task { @MainActor in
@@ -29,6 +29,21 @@ extension AppViewModel {
                     }
                 }
             }
+        }
+    }
+
+    func refreshManagedCoreMetadata() {
+        guard !self.isRemoteTarget else { return }
+
+        let detectedPath = self.processManager.detectedBinaryPath
+        self.mihomoBinaryPath = detectedPath ?? "-"
+        self.isMihomoCoreAvailable = detectedPath != nil
+
+        Task { [weak self] in
+            guard let self else { return }
+            guard let detectedVersion = await self.processManager.detectedBinaryVersion() else { return }
+            guard self.version == "-" else { return }
+            self.version = detectedVersion
         }
     }
 

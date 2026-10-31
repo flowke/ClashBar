@@ -8,9 +8,11 @@ public enum ProxyHelperConstants {
     public static let installedHelperPath = "/Library/PrivilegedHelperTools/com.clashbar.helper"
     public static let installedPlistPath = "/Library/LaunchDaemons/com.clashbar.helper.plist"
     public static let installedVersionPath = "/Library/PrivilegedHelperTools/com.clashbar.helper.version"
-    public static let helperVersion = 2
-    public static let allowedClientBundleIdentifier = "com.clashbar"
-    public static let allowedClientRequirement = "identifier \"\(allowedClientBundleIdentifier)\""
+    public static let helperVersion = 3
+    public static let allowedClientBundleIdentifiers = ["com.clashbar", "ClashBar"]
+    public static let allowedClientRequirement = allowedClientBundleIdentifiers
+        .map { "identifier \"\($0)\"" }
+        .joined(separator: " or ")
 }
 
 @objc(ProxyHelperProtocol)

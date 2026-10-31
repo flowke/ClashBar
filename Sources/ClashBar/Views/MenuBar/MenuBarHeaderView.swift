@@ -62,8 +62,6 @@ struct MenuBarHeaderView: TranslatingView {
             Spacer(minLength: T.space6)
 
             HStack(spacing: T.space6) {
-                self.headerControllerWebUIButton
-
                 self.compactTopIcon(
                     self.appViewModel.isPinned ? "pin.fill" : "pin",
                     label: self.appViewModel.isPinned ? self.tr("ui.action.unpin") : self.tr("ui.action.pin"),
@@ -72,32 +70,6 @@ struct MenuBarHeaderView: TranslatingView {
                 {
                     self.appViewModel.togglePinned()
                 }
-
-                self.compactTopIcon(
-                    "arrow.clockwise",
-                    label: self.appViewModel.primaryCoreActionLabel,
-                    toneOverride: nativeInfo)
-                {
-                    await self.appViewModel.performPrimaryCoreAction()
-                }
-                .disabled(self.appViewModel.isRemoteTarget || !self.appViewModel.isPrimaryCoreActionEnabled)
-                .opacity((self.appViewModel.isRemoteTarget || !self.appViewModel.isPrimaryCoreActionEnabled) ? 1 * 0.6 :
-                    1)
-
-                self.compactTopIcon(
-                    self.appViewModel.isRuntimeRunning ? "stop.circle" : "play.circle",
-                    label: self.appViewModel.isRuntimeRunning ? self.tr("ui.action.stop") : self
-                        .tr("app.primary.start"),
-                    toneOverride: self.appViewModel.isRuntimeRunning ? nativeWarning : nativePositive)
-                {
-                    if self.appViewModel.isRuntimeRunning {
-                        await self.appViewModel.stopCore()
-                    } else {
-                        await self.appViewModel.startCore(trigger: .manual)
-                    }
-                }
-                .disabled(self.appViewModel.isRemoteTarget || self.appViewModel.isCoreActionProcessing)
-                .opacity((self.appViewModel.isRemoteTarget || self.appViewModel.isCoreActionProcessing) ? 0.6 : 1)
 
                 self.compactTopIcon("power", label: self.tr("ui.action.quit"), warning: true) {
                     await self.appViewModel.quitApp()
@@ -212,24 +184,6 @@ struct MenuBarHeaderView: TranslatingView {
             .foregroundStyle(nativeWarning)
             .help("external-controller is 0.0.0.0 and can be accessed from your LAN.")
             .accessibilityLabel("Warning: external-controller is bound to 0.0.0.0")
-    }
-
-    var headerControllerWebUIButton: some View {
-        Button {
-            self.appViewModel.openControllerWebUI()
-        } label: {
-            Image(systemName: "globe.americas.fill")
-                .font(.system(size: 18, weight: .semibold))
-                .symbolRenderingMode(.monochrome)
-                .foregroundStyle(self.nativeInfo)
-                .frame(width: 26, height: 26)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .help(self.tr("ui.action.open_webui"))
-        .accessibilityLabel(self.tr("ui.action.open_webui"))
-        .disabled(self.isSwitchingMachine)
-        .opacity(self.isSwitchingMachine ? 0.6 : 1)
     }
 
     func headerPopoverSection(_ title: String) -> some View {

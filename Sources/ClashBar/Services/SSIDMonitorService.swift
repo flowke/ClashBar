@@ -93,6 +93,16 @@ final class SSIDMonitorService: NSObject {
         self.emitCurrentSnapshot()
     }
 
+    var shouldBootstrapDevelopmentBundle: Bool {
+        guard Bundle.main.bundleURL.pathExtension != "app" else {
+            return false
+        }
+        guard CLLocationManager.locationServicesEnabled() else {
+            return false
+        }
+        return !self.hasLocationUsageDescription()
+    }
+
     func requestAuthorizationIfNeeded() {
         self.startMonitoringEventsIfNeeded()
 
@@ -193,12 +203,25 @@ final class SSIDMonitorService: NSObject {
 
         do {
             let appURL = try self.prepareDevelopmentAppBundle()
-            guard NSWorkspace.shared.open(appURL) else {
-                throw SSIDMonitorServiceError.developmentBundleBootstrapFailed(
-                    "Launch Services could not open \(appURL.lastPathComponent).")
-            }
-            DispatchQueue.main.async {
-                NSApp.terminate(nil)
+            let configuration = NSWorkspace.OpenConfiguration()
+            configuration.activates = false
+            let errorHandler = self.errorHandler
+            NSWorkspace.shared.openApplication(at: appURL, configuration: configuration) { application, error in
+                DispatchQueue.main.async {
+                    if let error {
+                        errorHandler?(SSIDMonitorServiceError.developmentBundleBootstrapFailed(
+                            "The development app could not be launched: \(error.localizedDescription)"))
+                        return
+                    }
+
+                    guard let application, application.isFinishedLaunching, !application.isTerminated else {
+                        errorHandler?(SSIDMonitorServiceError.developmentBundleBootstrapFailed(
+                            "The development app exited before it finished launching."))
+                        return
+                    }
+
+                    NSApp.terminate(nil)
+                }
             }
             return true
         } catch {
@@ -225,7 +248,8 @@ final class SSIDMonitorService: NSObject {
 
         try fileManager.createDirectory(at: macOSURL, withIntermediateDirectories: true)
         try fileManager.createDirectory(at: resourcesURL, withIntermediateDirectories: true)
-        try fileManager.createSymbolicLink(at: bundledExecutableURL, withDestinationURL: executableURL)
+        // The executable must live inside the app bundle so Bundle.main can find Info.plist.
+        try fileManager.copyItem(at: executableURL, to: bundledExecutableURL)
         if let resourceBundleURL, fileManager.fileExists(atPath: resourceBundleURL.path) {
             let bundledResourceURL = resourcesURL.appendingPathComponent(
                 resourceBundleURL.lastPathComponent,

@@ -20,6 +20,18 @@ extension AppViewModel {
     func startCore(trigger: StartTrigger = .manual) async {
         guard !self.isRemoteTarget else { return }
         guard !isCoreActionProcessing else { return }
+        self.refreshManagedCoreMetadata()
+        guard self.isMihomoCoreAvailable else {
+            self.statusText = "Stopped"
+            self.apiStatus = .unknown
+            self.reportCoreStartFailure(
+                message: self.tr(
+                    "app.core.error.binary_not_found",
+                    self.workingDirectoryManager.coreDirectoryURL.path),
+                trigger: trigger,
+                markFailedOnManual: false)
+            return
+        }
         if trigger == .manual {
             shouldResumeCoreAfterNetworkRecovery = false
         }
@@ -54,6 +66,7 @@ extension AppViewModel {
             let launchController = applyExternalControllerFromSelectedConfigFile(configPath: configPath)
             statusText = "Starting"
             _ = try await self.processManager.start(configPath: configPath, controller: launchController)
+            self.refreshManagedCoreMetadata()
 
             await self.completeCoreBootstrap(
                 configPath: configPath,
@@ -67,6 +80,7 @@ extension AppViewModel {
                     autoTestGroupLatencies: true))
         } catch {
             preserveLocalSettingsOnNextSync = false
+            self.refreshManagedCoreMetadata()
             let message = tr("log.start.failed", self.coreErrorMessage(error))
             self.reportCoreStartFailure(message: message, trigger: trigger, markFailedOnManual: true)
         }

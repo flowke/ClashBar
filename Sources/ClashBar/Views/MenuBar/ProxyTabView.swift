@@ -797,7 +797,14 @@ struct ProxyTabView: TranslatingView {
     }
 
     var systemProxyHelperInstalledTint: Color {
-        switch self.appViewModel.systemProxyHelperInstalled {
+        if let installedVersion = self.appViewModel.systemProxyHelperInstalledVersion {
+            if installedVersion != self.appViewModel.systemProxyHelperExpectedVersion {
+                return nativeWarning.opacity(T.Opacity.solid)
+            }
+            return nativePositive.opacity(T.Opacity.solid)
+        }
+
+        return switch self.appViewModel.systemProxyHelperInstalled {
         case .some(true):
             nativePositive.opacity(T.Opacity.solid)
         case .some(false):
@@ -819,13 +826,25 @@ struct ProxyTabView: TranslatingView {
     }
 
     var systemProxyHelperInstalledHelp: String {
-        let value = switch self.appViewModel.systemProxyHelperInstalled {
-        case .some(true):
-            self.tr("ui.system_proxy.helper_install.ready")
-        case .some(false):
-            self.tr("ui.system_proxy.helper_install.missing")
-        case .none:
-            self.tr("ui.common.unknown")
+        let value: String
+        if let installedVersion = self.appViewModel.systemProxyHelperInstalledVersion {
+            if installedVersion == self.appViewModel.systemProxyHelperExpectedVersion {
+                value = self.tr("ui.system_proxy.helper_install.ready")
+            } else {
+                value = self.tr(
+                    "ui.system_proxy.helper_install.needs_update",
+                    installedVersion,
+                    self.appViewModel.systemProxyHelperExpectedVersion)
+            }
+        } else {
+            value = switch self.appViewModel.systemProxyHelperInstalled {
+            case .some(true):
+                self.tr("ui.system_proxy.helper_install.ready")
+            case .some(false):
+                self.tr("ui.system_proxy.helper_install.missing")
+            case .none:
+                self.tr("ui.common.unknown")
+            }
         }
         return "\(self.tr("ui.system_proxy.helper_install")): \(value)"
     }

@@ -11,7 +11,7 @@ description: 选择适合你的网络接管方式，并了解权限与安全边�
 
 在“快捷操作”中点击“系统代理”即可开启或关闭 macOS 系统代理。ClashBar 会使用当前配置中的 HTTP、SOCKS 或混合端口设置。
 
-第一次开启时，macOS 会要求管理员密码，把特权 helper 安装到 `/Library/PrivilegedHelperTools`。之后更新 ClashBar 不会覆盖这份 helper，系统代理开关不再因为换包而失效。helper 协议版本变化时，才会再要一次密码。TUN 的管理员授权仍然单独进行。
+系统代理使用一个需要管理员权限的特权 Helper。第一次使用前，请在“设置”的“系统代理 Helper”区域检查版本并点击“安装 Helper”；macOS 会要求管理员密码。Helper 会安装到 `/Library/PrivilegedHelperTools/com.clashbar.helper`，只负责修改 macOS 系统代理，mihomo 内核负责实际网络转发。之后更新 ClashBar 时，设置页会显示已安装版本与当前版本，只有 Helper 版本变化时才需要再次授权。未安装或版本过旧时，系统代理开关只会提示前往设置更新，不会在开关操作中隐式安装。
 
 ### 代理绕过
 

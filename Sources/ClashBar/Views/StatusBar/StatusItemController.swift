@@ -393,6 +393,9 @@ final class StatusItemController: NSObject {
 
         button.title = ""
         button.imagePosition = .imageOnly
+        button.toolTip = Bundle.main.bundleIdentifier == "com.clashbar.dev"
+            ? "ClashBar (Debug)"
+            : "ClashBar"
         button.target = self
         button.action = #selector(self.togglePopover(_:))
         button.sendAction(on: [.leftMouseUp])

@@ -12,6 +12,7 @@ protocol MihomoControlling: AnyObject, Sendable {
     var status: CoreLifecycleStatus { get }
     var isRunning: Bool { get }
     var detectedBinaryPath: String? { get }
+    func detectedBinaryVersion() async -> String?
     func validateConfigAsync(configPath: String) async throws
     @discardableResult
     func startAsync(configPath: String, controller: String) async throws -> CoreLifecycleStatus
@@ -29,6 +30,10 @@ protocol MihomoControlling: AnyObject, Sendable {
 }
 
 extension MihomoControlling {
+    func detectedBinaryVersion() async -> String? {
+        nil
+    }
+
     func validateConfig(configPath: String) async throws {
         try await self.validateConfigAsync(configPath: configPath)
     }
@@ -185,6 +190,13 @@ final class MihomoProcessManager: MihomoControlling, @unchecked Sendable {
 
     var detectedBinaryPath: String? {
         try? self.resolveMihomoBinary()
+    }
+
+    func detectedBinaryVersion() async -> String? {
+        try? await self.runBlockingOperation(on: self.validationQueue) {
+            guard let binary = try? self.resolveMihomoBinary() else { return nil }
+            return self.readBinaryVersion(at: binary)
+        }
     }
 
     var isRunning: Bool {
@@ -460,6 +472,47 @@ final class MihomoProcessManager: MihomoControlling, @unchecked Sendable {
 
     private func normalizedValidationTimeoutSeconds() -> Int {
         max(1, Int(self.configValidationTimeout.rounded(.awayFromZero)))
+    }
+
+    private func readBinaryVersion(at binary: String) -> String? {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: binary)
+        process.arguments = ["-v"]
+
+        let outputPipe = Pipe()
+        process.standardOutput = outputPipe
+        process.standardError = outputPipe
+
+        do {
+            try process.run()
+        } catch {
+            return nil
+        }
+
+        let didExit = self.waitForProcessExit(process, timeout: 2.0)
+        if !didExit {
+            process.terminate()
+            if !self.waitForProcessExit(process, timeout: 0.5) {
+                _ = Darwin.kill(process.processIdentifier, SIGKILL)
+                _ = self.waitForProcessExit(process, timeout: 0.5)
+            }
+        }
+
+        let output = outputPipe.fileHandleForReading.readDataToEndOfFile()
+        guard didExit, process.terminationStatus == 0 else { return nil }
+        return Self.parseBinaryVersion(String(data: output, encoding: .utf8) ?? "")
+    }
+
+    private static func parseBinaryVersion(_ output: String) -> String? {
+        let pattern = #"(?i)\bv?\d+(?:\.\d+)+(?:[-+][0-9A-Za-z.-]+)?"#
+        guard let expression = try? NSRegularExpression(pattern: pattern) else { return nil }
+        let fullRange = NSRange(output.startIndex..<output.endIndex, in: output)
+        guard let match = expression.firstMatch(in: output, range: fullRange),
+              let range = Range(match.range, in: output)
+        else {
+            return nil
+        }
+        return String(output[range])
     }
 
     private func resolveMihomoBinary() throws -> String {
