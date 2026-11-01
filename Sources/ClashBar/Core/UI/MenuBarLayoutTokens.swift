@@ -19,6 +19,14 @@ enum MenuBarLayoutTokens {
 
     static let rowLeadingIcon: CGFloat = 16
 
+    // Proxy content uses a calmer rhythm than the compact controls elsewhere in the panel.
+    static let proxySectionSpacing: CGFloat = 10
+    static let proxyQuickRowSpacing: CGFloat = 2
+    static let proxyQuickRowVerticalPadding: CGFloat = 4
+    static let proxyListItemSpacing: CGFloat = 4
+    static let proxyGroupRowHeight: CGFloat = 24
+    static let proxyNodeRowHeight: CGFloat = 24
+
     static let minimumScale: CGFloat = 0.85
 
     enum Opacity {

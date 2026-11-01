@@ -54,7 +54,7 @@
 "ui.action.flush_dns_cache" = "清理 DNS 缓存";
 "ui.action.open_core_directory" = "打开内核目录";
 "ui.action.open_webui" = "打开 WebUI";
-"ui.action.webui.metacubexd" = "MetaCubeXD";
+"ui.action.webui.metacubexd" = "Web面板";
 "ui.webui.unavailable" = "WebUI 不可用，请在设置中检查更新";
 "ui.action.enable_tun" = "开启 TUN 模式";
 "ui.action.disable_tun" = "关闭 TUN 模式";

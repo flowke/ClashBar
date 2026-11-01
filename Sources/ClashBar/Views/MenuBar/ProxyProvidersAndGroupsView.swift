@@ -7,7 +7,7 @@ extension ProxyTabView {
     var proxyProvidersSection: some View {
         let providers = proxyStore.sortedProxyProviderNames
 
-        return VStack(alignment: .leading, spacing: T.space6) {
+        return VStack(alignment: .leading, spacing: T.proxySectionSpacing) {
             self.nodesSectionHeader(
                 tr("ui.section.proxy_providers"),
                 symbol: "externaldrive.fill",
@@ -32,7 +32,7 @@ extension ProxyTabView {
             if providers.isEmpty {
                 emptyCard(tr("ui.empty.proxy_providers"))
             } else if !isProxyProvidersCollapsed {
-                VStack(spacing: T.space2) {
+                VStack(spacing: T.proxyListItemSpacing) {
                     ForEach(providers, id: \.self) { name in
                         self.proxyProviderRow(name: name, detail: proxyStore.proxyProvidersDetail[name])
                     }
@@ -195,7 +195,7 @@ extension ProxyTabView {
     var proxyGroupsSection: some View {
         let groups = rootViewModel.filteredProxyGroups
 
-        return VStack(alignment: .leading, spacing: T.space6) {
+        return VStack(alignment: .leading, spacing: T.proxySectionSpacing) {
             self.nodesSectionHeader(
                 tr("ui.section.proxy_groups"),
                 symbol: "point.3.connected.trianglepath.dotted",
@@ -264,7 +264,7 @@ extension ProxyTabView {
             if groups.isEmpty {
                 emptyCard(tr("ui.empty.proxy_groups"))
             } else {
-                VStack(spacing: T.space2) {
+                VStack(spacing: T.proxyListItemSpacing) {
                     ForEach(groups, id: \.name) { group in
                         self.proxyGroupInlineRow(group)
                     }
@@ -345,7 +345,7 @@ extension ProxyTabView {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
             }
-            .frame(height: T.compactRowHeight)
+            .frame(height: T.proxyGroupRowHeight)
             .padding(.horizontal, rowHorizontalPadding)
             .padding(.vertical, rowVerticalPadding)
             .background(nativeHoverRowBackground(isHovered))
@@ -619,7 +619,7 @@ private struct ProxyGroupPopoverNodeItem: View {
             self.latencyControl
                 .frame(width: 56, alignment: .trailing)
         }
-        .frame(height: T.compactRowHeight)
+        .frame(height: T.proxyNodeRowHeight)
         .padding(.horizontal, T.space4)
         .padding(.vertical, T.space1)
         .background(

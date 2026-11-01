@@ -127,7 +127,7 @@ extension MenuBarRootView {
                     let available = self.appViewModel.isWebUIAvailable(kind)
                     self.modeActionButton(
                         id: "webui-\(kind.id)",
-                        symbol: kind.symbolName,
+                        symbol: nil,
                         title: self.tr(kind.titleKey),
                         tint: nativeInfo,
                         isDisabled: self.isSwitchingMachine || !available,
@@ -175,7 +175,7 @@ extension MenuBarRootView {
 
     func modeActionButton(
         id: String,
-        symbol: String,
+        symbol: String?,
         title: String,
         tint: Color,
         isDisabled: Bool = false,
@@ -195,7 +195,7 @@ extension MenuBarRootView {
                     ProgressView()
                         .controlSize(.mini)
                         .tint(tint)
-                } else {
+                } else if let symbol {
                     Image(systemName: symbol)
                         .font(.app(size: T.FontSize.caption, weight: .semibold))
                         .foregroundStyle(isUnavailable ? tint.opacity(0.78) : disabled ? nativeTertiaryLabel : tint)

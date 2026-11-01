@@ -347,7 +347,7 @@ struct ProxyTabView: TranslatingView {
     }
 
     var proxyTabBody: some View {
-        VStack(alignment: .leading, spacing: T.space6) {
+        VStack(alignment: .leading, spacing: T.proxySectionSpacing) {
             self.trafficOverview
             self.proxyQuickRows
             if !self.proxyStore.sortedProxyProviderNames.isEmpty {
@@ -442,7 +442,7 @@ struct ProxyTabView: TranslatingView {
         let managedTargetDisplay = self.appViewModel.managedEndpointProxyCommandTargetDisplay()
         let showManagedTargetAction = localTargetDisplay != managedTargetDisplay
 
-        return VStack(spacing: 0) {
+        return VStack(spacing: T.proxyQuickRowSpacing) {
             if self.appViewModel.isRemoteTarget {
                 self.quickRowContent(
                     title: self.tr("ui.quick.switch_config"),
@@ -602,7 +602,7 @@ struct ProxyTabView: TranslatingView {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, T.space4)
-        .padding(.vertical, T.space2)
+        .padding(.vertical, T.proxyQuickRowVerticalPadding)
     }
 
     var systemProxyRowTitle: String {
@@ -673,7 +673,7 @@ struct ProxyTabView: TranslatingView {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, T.space4)
-        .padding(.vertical, T.space2)
+        .padding(.vertical, T.proxyQuickRowVerticalPadding)
     }
 
     var systemProxyInlineFailureText: String? {
