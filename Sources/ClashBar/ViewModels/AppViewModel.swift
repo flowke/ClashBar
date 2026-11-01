@@ -68,9 +68,34 @@ final class AppViewModel: ObservableObject {
     @Published var availableConfigFileNames: [String] = []
     @Published var remoteConfigMenuStates: [String: RemoteConfigMenuState] = [:]
     @Published var isPinned: Bool = false
+    @Published var pinnedProxyGroupName: String?
 
     func togglePinned() {
         self.isPinned.toggle()
+    }
+
+    func toggleProxyGroupPinned(named name: String) {
+        guard let normalizedName = name.trimmedNonEmpty else { return }
+
+        if self.pinnedProxyGroupName == normalizedName {
+            self.pinnedProxyGroupName = nil
+        } else {
+            self.pinnedProxyGroupName = normalizedName
+        }
+        self.persistPinnedProxyGroupName()
+    }
+
+    func isProxyGroupPinned(named name: String) -> Bool {
+        self.pinnedProxyGroupName == name
+    }
+
+    func validatePinnedProxyGroup(in groups: [ProxyGroup]) {
+        guard let pinnedProxyGroupName else { return }
+        guard groups.contains(where: { $0.name == pinnedProxyGroupName }) else {
+            self.pinnedProxyGroupName = nil
+            self.persistPinnedProxyGroupName()
+            return
+        }
     }
 
     let proxyStore = ProxyStore()
@@ -432,6 +457,7 @@ final class AppViewModel: ObservableObject {
     let uiLanguageKey = "clashbar.ui.language"
     let appearanceModeKey = "clashbar.ui.appearance.mode"
     let appThemeKey = "clashbar.ui.theme"
+    let pinnedProxyGroupNameKey = "clashbar.proxy.group.pinned_name.v1"
 
     let maxInMemoryLogEntries = 5000
     let hiddenPanelMaxInMemoryLogEntries = 20

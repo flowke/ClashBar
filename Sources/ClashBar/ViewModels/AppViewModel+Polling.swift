@@ -462,6 +462,7 @@ extension AppViewModel {
         }
 
         self.proxyGroups = groups
+        self.validatePinnedProxyGroup(in: groups)
         self.proxyDelaySamples = Self.mergeProxyDelaySamples(
             api: delaySamples,
             previous: self.proxyDelaySamples)

@@ -303,13 +303,12 @@ final class StatusItemController: NSObject {
 
     @objc
     private func togglePopover(_ sender: AnyObject?) {
-        guard let button = statusItem.button else { return }
-
-        if self.panel.isVisible {
+        if self.panel.isVisible || self.appViewModel.isPanelPresented {
             self.closePopover(nil)
             return
         }
 
+        guard let button = statusItem.button else { return }
         self.openPopover(relativeTo: button)
     }
 
@@ -535,13 +534,28 @@ final class StatusItemController: NSObject {
             .leftMouseDown,
             .rightMouseDown,
         ]) { [weak self] _ in
+            let clickLocation = NSEvent.mouseLocation
             DispatchQueue.main.async {
                 guard let self else { return }
+                guard !self.isStatusItemLocation(clickLocation) else { return }
                 if !self.appViewModel.isPinned {
                     self.closePopover(nil)
                 }
             }
         }
+    }
+
+    private func isStatusItemLocation(_ location: NSPoint) -> Bool {
+        guard
+            let button = self.statusItem.button,
+            let window = button.window
+        else {
+            return false
+        }
+
+        let buttonFrameInWindow = button.convert(button.bounds, to: nil)
+        let buttonFrameOnScreen = window.convertToScreen(buttonFrameInWindow)
+        return buttonFrameOnScreen.contains(location)
     }
 
     private func stopGlobalMonitor() {

@@ -125,11 +125,9 @@ final class WebUIAssetService {
                 try self.fileManager.createDirectory(
                     at: self.assetDirectoryURL(for: kind),
                     withIntermediateDirectories: true)
-                let bundledResource = URL(fileURLWithPath: kind.bundledArchiveResourcePath)
                 if !self.hasUsableIndex(for: kind),
-                   let bundledURL = Bundle.module.url(
-                       forResource: bundledResource.deletingPathExtension().lastPathComponent,
-                       withExtension: bundledResource.pathExtension),
+                   let bundledURL = AppResourceBundleLocator.bundledResourceURL(
+                       named: kind.bundledArchiveResourcePath),
                    let bundledData = try? Data(contentsOf: bundledURL)
                 {
                     try self.installArchive(

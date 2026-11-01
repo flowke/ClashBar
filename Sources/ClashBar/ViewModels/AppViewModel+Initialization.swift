@@ -70,6 +70,7 @@ extension AppViewModel {
         self.remoteConfigSubscriptions = loadPersistedRemoteConfigSubscriptions()
         pruneRemoteConfigSubscriptionsIfNeeded()
         restartRemoteConfigBackgroundTasksIfNeeded()
+        self.pinnedProxyGroupName = self.loadPersistedPinnedProxyGroupName()
         self.ssidStrategyRules = loadPersistedSSIDStrategyRules()
         self.pruneSSIDStrategyRulesIfNeeded()
         self.remoteMachineStore.resetActiveTarget()

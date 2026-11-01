@@ -8,6 +8,7 @@ struct AttachedPopoverMenu<Label: View, Content: View>: View {
     let width: CGFloat?
     let maxHeight: CGFloat?
     let expandAnchor: Bool
+    let isPinned: Bool
     let onWillPresent: (() -> Void)?
     let label: (_ isHovered: Bool) -> Label
     let content: (_ dismiss: @escaping () -> Void) -> Content
@@ -22,6 +23,7 @@ struct AttachedPopoverMenu<Label: View, Content: View>: View {
         width: CGFloat? = nil,
         maxHeight: CGFloat? = nil,
         expandAnchor: Bool = true,
+        isPinned: Bool = false,
         onWillPresent: (() -> Void)? = nil,
         @ViewBuilder label: @escaping (_ isHovered: Bool) -> Label,
         @ViewBuilder content: @escaping (_ dismiss: @escaping () -> Void) -> Content)
@@ -29,6 +31,7 @@ struct AttachedPopoverMenu<Label: View, Content: View>: View {
         self.width = width
         self.maxHeight = maxHeight
         self.expandAnchor = expandAnchor
+        self.isPinned = isPinned
         self.onWillPresent = onWillPresent
         self.label = label
         self.content = content
@@ -39,10 +42,24 @@ struct AttachedPopoverMenu<Label: View, Content: View>: View {
             self.anchorLabel
         }
         .buttonStyle(.plain)
+        .onAppear {
+            if self.isPinned {
+                self.requestPinnedOpen()
+            }
+        }
+        .onChange(of: self.isPinned) { isPinned in
+            if isPinned {
+                self.requestPinnedOpen()
+            } else {
+                self.suppressAutoOpen = false
+                self.isPopoverRequested = false
+                self.isAnchorHovered = false
+            }
+        }
         .onHover { hovering in
             self.isAnchorHovered = hovering
 
-            if hovering, !self.suppressAutoOpen {
+            if hovering, (!self.suppressAutoOpen || self.isPinned) {
                 if self.shouldBuildPopoverContent {
                     self.isPopoverRequested = true
                 } else {
@@ -57,7 +74,9 @@ struct AttachedPopoverMenu<Label: View, Content: View>: View {
             } else {
                 self.popoverOpenTask?.cancel()
                 self.popoverOpenTask = nil
-                self.isPopoverRequested = false
+                if !self.isPinned {
+                    self.isPopoverRequested = false
+                }
             }
             if !hovering {
                 self.suppressAutoOpen = false
@@ -72,6 +91,7 @@ struct AttachedPopoverMenu<Label: View, Content: View>: View {
                 anchorHovered: self.$isAnchorHovered,
                 popoverRequested: self.$isPopoverRequested,
                 suppressAutoOpen: self.$suppressAutoOpen,
+                isPinned: self.isPinned,
                 width: self.width,
                 maxHeight: self.maxHeight,
                 onVisibilityChanged: { visible in
@@ -129,6 +149,15 @@ struct AttachedPopoverMenu<Label: View, Content: View>: View {
         self.isPopoverRequested = true
     }
 
+    private func requestPinnedOpen() {
+        self.popoverOpenTask?.cancel()
+        self.popoverOpenTask = nil
+        self.onWillPresent?()
+        self.suppressAutoOpen = false
+        self.shouldBuildPopoverContent = true
+        self.isPopoverRequested = true
+    }
+
     private func activateAnchor() {
         self.popoverOpenTask?.cancel()
         self.popoverOpenTask = nil
@@ -140,6 +169,15 @@ struct AttachedPopoverMenu<Label: View, Content: View>: View {
     private func dismissPopover() {
         self.popoverOpenTask?.cancel()
         self.popoverOpenTask = nil
+
+        if self.isPinned {
+            self.suppressAutoOpen = false
+            self.shouldBuildPopoverContent = true
+            self.isPopoverRequested = true
+            self.isAnchorHovered = true
+            return
+        }
+
         self.shouldBuildPopoverContent = false
         self.isPopoverRequested = false
         self.suppressAutoOpen = true
@@ -266,6 +304,8 @@ struct AttachedPopoverMenuDivider: View {
 
 @MainActor
 private protocol SideAttachedPopoverManaging: AnyObject {
+    var isPinned: Bool { get }
+
     func deactivateAndClose()
 }
 
@@ -279,6 +319,7 @@ private struct SideAttachedPopoverHost<Content: View>: NSViewRepresentable {
     @Binding var anchorHovered: Bool
     @Binding var popoverRequested: Bool
     @Binding var suppressAutoOpen: Bool
+    let isPinned: Bool
     let width: CGFloat?
     let maxHeight: CGFloat?
     let onVisibilityChanged: ((Bool) -> Void)?
@@ -289,6 +330,7 @@ private struct SideAttachedPopoverHost<Content: View>: NSViewRepresentable {
             anchorHovered: self.$anchorHovered,
             popoverRequested: self.$popoverRequested,
             suppressAutoOpen: self.$suppressAutoOpen,
+            isPinned: self.isPinned,
             onVisibilityChanged: self.onVisibilityChanged,
             content: self.content)
     }
@@ -301,6 +343,7 @@ private struct SideAttachedPopoverHost<Content: View>: NSViewRepresentable {
         context.coordinator.anchorHovered = self.$anchorHovered
         context.coordinator.popoverRequested = self.$popoverRequested
         context.coordinator.suppressAutoOpen = self.$suppressAutoOpen
+        context.coordinator.isPinned = self.isPinned
         context.coordinator.width = self.width
         context.coordinator.maxHeight = self.maxHeight
         context.coordinator.onVisibilityChanged = self.onVisibilityChanged
@@ -317,6 +360,7 @@ private struct SideAttachedPopoverHost<Content: View>: NSViewRepresentable {
         var anchorHovered: Binding<Bool>
         var popoverRequested: Binding<Bool>
         var suppressAutoOpen: Binding<Bool>
+        var isPinned: Bool
         var width: CGFloat?
         var maxHeight: CGFloat?
         var onVisibilityChanged: ((Bool) -> Void)?
@@ -340,12 +384,14 @@ private struct SideAttachedPopoverHost<Content: View>: NSViewRepresentable {
             anchorHovered: Binding<Bool>,
             popoverRequested: Binding<Bool>,
             suppressAutoOpen: Binding<Bool>,
+            isPinned: Bool,
             onVisibilityChanged: ((Bool) -> Void)?,
             content: Content)
         {
             self.anchorHovered = anchorHovered
             self.popoverRequested = popoverRequested
             self.suppressAutoOpen = suppressAutoOpen
+            self.isPinned = isPinned
             self.onVisibilityChanged = onVisibilityChanged
             self.hostingController = NSHostingController(rootView: content)
             self.panel = SideAttachedMenuPanel(
@@ -414,7 +460,10 @@ private struct SideAttachedPopoverHost<Content: View>: NSViewRepresentable {
             }
 
             self.panel.setFrame(placement.frame, display: true)
-            self.ensureExclusiveVisibility()
+            guard self.ensureExclusiveVisibility() else {
+                self.closeNow()
+                return
+            }
 
             if !self.panel.isVisible {
                 self.panel.orderFront(nil)
@@ -428,6 +477,10 @@ private struct SideAttachedPopoverHost<Content: View>: NSViewRepresentable {
             guard self.panel.isVisible else {
                 self.cancelPendingClose()
                 self.stopLocalMouseMonitor()
+                return
+            }
+            if self.isPinned {
+                self.cancelPendingClose()
                 return
             }
             if self.panelHovering {
@@ -464,11 +517,15 @@ private struct SideAttachedPopoverHost<Content: View>: NSViewRepresentable {
             }
         }
 
-        private func ensureExclusiveVisibility() {
+        private func ensureExclusiveVisibility() -> Bool {
             if let active = SideAttachedPopoverRegistry.activeCoordinator, active !== self {
+                if active.isPinned && !self.isPinned {
+                    return false
+                }
                 active.deactivateAndClose()
             }
             SideAttachedPopoverRegistry.activeCoordinator = self
+            return true
         }
 
         func deactivateAndClose() {

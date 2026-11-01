@@ -50,6 +50,37 @@ enum AppResourceBundleLocator {
         return nil
     }
 
+    static func bundledResourceURL(named name: String, fileManager: FileManager = .default) -> URL? {
+        let relativePaths = [
+            name,
+            "WebUI/\(name)",
+            "Resources/\(name)",
+            "Resources/WebUI/\(name)",
+        ]
+
+        for root in self.candidateResourceRoots() {
+            for relativePath in relativePaths {
+                let candidate = root.appendingPathComponent(relativePath, isDirectory: false)
+                if fileManager.fileExists(atPath: candidate.path) {
+                    return candidate
+                }
+            }
+        }
+
+        #if SWIFT_PACKAGE
+        let fileURL = URL(fileURLWithPath: name)
+        if let bundledURL = Bundle.module.url(
+            forResource: fileURL.deletingPathExtension().lastPathComponent,
+            withExtension: fileURL.pathExtension),
+           fileManager.fileExists(atPath: bundledURL.path)
+        {
+            return bundledURL
+        }
+        #endif
+
+        return nil
+    }
+
     private static func candidateModuleBundleURLs() -> [URL] {
         var urls: [URL] = []
 

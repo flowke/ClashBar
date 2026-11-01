@@ -18,14 +18,11 @@ struct SSIDMonitorSnapshot: Equatable {
 
 enum SSIDMonitorServiceError: LocalizedError {
     case missingLocationUsageDescription
-    case developmentBundleBootstrapFailed(String)
 
     var errorDescription: String? {
         switch self {
         case .missingLocationUsageDescription:
             "Missing NSLocationWhenInUseUsageDescription in the app bundle."
-        case let .developmentBundleBootstrapFailed(reason):
-            "Failed to prepare a development app bundle for Wi-Fi permission: \(reason)"
         }
     }
 }
@@ -36,9 +33,6 @@ final class SSIDMonitorService: NSObject {
 
     private static let monitoredEventTypes: [CWEventType] = [.ssidDidChange, .linkDidChange]
     private static let locationUsageDescriptionKey = "NSLocationWhenInUseUsageDescription"
-    private static let developmentBundleName = "ClashBar Dev.app"
-    private static let developmentLocationUsageDescription =
-        "ClashBar uses your current Wi-Fi name to switch proxy config profiles automatically."
 
     private var wifiClient: CWWiFiClient
     private let locationManager: CLLocationManager
@@ -93,16 +87,6 @@ final class SSIDMonitorService: NSObject {
         self.emitCurrentSnapshot()
     }
 
-    var shouldBootstrapDevelopmentBundle: Bool {
-        guard Bundle.main.bundleURL.pathExtension != "app" else {
-            return false
-        }
-        guard CLLocationManager.locationServicesEnabled() else {
-            return false
-        }
-        return !self.hasLocationUsageDescription()
-    }
-
     func requestAuthorizationIfNeeded() {
         self.startMonitoringEventsIfNeeded()
 
@@ -113,9 +97,6 @@ final class SSIDMonitorService: NSObject {
 
         if self.locationManager.authorizationStatus == .notDetermined {
             guard self.hasLocationUsageDescription() else {
-                if self.bootstrapDevelopmentAppBundleIfNeeded() {
-                    return
-                }
                 self.errorHandler?(SSIDMonitorServiceError.missingLocationUsageDescription)
                 self.emitCurrentSnapshot()
                 return
@@ -196,90 +177,6 @@ final class SSIDMonitorService: NSObject {
         return value.trimmedNonEmpty != nil
     }
 
-    private func bootstrapDevelopmentAppBundleIfNeeded() -> Bool {
-        guard Bundle.main.bundleURL.pathExtension != "app" else {
-            return false
-        }
-
-        do {
-            let appURL = try self.prepareDevelopmentAppBundle()
-            let configuration = NSWorkspace.OpenConfiguration()
-            configuration.activates = false
-            let errorHandler = self.errorHandler
-            NSWorkspace.shared.openApplication(at: appURL, configuration: configuration) { application, error in
-                DispatchQueue.main.async {
-                    if let error {
-                        errorHandler?(SSIDMonitorServiceError.developmentBundleBootstrapFailed(
-                            "The development app could not be launched: \(error.localizedDescription)"))
-                        return
-                    }
-
-                    guard let application, application.isFinishedLaunching, !application.isTerminated else {
-                        errorHandler?(SSIDMonitorServiceError.developmentBundleBootstrapFailed(
-                            "The development app exited before it finished launching."))
-                        return
-                    }
-
-                    NSApp.terminate(nil)
-                }
-            }
-            return true
-        } catch {
-            self.errorHandler?(error)
-            self.emitCurrentSnapshot()
-            return true
-        }
-    }
-
-    private func prepareDevelopmentAppBundle() throws -> URL {
-        let fileManager = FileManager.default
-        let executableURL = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath()
-        let buildDirectoryURL = executableURL.deletingLastPathComponent()
-        let appURL = buildDirectoryURL.appendingPathComponent(Self.developmentBundleName, isDirectory: true)
-        let contentsURL = appURL.appendingPathComponent("Contents", isDirectory: true)
-        let macOSURL = contentsURL.appendingPathComponent("MacOS", isDirectory: true)
-        let resourcesURL = contentsURL.appendingPathComponent("Resources", isDirectory: true)
-        let bundledExecutableURL = macOSURL.appendingPathComponent(executableURL.lastPathComponent, isDirectory: false)
-        let resourceBundleURL = AppResourceBundleLocator.moduleBundle()?.bundleURL
-
-        if fileManager.fileExists(atPath: appURL.path) {
-            try fileManager.removeItem(at: appURL)
-        }
-
-        try fileManager.createDirectory(at: macOSURL, withIntermediateDirectories: true)
-        try fileManager.createDirectory(at: resourcesURL, withIntermediateDirectories: true)
-        // The executable must live inside the app bundle so Bundle.main can find Info.plist.
-        try fileManager.copyItem(at: executableURL, to: bundledExecutableURL)
-        if let resourceBundleURL, fileManager.fileExists(atPath: resourceBundleURL.path) {
-            let bundledResourceURL = resourcesURL.appendingPathComponent(
-                resourceBundleURL.lastPathComponent,
-                isDirectory: true)
-            try fileManager.createSymbolicLink(at: bundledResourceURL, withDestinationURL: resourceBundleURL)
-        }
-
-        let infoPlist = """
-        <?xml version="1.0" encoding="UTF-8"?>
-        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-        <plist version="1.0"><dict>
-        <key>CFBundleDevelopmentRegion</key><string>zh-Hans</string>
-        <key>CFBundleExecutable</key><string>\(executableURL.lastPathComponent)</string>
-        <key>CFBundleIdentifier</key><string>com.clashbar.dev</string>
-        <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
-        <key>CFBundleName</key><string>ClashBar</string>
-        <key>CFBundlePackageType</key><string>APPL</string>
-        <key>CFBundleShortVersionString</key><string>1.0</string>
-        <key>CFBundleVersion</key><string>1</string>
-        <key>LSUIElement</key><true/>
-        <key>NSAppTransportSecurity</key><dict><key>NSAllowsArbitraryLoads</key><true/></dict>
-        <key>NSLocationWhenInUseUsageDescription</key><string>\(Self.developmentLocationUsageDescription)</string>
-        </dict></plist>
-        """
-        try infoPlist.write(
-            to: contentsURL.appendingPathComponent("Info.plist", isDirectory: false),
-            atomically: true,
-            encoding: .utf8)
-        return appURL
-    }
 }
 
 extension SSIDMonitorService: CLLocationManagerDelegate {

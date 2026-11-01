@@ -289,8 +289,9 @@ extension ProxyTabView {
         let hasLeadingIcon = iconURL != nil
         let rowHorizontalPadding = T.space4
         let rowVerticalPadding: CGFloat = T.space1
+        let isPinned = appViewModel.isProxyGroupPinned(named: group.name)
 
-        return AttachedPopoverMenu { isHovered in
+        return AttachedPopoverMenu(isPinned: isPinned) { isHovered in
             GeometryReader { geo in
                 let columns = self.proxyGroupMainColumnWidths(
                     totalWidth: geo.size.width,
@@ -335,13 +336,17 @@ extension ProxyTabView {
                     }
                     .frame(width: columns.delay, alignment: .trailing)
 
-                    self.providerActionButton(
-                        .healthcheck,
-                        isLoading: proxyStore.groupLatencyLoading.contains(group.name))
-                    {
-                        await appViewModel.refreshGroupLatency(group)
+                    HStack(spacing: T.space2) {
+                        self.providerActionButton(
+                            .healthcheck,
+                            isLoading: proxyStore.groupLatencyLoading.contains(group.name))
+                        {
+                            await appViewModel.refreshGroupLatency(group)
+                        }
+
+                        self.proxyGroupPinButton(groupName: group.name, isPinned: isPinned)
                     }
-                    .frame(width: 18, alignment: .center)
+                    .frame(width: 40, alignment: .trailing)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
             }
@@ -383,10 +388,30 @@ extension ProxyTabView {
                         await appViewModel.refreshProxyLatency(group: group.name, node: node)
                     },
                     action: {
-                        dismiss()
+                        if !appViewModel.isProxyGroupPinned(named: group.name) {
+                            dismiss()
+                        }
                         Task { await appViewModel.switchProxy(group: group.name, target: node) }
                     })
             }
+        }
+    }
+
+    func proxyGroupPinButton(groupName: String, isPinned: Bool) -> some View {
+        let label = tr(isPinned ? "ui.action.unpin_proxy_group" : "ui.action.pin_proxy_group")
+        let tint = isPinned
+            ? nativeInfo.opacity(T.Opacity.solid)
+            : nativeSecondaryLabel
+
+        return self.compactAsyncIconButton(
+            symbol: isPinned ? "pin.fill" : "pin",
+            label: label,
+            tint: tint,
+            baseTint: tint,
+            size: 18,
+            fontSize: T.FontSize.caption)
+        {
+            appViewModel.toggleProxyGroupPinned(named: groupName)
         }
     }
 
@@ -395,7 +420,7 @@ extension ProxyTabView {
         hasLeadingIcon: Bool) -> (name: CGFloat, current: CGFloat, delay: CGFloat)
     {
         let iconWidth: CGFloat = hasLeadingIcon ? T.rowLeadingIcon : 0
-        let actionWidth: CGFloat = 18
+        let actionWidth: CGFloat = 40
         let spacingCount: CGFloat = hasLeadingIcon ? 4 : 3
         let spacing = T.space1 * spacingCount
         let available = max(0, totalWidth - iconWidth - actionWidth - spacing)

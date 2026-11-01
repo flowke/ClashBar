@@ -91,6 +91,19 @@ extension AppViewModel {
         self.encodeToDefaults(self.lastSavedSystemProxyExceptions, key: systemProxyExceptionsKey)
     }
 
+    func loadPersistedPinnedProxyGroupName() -> String? {
+        self.defaults.string(forKey: self.pinnedProxyGroupNameKey)?.trimmedNonEmpty
+    }
+
+    func persistPinnedProxyGroupName() {
+        guard let pinnedProxyGroupName = self.pinnedProxyGroupName?.trimmedNonEmpty else {
+            self.defaults.removeObject(forKey: self.pinnedProxyGroupNameKey)
+            return
+        }
+
+        self.defaults.set(pinnedProxyGroupName, forKey: self.pinnedProxyGroupNameKey)
+    }
+
     func decodeFromDefaults<Value: Decodable>(_ type: Value.Type, key: String) -> Value? {
         guard let data = defaults.data(forKey: key) else { return nil }
         return try? JSONDecoder().decode(Value.self, from: data)

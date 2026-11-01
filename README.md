@@ -124,6 +124,8 @@ brew uninstall --zap --cask clashbar
 
 ## 🛠️ 开发构建
 
+日常 Xcode 调试请打开 `ClashBar.xcodeproj`，选择 `ClashBar` Scheme 后运行。该 Scheme 会直接构建并启动固定的 `ClashBar Dev.app`，因此 Xcode 可以在再次点击 Run 时正确停止并替换上一次运行的实例。它与 SwiftPM 的源码保持一致，但不再依赖运行时临时创建开发 App bundle。
+
 ```sh
 # 依赖：Xcode / Swift 6.2+、macOS 13+
 make build                 # 产出 dist/ClashBar.app（默认不含 Core）

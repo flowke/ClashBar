@@ -447,6 +447,8 @@
 "fmt.expiry_short.long_term" = "Permanent";
 "ui.action.pin" = "Pin";
 "ui.action.unpin" = "Unpin";
+"ui.action.pin_proxy_group" = "Pin proxy group";
+"ui.action.unpin_proxy_group" = "Unpin proxy group";
 
 // Remote config subscription
 "ui.quick.remote.auto_update_label" = "Auto Update";
