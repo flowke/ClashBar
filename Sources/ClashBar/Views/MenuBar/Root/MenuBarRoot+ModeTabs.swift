@@ -31,7 +31,7 @@ extension MenuBarRootView {
         }
 
         var rowHeight: CGFloat {
-            self.isMode ? 28 : 26
+            self.isMode ? 24 : 26
         }
 
         var contentVerticalPadding: CGFloat {
@@ -89,7 +89,7 @@ extension MenuBarRootView {
                 symbol: "bolt.fill")
         }
         .padding(.horizontal, 5)
-        .padding(.vertical, T.space4)
+        .padding(.vertical, T.space2)
         .frame(width: 170)
         .background {
             RoundedRectangle(cornerRadius: 11, style: .continuous)
@@ -112,14 +112,31 @@ extension MenuBarRootView {
             && !self.appViewModel.isMihomoCoreAvailable
 
         return HStack(spacing: T.space2) {
-            self.modeActionButton(
-                id: "webui",
-                symbol: "globe.americas.fill",
-                title: self.tr("ui.action.open_webui"),
-                tint: nativeInfo,
-                isDisabled: self.isSwitchingMachine)
-            {
-                self.appViewModel.openControllerWebUI()
+            if self.appViewModel.isRemoteTarget {
+                self.modeActionButton(
+                    id: "webui",
+                    symbol: "globe.americas.fill",
+                    title: self.tr("ui.action.open_webui"),
+                    tint: nativeInfo,
+                    isDisabled: self.isSwitchingMachine)
+                {
+                    self.appViewModel.openControllerWebUI()
+                }
+            } else {
+                ForEach(WebUIKind.allCases) { kind in
+                    let available = self.appViewModel.isWebUIAvailable(kind)
+                    self.modeActionButton(
+                        id: "webui-\(kind.id)",
+                        symbol: kind.symbolName,
+                        title: self.tr(kind.titleKey),
+                        tint: nativeInfo,
+                        isDisabled: self.isSwitchingMachine || !available,
+                        isUnavailable: !available,
+                        helpText: !available ? self.tr("ui.webui.unavailable") : nil)
+                    {
+                        self.appViewModel.openWebUI(kind)
+                    }
+                }
             }
 
             self.modeActionButton(

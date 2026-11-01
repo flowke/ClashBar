@@ -16,6 +16,7 @@ final class AppViewModel: ObservableObject {
     @Published var controllerUIURL: String =
         "https://metacubex.github.io/metacubexd/#/setup?http=true&hostname=127.0.0.1&port=9090&secret="
     @Published var controllerSecret: String?
+    @Published var webUIStatuses: [WebUIKind: WebUIAssetStatus] = [:]
     var hasConfiguredExternalUI = false
     var configuredExternalUIName: String?
 
@@ -376,6 +377,7 @@ final class AppViewModel: ObservableObject {
     let ssidMonitorService: SSIDMonitorService
     let remoteMachineStore: RemoteMachineStore
     let proxyGroupIconCache: ProxyGroupIconCache
+    let webUIAssetService: WebUIAssetService
     var apiClient: MihomoAPIService?
 
     var mediumFrequencyTask: Task<Void, Never>?
@@ -488,6 +490,7 @@ final class AppViewModel: ObservableObject {
         self.ssidMonitorService = dependencies.ssidMonitorService
         self.remoteMachineStore = dependencies.remoteMachineStore
         self.proxyGroupIconCache = dependencies.proxyGroupIconCache
+        self.webUIAssetService = dependencies.webUIAssetService
         self.clashbarLogStore = dependencies.clashbarLogStore
         self.mihomoLogStore = dependencies.mihomoLogStore
         self.clashbarLogFileURL = dependencies.clashbarLogStore.logFileURL
@@ -500,6 +503,8 @@ final class AppViewModel: ObservableObject {
         configureStreamCoordinator()
         refreshLaunchAtLoginStatus()
         self.configureManagedProcessCallbacks()
+        self.webUIAssetService.bootstrap()
+        self.webUIStatuses = self.webUIAssetService.statuses
     }
 
     isolated deinit {

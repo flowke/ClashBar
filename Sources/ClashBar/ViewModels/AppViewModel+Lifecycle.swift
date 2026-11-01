@@ -49,6 +49,8 @@ extension AppViewModel {
 
             settingsOverlay = try await prepareTunOverlayForCoreStartup(settingsOverlay)
 
+            self.prepareManagedWebUIConfiguration(at: configPath)
+
             guard await self.validateConfigBeforeCoreLaunch(configPath: configPath) else {
                 preserveLocalSettingsOnNextSync = false
                 if trigger == .auto {
@@ -137,6 +139,8 @@ extension AppViewModel {
                 self.reportCoreRestartFailure(message: tr("log.start.no_config"))
                 return
             }
+
+            self.prepareManagedWebUIConfiguration(at: configPath)
 
             guard await self.validateConfigBeforeCoreLaunch(configPath: configPath) else {
                 preserveLocalSettingsOnNextSync = false

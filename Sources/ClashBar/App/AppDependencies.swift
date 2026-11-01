@@ -12,6 +12,7 @@ struct AppDependencies {
     let ssidMonitorService: SSIDMonitorService
     let remoteMachineStore: RemoteMachineStore
     let proxyGroupIconCache: ProxyGroupIconCache
+    let webUIAssetService: WebUIAssetService
     let clashbarLogStore: AppLogStore
     let mihomoLogStore: AppLogStore
 
@@ -47,6 +48,9 @@ struct AppDependencies {
             remoteMachineStore: RemoteMachineStore(session: sharedSession),
             proxyGroupIconCache: ProxyGroupIconCache(
                 iconDirectory: workingDirectoryManager.iconDirectoryURL,
+                session: sharedSession),
+            webUIAssetService: WebUIAssetService(
+                workingDirectoryManager: workingDirectoryManager,
                 session: sharedSession),
             clashbarLogStore: clashbarLogStore,
             mihomoLogStore: mihomoLogStore)

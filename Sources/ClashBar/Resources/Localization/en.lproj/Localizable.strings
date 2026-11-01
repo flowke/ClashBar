@@ -52,6 +52,8 @@
 "ui.action.flush_dns_cache" = "Flush DNS Cache";
 "ui.action.open_core_directory" = "Open Core Directory";
 "ui.action.open_webui" = "Open WebUI";
+"ui.action.webui.metacubexd" = "MetaCubeXD";
+"ui.webui.unavailable" = "WebUI is unavailable. Check for an update in Settings.";
 "ui.action.enable_tun" = "Enable TUN Mode";
 "ui.action.disable_tun" = "Disable TUN Mode";
 "ui.action.upgrade_core" = "Upgrade Core";
@@ -77,6 +79,18 @@
 "ui.section.local_app_settings" = "App Settings (Local)";
 "ui.section.core_settings" = "Core Settings";
 "ui.section.core_settings_remote" = "Core Settings (Remote)";
+"ui.section.webui" = "WebUI Resources";
+"ui.webui.current_version" = "Current version";
+"ui.webui.latest_version" = "Latest version";
+"ui.webui.last_checked" = "Last checked";
+"ui.webui.never_checked" = "Never";
+"ui.webui.not_installed" = "Not installed";
+"ui.webui.check" = "Check for updates";
+"ui.webui.update" = "Update WebUI";
+"ui.webui.updating" = "Updating...";
+"ui.webui.checking" = "Checking...";
+"ui.webui.available" = "Ready";
+"ui.webui.failed" = "Unavailable";
 
 "ui.quick.switch_config" = "Switch Config";
 "ui.quick.system_proxy" = "System Proxy";

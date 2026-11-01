@@ -89,7 +89,11 @@ extension AppViewModel {
         self.flushPendingTrafficSnapshotIfNeeded(immediately: true)
         self.scheduleRefreshForActivatedTab(activeMenuTab)
         Task { [weak self] in
-            await self?.refreshLatestAppRelease()
+            guard let self else { return }
+            await self.refreshLatestAppRelease()
+            for kind in WebUIKind.allCases {
+                await self.checkForWebUIUpdates(kind)
+            }
         }
     }
 

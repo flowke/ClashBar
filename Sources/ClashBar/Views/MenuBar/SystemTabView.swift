@@ -336,6 +336,97 @@ struct SystemTabView: TranslatingView {
             : "arrow.triangle.2.circlepath"
     }
 
+    func webUIResourceCard() -> some View {
+        VStack(spacing: 0) {
+            self.settingsCardHeader(self.tr("ui.section.webui"), symbol: "rectangle.3.group")
+            ForEach(WebUIKind.allCases) { kind in
+                self.webUIResourceRow(kind)
+            }
+        }
+    }
+
+    func webUIResourceRow(_ kind: WebUIKind) -> some View {
+        let status = self.appViewModel.webUIStatuses[kind] ?? .unavailable(for: kind)
+        let isChecking = status.state == .checking
+        let isUpdating = status.state == .updating
+        let hasUpdate = status.state == .updateAvailable
+        let current = status.currentVersion ?? self.tr("ui.webui.not_installed")
+        let latest = status.latestVersion ?? self.tr("ui.common.unknown")
+        let checked = status.lastCheckedAt.map {
+            $0.formatted(date: .abbreviated, time: .shortened)
+        } ?? self.tr("ui.webui.never_checked")
+
+        return VStack(alignment: .leading, spacing: T.space4) {
+            HStack(spacing: T.space8) {
+                self.settingsRowLabel(symbol: kind.symbolName, title: self.tr(kind.titleKey))
+                    .layoutPriority(1)
+                Spacer(minLength: 0)
+                Text(hasUpdate ? self.tr("ui.webui.update") : status.state == .failed
+                    ? self.tr("ui.webui.failed") : self.tr("ui.webui.available"))
+                    .font(.app(size: T.FontSize.caption, weight: .semibold))
+                    .foregroundStyle(hasUpdate ? nativeWarning : status.state == .failed
+                        ? nativeCritical : nativeSecondaryLabel)
+            }
+
+            self.webUIInfoLine(self.tr("ui.webui.current_version"), value: current)
+            self.webUIInfoLine(self.tr("ui.webui.latest_version"), value: latest)
+            self.webUIInfoLine(self.tr("ui.webui.last_checked"), value: checked)
+
+            HStack(spacing: T.space4) {
+                Button {
+                    Task { await self.appViewModel.checkForWebUIUpdates(kind) }
+                } label: {
+                    Label(
+                        isChecking ? self.tr("ui.webui.checking") : self.tr("ui.webui.check"),
+                        systemImage: isChecking ? "arrow.triangle.2.circlepath" : "magnifyingglass")
+                        .frame(maxWidth: .infinity, alignment: .center)
+                }
+                .appBorderedButtonStyle()
+                .controlSize(.small)
+                .disabled(isChecking || isUpdating)
+
+                Button {
+                    Task { await self.appViewModel.updateWebUI(kind) }
+                } label: {
+                    HStack(spacing: T.space4) {
+                        if isUpdating {
+                            ProgressView().controlSize(.mini)
+                        } else {
+                            Image(systemName: hasUpdate ? "arrow.down.circle" : "arrow.triangle.2.circlepath")
+                        }
+                        Text(isUpdating ? self.tr("ui.webui.updating") : self.tr("ui.webui.update"))
+                    }
+                    .frame(maxWidth: .infinity, alignment: .center)
+                }
+                .appBorderedButtonStyle()
+                .controlSize(.small)
+                .disabled(isChecking || isUpdating)
+            }
+
+            if let error = status.errorMessage?.trimmedNonEmpty {
+                Text(error)
+                    .font(.app(size: T.FontSize.caption, weight: .regular))
+                    .foregroundStyle(nativeCritical.opacity(T.Opacity.solid))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .menuRowPadding(vertical: T.space4)
+    }
+
+    func webUIInfoLine(_ title: String, value: String) -> some View {
+        HStack(spacing: T.space8) {
+            Text(title)
+                .font(.app(size: T.FontSize.caption, weight: .regular))
+                .foregroundStyle(nativeSecondaryLabel)
+            Spacer(minLength: 0)
+            Text(value)
+                .font(.app(size: T.FontSize.caption, weight: .medium))
+                .foregroundStyle(nativePrimaryLabel)
+                .lineLimit(1)
+                .truncationMode(.middle)
+        }
+    }
+
     var systemProxyHelperInstallFeedback: (message: String, color: Color, symbol: String)? {
         guard let message = self.appViewModel.systemProxyHelperInstallMessage?.trimmedNonEmpty else {
             return nil
@@ -611,6 +702,8 @@ struct SystemTabView: TranslatingView {
                 .opacity(self.isExceptionsExpanded ? 1 : 0)
             }
             .animation(.spring(response: 0.30, dampingFraction: 0.80), value: self.isExceptionsExpanded)
+
+            self.webUIResourceCard()
 
             VStack(spacing: 0) {
                 self.settingsCardHeader(

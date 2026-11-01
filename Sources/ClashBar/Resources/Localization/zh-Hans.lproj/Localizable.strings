@@ -54,6 +54,8 @@
 "ui.action.flush_dns_cache" = "清理 DNS 缓存";
 "ui.action.open_core_directory" = "打开内核目录";
 "ui.action.open_webui" = "打开 WebUI";
+"ui.action.webui.metacubexd" = "MetaCubeXD";
+"ui.webui.unavailable" = "WebUI 不可用，请在设置中检查更新";
 "ui.action.enable_tun" = "开启 TUN 模式";
 "ui.action.disable_tun" = "关闭 TUN 模式";
 "ui.action.upgrade_core" = "升级 Core";
@@ -79,6 +81,18 @@
 "ui.section.local_app_settings" = "应用设置 (本地)";
 "ui.section.core_settings" = "内核设置";
 "ui.section.core_settings_remote" = "内核设置 (远程)";
+"ui.section.webui" = "WebUI 资源";
+"ui.webui.current_version" = "当前版本";
+"ui.webui.latest_version" = "最新版本";
+"ui.webui.last_checked" = "上次检查";
+"ui.webui.never_checked" = "从未检查";
+"ui.webui.not_installed" = "未安装";
+"ui.webui.check" = "检查更新";
+"ui.webui.update" = "更新 WebUI";
+"ui.webui.updating" = "更新中...";
+"ui.webui.checking" = "检查中...";
+"ui.webui.available" = "可用";
+"ui.webui.failed" = "不可用";
 
 "ui.quick.switch_config" = "切换配置";
 "ui.quick.system_proxy" = "系统代理";
