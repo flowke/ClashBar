@@ -59,6 +59,10 @@ struct AttachedPopoverMenu<Label: View, Content: View>: View {
         .onHover { hovering in
             self.isAnchorHovered = hovering
 
+            if hovering {
+                SideAttachedPopoverRegistry.cancelPendingPinnedRestore()
+            }
+
             if hovering, (!self.suppressAutoOpen || self.isPinned) {
                 if self.shouldBuildPopoverContent {
                     self.isPopoverRequested = true
@@ -315,8 +319,25 @@ private protocol SideAttachedPopoverManaging: AnyObject {
 private enum SideAttachedPopoverRegistry {
     static var activeCoordinator: (any SideAttachedPopoverManaging)?
     static var pinnedCoordinator: (any SideAttachedPopoverManaging)?
+    private static var pendingPinnedRestore: DispatchWorkItem?
+    private static let pinnedRestoreDelay: TimeInterval = 0.22
 
-    static func restorePinnedIfNeeded() {
+    static func schedulePinnedRestoreIfNeeded() {
+        self.cancelPendingPinnedRestore()
+        let work = DispatchWorkItem {
+            self.pendingPinnedRestore = nil
+            self.restorePinnedIfNeeded()
+        }
+        self.pendingPinnedRestore = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + self.pinnedRestoreDelay, execute: work)
+    }
+
+    static func cancelPendingPinnedRestore() {
+        self.pendingPinnedRestore?.cancel()
+        self.pendingPinnedRestore = nil
+    }
+
+    private static func restorePinnedIfNeeded() {
         guard self.activeCoordinator == nil else { return }
         guard let pinnedCoordinator else { return }
         guard pinnedCoordinator.isPinned else {
@@ -385,6 +406,7 @@ private struct SideAttachedPopoverHost<Content: View>: NSViewRepresentable {
         private weak var hostWindow: NSWindow?
         private var panelTrackingArea: NSTrackingArea?
         private var panelHovering = false
+        private var isSuspendedForOverride = false
         private var localMouseMonitor: Any?
         private var closeWorkItem: DispatchWorkItem?
         private var attachmentSide: PanelAttachmentSide = .right
@@ -433,8 +455,13 @@ private struct SideAttachedPopoverHost<Content: View>: NSViewRepresentable {
             self.hostWindow = anchorView.window
             self.installTrackingAreaIfNeeded()
 
+            if !self.isPinned {
+                self.isSuspendedForOverride = false
+            }
+
             let shouldShow = self.popoverRequested.wrappedValue && !self.suppressAutoOpen.wrappedValue
             if shouldShow {
+                guard !self.isSuspendedForOverride else { return }
                 self.cancelPendingClose()
                 self.showOrUpdate()
                 return
@@ -523,7 +550,7 @@ private struct SideAttachedPopoverHost<Content: View>: NSViewRepresentable {
                 SideAttachedPopoverRegistry.pinnedCoordinator = nil
             }
             if restorePinned {
-                SideAttachedPopoverRegistry.restorePinnedIfNeeded()
+                SideAttachedPopoverRegistry.schedulePinnedRestoreIfNeeded()
             }
         }
 
@@ -537,6 +564,8 @@ private struct SideAttachedPopoverHost<Content: View>: NSViewRepresentable {
         }
 
         private func ensureExclusiveVisibility() -> Bool {
+            SideAttachedPopoverRegistry.cancelPendingPinnedRestore()
+
             if let active = SideAttachedPopoverRegistry.activeCoordinator, active !== self {
                 if active.isPinned && !self.isPinned {
                     active.suspendForOverride()
@@ -560,6 +589,7 @@ private struct SideAttachedPopoverHost<Content: View>: NSViewRepresentable {
         func suspendForOverride() {
             self.cancelPendingClose()
             self.stopLocalMouseMonitor()
+            self.isSuspendedForOverride = true
             if self.panel.isVisible {
                 self.panel.orderOut(nil)
             }
@@ -573,6 +603,7 @@ private struct SideAttachedPopoverHost<Content: View>: NSViewRepresentable {
             guard self.isPinned else { return }
             guard self.popoverRequested.wrappedValue else { return }
             guard !self.suppressAutoOpen.wrappedValue else { return }
+            self.isSuspendedForOverride = false
             self.showOrUpdate()
         }
 

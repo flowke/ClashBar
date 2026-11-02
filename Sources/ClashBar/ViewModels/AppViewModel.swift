@@ -439,7 +439,7 @@ final class AppViewModel: ObservableObject {
     var isLatestAppReleaseCheckInFlight = false
 
     let defaults = UserDefaults.standard
-    @AppStorage("clashbar.auto.start.core") var autoStartCore: Bool = false
+    @AppStorage("clashbar.auto.start.core") var autoStartCore: Bool = true
     @AppStorage("clashbar.ssid.strategy.enabled") var ssidStrategyEnabledStorage: Bool = false
     @AppStorage("clashbar.statusbar.display.mode") private var statusBarDisplayModeRaw: String = StatusBarDisplayMode
         .iconOnly.rawValue
