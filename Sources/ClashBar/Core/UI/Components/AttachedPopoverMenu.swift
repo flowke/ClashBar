@@ -307,11 +307,24 @@ private protocol SideAttachedPopoverManaging: AnyObject {
     var isPinned: Bool { get }
 
     func deactivateAndClose()
+    func suspendForOverride()
+    func restoreIfPinned()
 }
 
 @MainActor
 private enum SideAttachedPopoverRegistry {
     static var activeCoordinator: (any SideAttachedPopoverManaging)?
+    static var pinnedCoordinator: (any SideAttachedPopoverManaging)?
+
+    static func restorePinnedIfNeeded() {
+        guard self.activeCoordinator == nil else { return }
+        guard let pinnedCoordinator else { return }
+        guard pinnedCoordinator.isPinned else {
+            self.pinnedCoordinator = nil
+            return
+        }
+        pinnedCoordinator.restoreIfPinned()
+    }
 }
 
 @MainActor
@@ -352,7 +365,7 @@ private struct SideAttachedPopoverHost<Content: View>: NSViewRepresentable {
     }
 
     static func dismantleNSView(_ nsView: NSView, coordinator: Coordinator) {
-        coordinator.closeNow()
+        coordinator.closeNow(restorePinned: false)
     }
 
     @MainActor
@@ -495,7 +508,7 @@ private struct SideAttachedPopoverHost<Content: View>: NSViewRepresentable {
             self.scheduleClose()
         }
 
-        func closeNow() {
+        func closeNow(restorePinned: Bool = true) {
             self.cancelPendingClose()
             self.stopLocalMouseMonitor()
             if self.panel.isVisible {
@@ -505,6 +518,12 @@ private struct SideAttachedPopoverHost<Content: View>: NSViewRepresentable {
             self.reportVisibility(false)
             if SideAttachedPopoverRegistry.activeCoordinator === self {
                 SideAttachedPopoverRegistry.activeCoordinator = nil
+            }
+            if SideAttachedPopoverRegistry.pinnedCoordinator === self {
+                SideAttachedPopoverRegistry.pinnedCoordinator = nil
+            }
+            if restorePinned {
+                SideAttachedPopoverRegistry.restorePinnedIfNeeded()
             }
         }
 
@@ -520,9 +539,13 @@ private struct SideAttachedPopoverHost<Content: View>: NSViewRepresentable {
         private func ensureExclusiveVisibility() -> Bool {
             if let active = SideAttachedPopoverRegistry.activeCoordinator, active !== self {
                 if active.isPinned && !self.isPinned {
-                    return false
+                    active.suspendForOverride()
+                } else {
+                    active.deactivateAndClose()
                 }
-                active.deactivateAndClose()
+            }
+            if self.isPinned {
+                SideAttachedPopoverRegistry.pinnedCoordinator = self
             }
             SideAttachedPopoverRegistry.activeCoordinator = self
             return true
@@ -531,7 +554,26 @@ private struct SideAttachedPopoverHost<Content: View>: NSViewRepresentable {
         func deactivateAndClose() {
             self.anchorHovered.wrappedValue = false
             self.popoverRequested.wrappedValue = false
-            self.closeNow()
+            self.closeNow(restorePinned: false)
+        }
+
+        func suspendForOverride() {
+            self.cancelPendingClose()
+            self.stopLocalMouseMonitor()
+            if self.panel.isVisible {
+                self.panel.orderOut(nil)
+            }
+            self.panelHovering = false
+            if SideAttachedPopoverRegistry.activeCoordinator === self {
+                SideAttachedPopoverRegistry.activeCoordinator = nil
+            }
+        }
+
+        func restoreIfPinned() {
+            guard self.isPinned else { return }
+            guard self.popoverRequested.wrappedValue else { return }
+            guard !self.suppressAutoOpen.wrappedValue else { return }
+            self.showOrUpdate()
         }
 
         private func scheduleClose() {
