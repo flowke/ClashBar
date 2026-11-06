@@ -30,6 +30,10 @@ extension MenuBarRootView {
             self.isMode ? 8 : 0
         }
 
+        var containerInset: CGFloat {
+            self.isMode ? T.space2 : 0
+        }
+
         var rowHeight: CGFloat {
             self.isMode ? 24 : 26
         }
@@ -74,7 +78,12 @@ extension MenuBarRootView {
     }
 
     var modeSwitcher: some View {
-        HStack(spacing: 0) {
+        let style = SegmentedControlStyle.mode
+        let shape = RoundedRectangle(
+            cornerRadius: style.cornerRadius + style.containerInset,
+            style: .continuous)
+
+        return HStack(spacing: 0) {
             self.modeSegmentButton(
                 title: tr("ui.mode.rule"),
                 mode: .rule,
@@ -88,16 +97,15 @@ extension MenuBarRootView {
                 mode: .direct,
                 symbol: "bolt.fill")
         }
-        .padding(.horizontal, 5)
-        .padding(.vertical, T.space2)
+        .padding(style.containerInset)
         .frame(width: 170)
         .background {
-            RoundedRectangle(cornerRadius: 11, style: .continuous)
+            shape
                 .fill(
                     Color(nsColor: .controlBackgroundColor)
                         .opacity(self.isDarkAppearance ? 0.78 : 0.92))
                 .overlay {
-                    RoundedRectangle(cornerRadius: 11, style: .continuous)
+                    shape
                         .stroke(
                             self.nativeControlBorder.opacity(self.isDarkAppearance ? 0.48 : 0.22),
                             lineWidth: T.stroke)
