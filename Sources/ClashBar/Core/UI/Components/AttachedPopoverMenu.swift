@@ -6,6 +6,7 @@ private typealias T = MenuBarLayoutTokens
 
 struct AttachedPopoverMenu<Label: View, Content: View>: View {
     let width: CGFloat?
+    let maxWidth: CGFloat?
     let maxHeight: CGFloat?
     let expandAnchor: Bool
     let isPinned: Bool
@@ -21,6 +22,7 @@ struct AttachedPopoverMenu<Label: View, Content: View>: View {
 
     init(
         width: CGFloat? = nil,
+        maxWidth: CGFloat? = nil,
         maxHeight: CGFloat? = nil,
         expandAnchor: Bool = true,
         isPinned: Bool = false,
@@ -29,6 +31,7 @@ struct AttachedPopoverMenu<Label: View, Content: View>: View {
         @ViewBuilder content: @escaping (_ dismiss: @escaping () -> Void) -> Content)
     {
         self.width = width
+        self.maxWidth = maxWidth
         self.maxHeight = maxHeight
         self.expandAnchor = expandAnchor
         self.isPinned = isPinned
@@ -58,10 +61,6 @@ struct AttachedPopoverMenu<Label: View, Content: View>: View {
         }
         .onHover { hovering in
             self.isAnchorHovered = hovering
-
-            if hovering {
-                SideAttachedPopoverRegistry.cancelPendingPinnedRestore()
-            }
 
             if hovering, (!self.suppressAutoOpen || self.isPinned) {
                 if self.shouldBuildPopoverContent {
@@ -97,6 +96,7 @@ struct AttachedPopoverMenu<Label: View, Content: View>: View {
                 suppressAutoOpen: self.$suppressAutoOpen,
                 isPinned: self.isPinned,
                 width: self.width,
+                maxWidth: self.maxWidth,
                 maxHeight: self.maxHeight,
                 onVisibilityChanged: { visible in
                     self.shouldBuildPopoverContent = visible
@@ -128,6 +128,7 @@ struct AttachedPopoverMenu<Label: View, Content: View>: View {
             }
             .scrollIndicators(.hidden)
             .frame(width: self.width, alignment: .leading)
+            .frame(maxWidth: self.maxWidth.map { max(0, $0 - T.space8 * 2) }, alignment: .leading)
             .frame(maxHeight: self.maxHeight)
             .padding(T.space8)
             .background {
@@ -309,6 +310,7 @@ struct AttachedPopoverMenuDivider: View {
 @MainActor
 private protocol SideAttachedPopoverManaging: AnyObject {
     var isPinned: Bool { get }
+    var isPopoverVisible: Bool { get }
 
     func deactivateAndClose()
     func suspendForOverride()
@@ -338,6 +340,12 @@ private enum SideAttachedPopoverRegistry {
     }
 
     private static func restorePinnedIfNeeded() {
+        // A coordinator can remain registered after its panel was ordered out
+        // during a rapid hover transition. Do not let that stale entry block
+        // the pinned coordinator from being restored.
+        if let activeCoordinator, !activeCoordinator.isPopoverVisible {
+            self.activeCoordinator = nil
+        }
         guard self.activeCoordinator == nil else { return }
         guard let pinnedCoordinator else { return }
         guard pinnedCoordinator.isPinned else {
@@ -355,6 +363,7 @@ private struct SideAttachedPopoverHost<Content: View>: NSViewRepresentable {
     @Binding var suppressAutoOpen: Bool
     let isPinned: Bool
     let width: CGFloat?
+    let maxWidth: CGFloat?
     let maxHeight: CGFloat?
     let onVisibilityChanged: ((Bool) -> Void)?
     let content: Content
@@ -379,6 +388,7 @@ private struct SideAttachedPopoverHost<Content: View>: NSViewRepresentable {
         context.coordinator.suppressAutoOpen = self.$suppressAutoOpen
         context.coordinator.isPinned = self.isPinned
         context.coordinator.width = self.width
+        context.coordinator.maxWidth = self.maxWidth
         context.coordinator.maxHeight = self.maxHeight
         context.coordinator.onVisibilityChanged = self.onVisibilityChanged
         context.coordinator.hostingController.rootView = self.content
@@ -396,6 +406,7 @@ private struct SideAttachedPopoverHost<Content: View>: NSViewRepresentable {
         var suppressAutoOpen: Binding<Bool>
         var isPinned: Bool
         var width: CGFloat?
+        var maxWidth: CGFloat?
         var maxHeight: CGFloat?
         var onVisibilityChanged: ((Bool) -> Void)?
 
@@ -407,6 +418,7 @@ private struct SideAttachedPopoverHost<Content: View>: NSViewRepresentable {
         private var panelTrackingArea: NSTrackingArea?
         private var panelHovering = false
         private var isSuspendedForOverride = false
+        private var lockedPanelWidth: CGFloat?
         private var localMouseMonitor: Any?
         private var closeWorkItem: DispatchWorkItem?
         private var attachmentSide: PanelAttachmentSide = .right
@@ -414,6 +426,10 @@ private struct SideAttachedPopoverHost<Content: View>: NSViewRepresentable {
         private let edgeOverlap: CGFloat = 1
         private let closeDebounce: TimeInterval = 0.10
         private var reportedVisible = false
+
+        var isPopoverVisible: Bool {
+            self.panel.isVisible
+        }
 
         init(
             anchorHovered: Binding<Bool>,
@@ -488,9 +504,12 @@ private struct SideAttachedPopoverHost<Content: View>: NSViewRepresentable {
             guard let placement = anchorContext.sideAttachedPlacement(
                 contentSize: fitting,
                 preferredWidth: self.width,
+                lockedWidth: self.lockedPanelWidth,
+                maximumWidth: self.maxWidth,
                 maximumHeight: self.maxHeight,
                 screenPadding: 6,
-                edgeOverlap: self.edgeOverlap)
+                edgeOverlap: self.edgeOverlap,
+                preferredAttachmentSide: self.attachmentSide)
             else {
                 return
             }
@@ -508,6 +527,9 @@ private struct SideAttachedPopoverHost<Content: View>: NSViewRepresentable {
             if !self.panel.isVisible {
                 self.panel.orderFront(nil)
             }
+            if self.lockedPanelWidth == nil {
+                self.lockedPanelWidth = placement.frame.width
+            }
             ScrollIndicatorPolicy.suppressRecursively(in: self.panel.contentView)
             self.reportVisibility(true)
             self.startLocalMouseMonitorIfNeeded()
@@ -517,6 +539,10 @@ private struct SideAttachedPopoverHost<Content: View>: NSViewRepresentable {
             guard self.panel.isVisible else {
                 self.cancelPendingClose()
                 self.stopLocalMouseMonitor()
+                if SideAttachedPopoverRegistry.activeCoordinator === self {
+                    SideAttachedPopoverRegistry.activeCoordinator = nil
+                    SideAttachedPopoverRegistry.schedulePinnedRestoreIfNeeded()
+                }
                 return
             }
             if self.isPinned {
@@ -538,6 +564,7 @@ private struct SideAttachedPopoverHost<Content: View>: NSViewRepresentable {
         func closeNow(restorePinned: Bool = true) {
             self.cancelPendingClose()
             self.stopLocalMouseMonitor()
+            self.lockedPanelWidth = nil
             if self.panel.isVisible {
                 self.panel.orderOut(nil)
             }

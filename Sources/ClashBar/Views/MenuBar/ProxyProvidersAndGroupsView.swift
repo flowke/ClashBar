@@ -291,7 +291,7 @@ extension ProxyTabView {
         let rowVerticalPadding: CGFloat = T.space1
         let isPinned = appViewModel.isProxyGroupPinned(named: group.name)
 
-        return AttachedPopoverMenu(isPinned: isPinned) { isHovered in
+        return AttachedPopoverMenu(maxWidth: 300, isPinned: isPinned) { isHovered in
             GeometryReader { geo in
                 let columns = self.proxyGroupMainColumnWidths(
                     totalWidth: geo.size.width,
@@ -618,6 +618,7 @@ private struct ProxyGroupPopoverNodeItem: View {
                         .lineLimit(1)
                         .truncationMode(.middle)
                         .minimumScaleFactor(T.minimumScale)
+                        .help(self.title)
 
                     Spacer(minLength: 0)
 

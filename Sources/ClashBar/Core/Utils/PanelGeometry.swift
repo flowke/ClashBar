@@ -82,15 +82,21 @@ struct PanelAnchorContext {
     func sideAttachedPlacement(
         contentSize: CGSize,
         preferredWidth: CGFloat?,
+        lockedWidth: CGFloat? = nil,
+        maximumWidth: CGFloat? = nil,
         maximumHeight: CGFloat?,
         screenPadding: CGFloat,
-        edgeOverlap: CGFloat)
+        edgeOverlap: CGFloat,
+        preferredAttachmentSide: PanelAttachmentSide? = nil)
         -> PanelPlacement?
     {
         guard let hostWindowFrame else { return nil }
 
-        let contentWidth = preferredWidth ?? contentSize.width
-        let panelWidth = min(max(1, contentWidth), self.visibleFrame.width - (screenPadding * 2))
+        let contentWidth = lockedWidth ?? preferredWidth ?? contentSize.width
+        let panelWidth = min(
+            max(1, contentWidth),
+            max(1, maximumWidth ?? .greatestFiniteMagnitude),
+            self.visibleFrame.width - (screenPadding * 2))
 
         let preferredHeight: CGFloat = if let maximumHeight {
             min(contentSize.height, maximumHeight + (screenPadding * 2))
@@ -102,13 +108,22 @@ struct PanelAnchorContext {
         let rightAvailable = max(0, self.visibleFrame.maxX - hostWindowFrame.maxX)
         let leftAvailable = max(0, hostWindowFrame.minX - self.visibleFrame.minX)
 
-        let attachmentSide: PanelAttachmentSide = if rightAvailable >= panelWidth {
-            .right
-        } else if leftAvailable >= panelWidth {
-            .left
-        } else {
-            rightAvailable >= leftAvailable ? .right : .left
-        }
+        let attachmentSide: PanelAttachmentSide = {
+            if let preferredAttachmentSide {
+                let preferredAvailable = preferredAttachmentSide == .right ? rightAvailable : leftAvailable
+                if preferredAvailable >= panelWidth {
+                    return preferredAttachmentSide
+                }
+            }
+
+            if rightAvailable >= panelWidth {
+                return .right
+            }
+            if leftAvailable >= panelWidth {
+                return .left
+            }
+            return rightAvailable >= leftAvailable ? .right : .left
+        }()
 
         let sideAvailable = attachmentSide == .right ? rightAvailable : leftAvailable
         let resolvedPanelWidth = max(1, min(panelWidth, sideAvailable))
