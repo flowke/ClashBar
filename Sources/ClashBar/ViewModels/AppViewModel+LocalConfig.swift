@@ -32,6 +32,7 @@ extension AppViewModel {
     }
 
     func selectConfig() async {
+        guard !dashboardConfigBusy else { return }
         let previousSelectedURL = configService.selectedConfig
         let previousSelectedPath = configService.selectedConfig?.path
         guard configService.chooseConfigDirectory() != nil else { return }
@@ -67,6 +68,15 @@ extension AppViewModel {
     }
 
     func selectConfigFile(named fileName: String) async {
+        guard !dashboardConfigBusy else { return }
+        if (try? effectiveConfigTransaction.currentRecord()) != nil {
+            let changes = (try? effectiveConfigTransaction.currentRecord())?.changes ?? []
+            await applyDashboardConfiguration(baseName: fileName, changes: changes)
+            if let dashboardConfigError {
+                appendLog(level: "error", message: dashboardConfigError)
+            }
+            return
+        }
         let previousSelectedURL = configService.selectedConfig
         let previousSelectedPath = configService.selectedConfig?.path
         guard let matched = configService.availableConfigs.first(where: { $0.lastPathComponent == fileName }) else {
@@ -102,7 +112,7 @@ extension AppViewModel {
         await restartCoreIfNeededForConfigSwitch(previousPath: previousSelectedPath, nextPath: nextSelectedPath)
     }
 
-    func importLocalConfigFile() {
+    func importLocalConfigFile(dashboardErrors: Bool = false) {
         guard let configDirectory = ensureConfigDirectoryAvailable() else { return }
 
         self.prepareModalWindowPresentation()
@@ -126,12 +136,26 @@ extension AppViewModel {
 
         guard panel.runModal() == .OK, let sourceURL = panel.url else { return }
         guard let fileName = normalizedConfigFileName(sourceURL.lastPathComponent) else {
-            appendLog(level: "error", message: tr("log.config.import.invalid_filename", sourceURL.lastPathComponent))
+            let message = tr("log.config.import.invalid_filename", sourceURL.lastPathComponent)
+            appendLog(level: "error", message: message)
+            if dashboardErrors { dashboardConfigError = message }
             return
         }
 
         let targetURL = configDirectory.appendingPathComponent(fileName, isDirectory: false)
+        guard self.remoteConfigSubscriptions[fileName] == nil else {
+            let message = uiLanguage == .zhHans ? "同名订阅已存在：\(fileName)" : "A subscription with this name already exists: \(fileName)"
+            appendLog(level: "error", message: message)
+            if dashboardErrors { dashboardConfigError = message }
+            return
+        }
         let isOverwrite = FileManager.default.fileExists(atPath: targetURL.path)
+        if isOverwrite, fileName == selectedConfigName {
+            let message = uiLanguage == .zhHans ? "不能覆盖当前基础配置，请使用其他文件名。" : "Cannot overwrite the active base configuration; use a different file name."
+            appendLog(level: "error", message: message)
+            if dashboardErrors { dashboardConfigError = message }
+            return
+        }
         guard !isOverwrite || self.confirmOverwriteConfig(named: fileName) else {
             appendLog(level: "info", message: tr("log.config.import.cancelled", fileName))
             return
@@ -148,6 +172,7 @@ extension AppViewModel {
                 Task { [weak self] in await self?.reloadConfig() }
             }
         } catch {
+            if dashboardErrors { dashboardConfigError = error.localizedDescription }
             appendLog(
                 level: "error",
                 message: tr("log.config.import_local.failed", fileName, error.localizedDescription))

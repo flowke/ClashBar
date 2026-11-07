@@ -37,6 +37,14 @@ extension AppViewModel {
         }
         streamCoordinator.onDisconnect = { [weak self] key, message in
             guard let self else { return }
+            switch key {
+            case StreamKind.traffic.key:
+                self.dashboardTrafficAvailable = false
+                self.resetPendingTrafficSnapshotState()
+            case StreamKind.memory.key: self.dashboardMemoryAvailable = false
+            case StreamKind.connections.key: self.dashboardConnectionsAvailable = false
+            default: break
+            }
             let label = StreamKind.allCases.first(where: { $0.key == key })?.label ?? key
             self.appendLog(
                 level: "error", message: tr("log.stream.disconnected", tr(label), message))
@@ -56,6 +64,12 @@ extension AppViewModel {
         makeWebSocket: @escaping (MihomoAPIService) throws -> URLSessionWebSocketTask,
         onPayload: @escaping (Data) -> Void)
     {
+        switch kind {
+        case .traffic: self.dashboardTrafficAvailable = false
+        case .memory: self.dashboardMemoryAvailable = false
+        case .connections: self.dashboardConnectionsAvailable = false
+        case .logs: break
+        }
         if kind == .connections {
             currentConnectionsStreamIntervalMilliseconds = nil
         }
@@ -85,6 +99,12 @@ extension AppViewModel {
 
     func cancelStream(_ kind: StreamKind, resetReconnectState: Bool = true) {
         streamCoordinator.cancel(key: kind.key, resetReconnectState: resetReconnectState)
+        switch kind {
+        case .traffic: self.dashboardTrafficAvailable = false
+        case .memory: self.dashboardMemoryAvailable = false
+        case .connections: self.dashboardConnectionsAvailable = false
+        case .logs: break
+        }
         if kind == .connections {
             currentConnectionsStreamIntervalMilliseconds = nil
         }
@@ -127,6 +147,7 @@ extension AppViewModel {
             onDecoded: { [weak self] (snapshot: MemorySnapshot) in
                 guard let self else { return }
                 memory = snapshot
+                self.dashboardMemoryAvailable = true
             })
     }
 
@@ -139,6 +160,7 @@ extension AppViewModel {
             onDecoded: { [weak self] (snapshot: ConnectionsSnapshot) in
                 guard let self else { return }
                 self.applyConnectionsSnapshot(snapshot)
+                self.dashboardConnectionsAvailable = true
             })
         currentConnectionsStreamIntervalMilliseconds = intervalMilliseconds
     }
@@ -218,8 +240,9 @@ extension AppViewModel {
 
     private func applyTrafficSnapshot(_ snapshot: TrafficSnapshot) {
         self.traffic = snapshot
+        self.dashboardTrafficAvailable = true
         self.appendTrafficHistory(up: snapshot.up, down: snapshot.down)
-        guard self.isPanelPresented else { return }
+        guard self.isPanelPresented || self.isDashboardPresented else { return }
         self.updateTrafficTotals(from: snapshot)
     }
 
@@ -232,6 +255,8 @@ extension AppViewModel {
 
     private func applyConnectionsSnapshot(_ snapshot: ConnectionsSnapshot) {
         let totalCount = snapshot.totalCount
+        self.connectionsStore.uploadTotal = snapshot.uploadTotal
+        self.connectionsStore.downloadTotal = snapshot.downloadTotal
         if connectionsStore.connectionsCount != totalCount {
             connectionsStore.connectionsCount = totalCount
         }

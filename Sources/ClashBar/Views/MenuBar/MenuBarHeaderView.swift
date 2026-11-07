@@ -9,6 +9,12 @@ struct MenuBarHeaderView: TranslatingView {
     @Binding var showRemoteMachineManager: Bool
     @Binding var isSwitchingMachine: Bool
     @Environment(\.openURL) private var openURL
+    @State private var isCoreButtonHovered = false
+
+    private var isCoreButtonDisabled: Bool {
+        self.appViewModel.isRemoteTarget || self.appViewModel.isCoreActionProcessing || self.appViewModel.dashboardConfigBusy ||
+            (!self.appViewModel.isRuntimeRunning && !self.appViewModel.isMihomoCoreAvailable)
+    }
 
     var headerLogoSize: CGFloat {
         40
@@ -62,6 +68,41 @@ struct MenuBarHeaderView: TranslatingView {
             Spacer(minLength: T.space6)
 
             HStack(spacing: T.space6) {
+                Button {
+                    Task {
+                        if self.appViewModel.isRuntimeRunning {
+                            await self.appViewModel.stopCore()
+                        } else {
+                            await self.appViewModel.startCore(trigger: .manual)
+                        }
+                    }
+                } label: {
+                    HStack(spacing: T.space2) {
+                        if self.appViewModel.isCoreActionProcessing {
+                            ProgressView().controlSize(.mini)
+                        } else {
+                            Image(systemName: self.appViewModel.isRuntimeRunning ? "stop.circle" : "play.circle")
+                                .foregroundStyle(self.appViewModel.isRuntimeRunning ? nativeWarning : nativePositive)
+                        }
+                        Text(self.tr(self.appViewModel.isRuntimeRunning ? "ui.action.stop_core" : "ui.action.start_core"))
+                            .font(.app(size: T.FontSize.caption, weight: .semibold))
+                            .lineLimit(1)
+                    }
+                    .padding(.horizontal, T.space6)
+                    .frame(height: 26)
+                    .background(
+                        self.isCoreButtonHovered && !self.isCoreButtonDisabled ? self.nativeHoverFill : .clear,
+                        in: RoundedRectangle(cornerRadius: 6))
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .disabled(self.isCoreButtonDisabled)
+                .onHover { self.isCoreButtonHovered = $0 }
+                .help(!self.appViewModel.isRemoteTarget && !self.appViewModel.isRuntimeRunning &&
+                    !self.appViewModel.isMihomoCoreAvailable
+                    ? self.tr("app.core.setup_required.message", self.appViewModel.workingDirectoryManager.coreDirectoryURL.path)
+                    : self.tr(self.appViewModel.isRuntimeRunning ? "ui.action.stop_core" : "ui.action.start_core"))
+
                 self.compactTopIcon(
                     self.appViewModel.isPinned ? "pin.fill" : "pin",
                     label: self.appViewModel.isPinned ? self.tr("ui.action.unpin") : self.tr("ui.action.pin"),
@@ -75,6 +116,8 @@ struct MenuBarHeaderView: TranslatingView {
                     await self.appViewModel.quitApp()
                 }
             }
+            .fixedSize(horizontal: true, vertical: false)
+            .layoutPriority(1)
         }
         .padding(.vertical, T.space8)
         .sheet(isPresented: self.$showRemoteMachineManager) {

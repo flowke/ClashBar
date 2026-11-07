@@ -114,12 +114,16 @@ extension MenuBarRootView {
     }
 
     var modeActionButtons: some View {
-        let coreIsRunning = self.appViewModel.isRuntimeRunning
-        let coreIsUnavailable = !self.appViewModel.isRemoteTarget
-            && !coreIsRunning
-            && !self.appViewModel.isMihomoCoreAvailable
+        return HStack(spacing: T.space4) {
+            self.modeActionButton(
+                id: "dashboard",
+                symbol: nil,
+                title: self.tr("ui.action.open_dashboard"),
+                tint: nativeInfo)
+            {
+                self.openDashboard()
+            }
 
-        return HStack(spacing: T.space2) {
             if self.appViewModel.isRemoteTarget {
                 self.modeActionButton(
                     id: "webui",
@@ -147,38 +151,9 @@ extension MenuBarRootView {
                 }
             }
 
-            self.modeActionButton(
-                id: "core",
-                symbol: coreIsRunning
-                    ? "stop.circle"
-                    : coreIsUnavailable ? "exclamationmark.triangle" : "play.circle",
-                title: self.appViewModel.isCoreActionProcessing
-                    ? self.tr("app.primary.processing")
-                    : coreIsRunning
-                    ? self.tr("ui.action.stop_core")
-                    : coreIsUnavailable
-                    ? self.tr("ui.action.core_unavailable")
-                    : self.tr("ui.action.start_core"),
-                tint: coreIsRunning ? nativeWarning : coreIsUnavailable ? nativeWarning : nativePositive,
-                isDisabled: self.appViewModel.isRemoteTarget,
-                isUnavailable: coreIsUnavailable,
-                helpText: coreIsUnavailable
-                    ? self.tr(
-                        "app.core.setup_required.message",
-                        self.appViewModel.workingDirectoryManager.coreDirectoryURL.path)
-                    : nil,
-                isLoading: self.appViewModel.isCoreActionProcessing)
-            {
-                if self.appViewModel.isRuntimeRunning {
-                    await self.appViewModel.stopCore()
-                } else {
-                    await self.appViewModel.startCore(trigger: .manual)
-                }
-            }
         }
-        .padding(T.space1)
-        .frame(width: 168)
-        .background(self.nativeControlSurface(cornerRadius: SegmentedControlStyle.mode.cornerRadius))
+        .frame(width: 160)
+        .padding(.trailing, T.space8)
     }
 
     func modeActionButton(
@@ -221,7 +196,15 @@ extension MenuBarRootView {
             .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
             .background {
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(hovered && !disabled ? nativeHoverFill.opacity(isDarkAppearance ? 0.9 : 0.7) : .clear)
+                    .fill(Color(nsColor: .controlBackgroundColor).opacity(isDarkAppearance ? 0.85 : 0.95))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill(hovered && !disabled ? nativeHoverFill.opacity(isDarkAppearance ? 0.45 : 0.25) : .clear)
+                    }
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .stroke(nativeControlBorder.opacity(isDarkAppearance ? 0.6 : 0.42), lineWidth: T.stroke)
+                    }
             }
         }
         .buttonStyle(.plain)

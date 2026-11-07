@@ -1,9 +1,11 @@
 import AppKit
+import SwiftUI
 
 @MainActor
-final class ClashBarAppDelegate: NSObject, NSApplicationDelegate {
+final class ClashBarAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     let appViewModel = AppViewModel(dependencies: .live)
     private var statusItemController: StatusItemController?
+    private var dashboardWindow: NSWindow?
     private var windowObservers: [any NSObjectProtocol] = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -21,7 +23,9 @@ final class ClashBarAppDelegate: NSObject, NSApplicationDelegate {
         self.suppressNonPanelWindows()
 
         self.appViewModel.start()
-        self.statusItemController = StatusItemController(appViewModel: self.appViewModel)
+        self.statusItemController = StatusItemController(appViewModel: self.appViewModel) { [weak self] in
+            self?.showDashboard()
+        }
         self.appViewModel.presentInitialNoCoreSetupGuideIfNeeded()
 
         DispatchQueue.main.async { [weak self] in
@@ -65,6 +69,47 @@ final class ClashBarAppDelegate: NSObject, NSApplicationDelegate {
         self.statusItemController?.presentPopover(tab: .system)
     }
 
+    func showDashboard() {
+        if self.dashboardWindow == nil {
+            let window = DashboardWindow(
+                contentRect: NSRect(x: 0, y: 0, width: 1100, height: 740),
+                styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
+                backing: .buffered,
+                defer: false)
+            window.title = L10n.t("ui.action.open_dashboard", language: self.appViewModel.uiLanguage)
+            window.titleVisibility = .hidden
+            window.titlebarAppearsTransparent = true
+            window.minSize = NSSize(width: 760, height: 520)
+            window.isReleasedWhenClosed = false
+            window.delegate = self
+            window.installContent(DashboardView(appViewModel: self.appViewModel)
+                .preferredColorScheme(.light))
+            window.center()
+            self.dashboardWindow = window
+        }
+        NSApp.activate(ignoringOtherApps: true)
+        if self.dashboardWindow?.isMiniaturized == true {
+            self.dashboardWindow?.deminiaturize(nil)
+        }
+        self.dashboardWindow?.makeKeyAndOrderFront(nil)
+        self.appViewModel.setDashboardVisibility(true)
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        guard notification.object as? NSWindow === self.dashboardWindow else { return }
+        self.appViewModel.setDashboardVisibility(false)
+    }
+
+    func windowDidMiniaturize(_ notification: Notification) {
+        guard notification.object as? NSWindow === self.dashboardWindow else { return }
+        self.appViewModel.setDashboardVisibility(false)
+    }
+
+    func windowDidDeminiaturize(_ notification: Notification) {
+        guard notification.object as? NSWindow === self.dashboardWindow else { return }
+        self.appViewModel.setDashboardVisibility(true)
+    }
+
     private func setupWindowSuppression() {
         let center = NotificationCenter.default
         let notifications: [Notification.Name] = [
@@ -88,6 +133,9 @@ final class ClashBarAppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func suppressWindowIfNeeded(_ window: NSWindow) {
+        if window is DashboardWindow {
+            return
+        }
         if window is NSPanel {
             return
         }

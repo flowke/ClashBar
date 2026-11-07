@@ -108,7 +108,7 @@
 "ui.quick.remote.url_label" = "Subscription URL";
 "ui.quick.remote.url_placeholder" = "https://example.com/config.yaml";
 "ui.quick.remote.filename_label" = "File Name";
-"ui.quick.remote.filename_placeholder" = "Leave empty to infer automatically";
+"ui.quick.remote.filename_placeholder" = "Leave empty to use the subscription host";
 "ui.quick.remote.refreshing" = "Refreshing";
 "ui.quick.remote.refresh_failed" = "Refresh Failed";
 "ui.quick.ssid.bound_label" = "Bound Wi-Fi: %@";
@@ -462,3 +462,4 @@
 "app.config.delete.message" = "This will permanently delete the config file. If it is a remote subscription, the subscription metadata will also be removed.";
 "log.config.delete.success" = "Config deleted: %@";
 "log.config.delete.failed" = "Failed to delete config (%@): %@";
+"ui.action.open_dashboard" = "Dashboard";

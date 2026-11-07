@@ -12,13 +12,16 @@ let package = Package(
         .executable(name: "ClashBar", targets: ["ClashBar"]),
         .executable(name: "ClashBarProxyHelper", targets: ["ClashBarProxyHelper"]),
     ],
+    dependencies: [
+        .package(url: "https://github.com/jpsim/Yams.git", from: "5.4.0"),
+    ],
     targets: [
         .target(
             name: "ProxyHelperShared",
             path: "Sources/ProxyHelperShared"),
         .executableTarget(
             name: "ClashBar",
-            dependencies: ["ProxyHelperShared"],
+            dependencies: ["ProxyHelperShared", .product(name: "Yams", package: "Yams")],
             path: "Sources/ClashBar",
             resources: [
                 .process("Resources"),
@@ -27,4 +30,8 @@ let package = Package(
             name: "ClashBarProxyHelper",
             dependencies: ["ProxyHelperShared"],
             path: "Sources/ProxyHelper/Daemon"),
+        .testTarget(
+            name: "ClashBarTests",
+            dependencies: ["ClashBar"],
+            path: "Tests/ClashBarTests"),
     ])

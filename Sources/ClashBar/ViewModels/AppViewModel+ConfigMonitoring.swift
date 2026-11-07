@@ -74,6 +74,17 @@ extension AppViewModel {
             return
         }
         guard self.pendingConfigChangeRestart || selectedConfigChanged else { return }
+        if dashboardConfigBusy {
+            pendingConfigChangeRestart = true
+            scheduleConfigDirectoryRefresh(delayNanoseconds: 500_000_000)
+            return
+        }
+        if let record = try? effectiveConfigTransaction.currentRecord(),
+           record.baseName == selectedConfigName {
+            _ = await applyDashboardConfiguration(baseName: record.baseName, changes: record.changes)
+            self.pendingConfigChangeRestart = false
+            return
+        }
         guard self.isRuntimeRunning else {
             self.pendingConfigChangeRestart = false
             return

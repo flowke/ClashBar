@@ -19,6 +19,7 @@ extension AppViewModel {
 
     func startCore(trigger: StartTrigger = .manual) async {
         guard !self.isRemoteTarget else { return }
+        guard !dashboardConfigBusy else { return }
         guard !isCoreActionProcessing else { return }
         self.refreshManagedCoreMetadata()
         guard self.isMihomoCoreAvailable else {
@@ -106,6 +107,7 @@ extension AppViewModel {
 
     func stopCore(trigger: StopTrigger = .manual) async {
         guard !self.isRemoteTarget else { return }
+        if trigger == .manual, dashboardConfigBusy { return }
         guard !isCoreActionProcessing else { return }
         if trigger == .manual {
             shouldResumeCoreAfterNetworkRecovery = false
@@ -129,6 +131,7 @@ extension AppViewModel {
 
     func restartCore(trigger: ProviderRefreshTrigger = .restart) async {
         guard !self.isRemoteTarget else { return }
+        guard !dashboardConfigBusy else { return }
         guard !isCoreActionProcessing else { return }
         coreActionState = .restarting
         defer { coreActionState = .idle }
@@ -225,6 +228,8 @@ extension AppViewModel {
     }
 
     func cancelOwnedTasks() {
+        self.agentRuleSocket?.stop()
+        self.agentRuleSocket = nil
         self.shouldResumeCoreAfterNetworkRecovery = false
         self.stopNetworkReachabilityMonitoring()
         self.stopConfigDirectoryMonitoring()

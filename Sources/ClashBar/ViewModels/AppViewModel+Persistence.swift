@@ -3,6 +3,24 @@ import Foundation
 @MainActor
 extension AppViewModel {
     func resolveSelectedConfigPath() async -> String? {
+        do {
+            if let record = try effectiveConfigTransaction.currentRecord() {
+                guard let source = configService.availableConfigs.first(where: { $0.lastPathComponent == record.baseName }),
+                      let effective = effectiveConfigTransaction.currentFile(record),
+                      FileManager.default.fileExists(atPath: effective.path) else {
+                    dashboardConfigError = "已保存的生效配置或基础配置不存在。"
+                    return nil
+                }
+                configService.selectConfig(source)
+                _ = self.syncSelectedConfigSelection(source)
+                self.syncConfigDisplayState()
+                dashboardEffectiveRecord = record
+                return effective.path
+            }
+        } catch {
+            dashboardConfigError = error.localizedDescription
+            return nil
+        }
         if let path = self.applySelectedConfig(configService.selectedConfig) {
             return path
         }
@@ -32,11 +50,19 @@ extension AppViewModel {
         guard let selected else { return nil }
         let selectedPath = self.syncSelectedConfigSelection(selected)
         self.syncConfigDisplayState()
-        return selectedPath
+        guard let selectedPath else { return nil }
+        return self.effectiveConfigURL(for: selected.lastPathComponent)?.path ?? selectedPath
     }
 
     func restoreSavedConfigDirectory() {
         configService.setConfigDirectory(workingDirectoryManager.configDirectoryURL)
+        let record = try? effectiveConfigTransaction.currentRecord()
+        let preferredName = record?.baseName ?? defaults.string(forKey: selectedConfigKey)
+        if let preferredName,
+           let preferred = configService.availableConfigs.first(where: { $0.lastPathComponent == preferredName }) {
+            configService.selectConfig(preferred)
+        }
+        dashboardEffectiveRecord = record
         if let selected = configService.selectedConfig {
             _ = self.syncSelectedConfigSelection(selected)
         }
@@ -44,6 +70,7 @@ extension AppViewModel {
     }
 
     func restoreLastSuccessfulConfigIfAvailable() {
+        if (try? effectiveConfigTransaction.currentRecord()) != nil { return }
         guard let lastPath = defaults.string(forKey: lastSuccessfulConfigPathKey), !lastPath.isEmpty else { return }
         let candidate = URL(fileURLWithPath: lastPath)
         guard FileManager.default.fileExists(atPath: candidate.path) else { return }

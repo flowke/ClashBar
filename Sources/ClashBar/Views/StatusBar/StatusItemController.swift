@@ -28,9 +28,10 @@ private final class PassiveFloatingPanel: NSPanel {
 private struct StatusItemPopoverRootView: View {
     @ObservedObject var appViewModel: AppViewModel
     @ObservedObject var popoverLayoutModel: PopoverLayoutModel
+    let openDashboard: () -> Void
 
     var body: some View {
-        MenuBarRootView()
+        MenuBarRootView(openDashboard: self.openDashboard)
             .environmentObject(self.appViewModel)
             .environmentObject(self.appViewModel.proxyStore)
             .environmentObject(self.appViewModel.trafficStore)
@@ -197,6 +198,7 @@ private struct StatusItemBannerRootView: View {
 @MainActor
 final class StatusItemController: NSObject {
     private let appViewModel: AppViewModel
+    private let openDashboard: () -> Void
     private let viewModel: StatusBarViewModel
     private let statusItem: NSStatusItem
     private let panel: FloatingPanel
@@ -239,8 +241,9 @@ final class StatusItemController: NSObject {
         height: bannerContentSize.height + bannerShadowBleed * 2)
     private let bannerDisplayDurationNanoseconds: UInt64 = 2_600_000_000
 
-    init(appViewModel: AppViewModel) {
+    init(appViewModel: AppViewModel, openDashboard: @escaping () -> Void) {
         self.appViewModel = appViewModel
+        self.openDashboard = openDashboard
         self.viewModel = StatusBarViewModel(session: appViewModel)
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         self.panel = FloatingPanel(
@@ -384,7 +387,8 @@ final class StatusItemController: NSObject {
     private var popoverRootView: StatusItemPopoverRootView {
         StatusItemPopoverRootView(
             appViewModel: self.appViewModel,
-            popoverLayoutModel: self.popoverLayoutModel)
+            popoverLayoutModel: self.popoverLayoutModel,
+            openDashboard: self.openDashboard)
     }
 
     private func configureStatusItem() {

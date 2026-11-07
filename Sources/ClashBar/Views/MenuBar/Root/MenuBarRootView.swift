@@ -46,6 +46,7 @@ enum LogLevelFilter: Hashable, CaseIterable {
 }
 
 struct MenuBarRootView: TranslatingView {
+    let openDashboard: () -> Void
     @EnvironmentObject var appViewModel: AppViewModel
     @EnvironmentObject var proxyStore: ProxyStore
     @EnvironmentObject var remoteMachineStore: RemoteMachineStore

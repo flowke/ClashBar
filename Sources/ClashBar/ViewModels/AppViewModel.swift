@@ -67,6 +67,10 @@ final class AppViewModel: ObservableObject {
     @Published var configDirectoryPath: String = "-"
     @Published var availableConfigFileNames: [String] = []
     @Published var remoteConfigMenuStates: [String: RemoteConfigMenuState] = [:]
+    @Published var dashboardConfigBusy = false
+    @Published var dashboardConfigError: String?
+    @Published var dashboardEffectiveRecord: EffectiveConfigRecord?
+    @Published var dashboardSubscriptionErrors: [String: String] = [:]
     @Published var isPinned: Bool = false
     @Published var pinnedProxyGroupName: String?
 
@@ -228,6 +232,10 @@ final class AppViewModel: ObservableObject {
     @Published var appearanceMode: AppAppearanceMode = .system
     @Published var appTheme: AppTheme = .sage
     @Published var isPanelPresented: Bool = false
+    @Published var isDashboardPresented: Bool = false
+    @Published var dashboardTrafficAvailable = false
+    @Published var dashboardMemoryAvailable = false
+    @Published var dashboardConnectionsAvailable = false
     @Published var activeMenuTab: RootTab = .proxy
     @Published var launchAtLoginEnabled: Bool = false
     @Published var launchAtLoginErrorMessage: String?
@@ -417,6 +425,7 @@ final class AppViewModel: ObservableObject {
     var coreUpgradeFeedbackClearTask: Task<Void, Never>?
     var geoUpdateFeedbackClearTask: Task<Void, Never>?
     var configDirectoryMonitor: ConfigDirectoryMonitor?
+    var agentRuleSocket: AgentRuleSocket?
     var trafficDecodeTask: Task<Void, Never>?
     var mihomoLogFlushTask: Task<Void, Never>?
     var startupRefreshTask: Task<Void, Never>?

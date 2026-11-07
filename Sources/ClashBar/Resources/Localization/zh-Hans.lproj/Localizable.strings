@@ -112,7 +112,7 @@
 "ui.quick.remote.url_label" = "订阅链接";
 "ui.quick.remote.url_placeholder" = "https://example.com/config.yaml";
 "ui.quick.remote.filename_label" = "文件名";
-"ui.quick.remote.filename_placeholder" = "留空则自动推断";
+"ui.quick.remote.filename_placeholder" = "留空则使用订阅域名";
 "ui.quick.remote.refreshing" = "刷新中";
 "ui.quick.remote.refresh_failed" = "刷新失败";
 "ui.quick.ssid.bound_label" = "绑定 Wi-Fi: %@";
@@ -462,3 +462,4 @@
 "app.config.delete.message" = "此操作将永久删除配置文件。如果这是远程订阅，订阅元数据也会被一并删除。";
 "log.config.delete.success" = "已删除配置：%@";
 "log.config.delete.failed" = "删除配置失败（%@）：%@";
+"ui.action.open_dashboard" = "内部看板";

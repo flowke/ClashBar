@@ -5,13 +5,19 @@ struct ConnectionsSnapshot: Decodable, Equatable {
 
     let totalCount: Int
     let connections: [ConnectionSummary]
+    let uploadTotal: Int64?
+    let downloadTotal: Int64?
 
     private enum CodingKeys: String, CodingKey {
         case connections
+        case uploadTotal
+        case downloadTotal
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.uploadTotal = try container.decodeIfPresent(Int64.self, forKey: .uploadTotal)
+        self.downloadTotal = try container.decodeIfPresent(Int64.self, forKey: .downloadTotal)
         guard var connectionsContainer = try? container.nestedUnkeyedContainer(forKey: .connections) else {
             self.connections = []
             self.totalCount = 0

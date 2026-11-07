@@ -42,7 +42,7 @@ extension AppViewModel {
     }
 
     private func ensurePeriodicTasksForCurrentVisibility() {
-        guard isPanelPresented else {
+        guard isPanelPresented || isDashboardPresented else {
             mediumFrequencyTask?.cancel()
             mediumFrequencyTask = nil
             lowFrequencyTask?.cancel()
@@ -78,8 +78,10 @@ extension AppViewModel {
         isPanelPresented = presented
         if !presented {
             cancelProxyPortsAutoSave()
-            self.resetTrafficTotalsForHiddenPanel()
-            self.releasePanelCachedData()
+            if !self.isDashboardPresented {
+                self.resetTrafficTotalsForHiddenPanel()
+                self.releasePanelCachedData()
+            }
         }
         trimInMemoryLogsForCurrentVisibility()
         self.updateDataAcquisitionPolicy()
@@ -94,6 +96,19 @@ extension AppViewModel {
             for kind in WebUIKind.allCases {
                 await self.checkForWebUIUpdates(kind)
             }
+        }
+    }
+
+    func setDashboardVisibility(_ presented: Bool) {
+        guard self.isDashboardPresented != presented else { return }
+        self.isDashboardPresented = presented
+        if !presented && !self.isPanelPresented {
+            self.resetTrafficTotalsForHiddenPanel()
+            self.releasePanelCachedData()
+        }
+        self.updateDataAcquisitionPolicy()
+        if presented {
+            Task { [weak self] in await self?.refreshFromAPI(includeSlowCalls: false) }
         }
     }
 
@@ -119,9 +134,9 @@ extension AppViewModel {
         panelPresented: Bool,
         activeTab: RootTab) -> DataAcquisitionPolicy
     {
-        let trafficEnabled = panelPresented || self.statusBarDisplayMode != .iconOnly
+        let trafficEnabled = panelPresented || self.isDashboardPresented || self.statusBarDisplayMode != .iconOnly
 
-        if !panelPresented {
+        if !panelPresented && !self.isDashboardPresented {
             return DataAcquisitionPolicy(
                 enableTrafficStream: trafficEnabled,
                 enableMemoryStream: false,
@@ -139,9 +154,9 @@ extension AppViewModel {
             self.foregroundLowFrequencyOtherTabsIntervalNanoseconds
         }
 
-        let memoryEnabled = activeTab == .proxy
-        let connectionsEnabled = activeTab == .proxy || activeTab == .connections
-        let logsEnabled = activeTab == .logs
+        let memoryEnabled = self.isDashboardPresented || activeTab == .proxy
+        let connectionsEnabled = self.isDashboardPresented || activeTab == .proxy || activeTab == .connections
+        let logsEnabled = panelPresented && activeTab == .logs
 
         return DataAcquisitionPolicy(
             enableTrafficStream: trafficEnabled,

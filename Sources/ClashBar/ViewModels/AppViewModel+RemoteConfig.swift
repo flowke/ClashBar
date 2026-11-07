@@ -7,15 +7,16 @@ private typealias T = MenuBarLayoutTokens
 
 @MainActor
 extension AppViewModel {
-    func importRemoteConfigFile() async {
+    func importRemoteConfigFile(manualOnly: Bool = false, dashboardErrors: Bool = false) async {
         guard let configDirectory = ensureConfigDirectoryAvailable() else { return }
-        guard let input = promptRemoteConfigImportInput() else { return }
+        guard let input = promptRemoteConfigImportInput(manualOnly: manualOnly) else { return }
 
         let urlText = input.urlString.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let remoteURL = URL(string: urlText), isSupportedRemoteConfigURL(remoteURL) else {
             let message = tr("log.config.remote.invalid_url", urlText)
             appendLog(level: "error", message: message)
-            self.presentRemoteConfigImportResultAlert(success: false, message: message)
+            if dashboardErrors { dashboardConfigError = message }
+            else { self.presentRemoteConfigImportResultAlert(success: false, message: message) }
             return
         }
 
@@ -23,49 +24,52 @@ extension AppViewModel {
         guard let fileName = normalizedConfigFileName(input.fileName, fallback: fallbackName) else {
             let message = tr("log.config.import.invalid_filename", input.fileName)
             appendLog(level: "error", message: message)
-            self.presentRemoteConfigImportResultAlert(success: false, message: message)
+            if dashboardErrors { dashboardConfigError = message }
+            else { self.presentRemoteConfigImportResultAlert(success: false, message: message) }
             return
         }
 
         let targetURL = configDirectory.appendingPathComponent(fileName, isDirectory: false)
         let existsAlready = FileManager.default.fileExists(atPath: targetURL.path)
-        let existingIsRemote = self.remoteConfigSubscriptions[fileName] != nil
-
-        if existsAlready, !existingIsRemote {
-            guard self.confirmOverwriteConfig(named: fileName) else {
-                appendLog(level: "info", message: tr("log.config.import.cancelled", fileName))
-                return
-            }
+        if existsAlready {
+            let message = self.uiLanguage == .zhHans ? "同名配置已存在，请使用其他名称。" : "A configuration with this name already exists. Choose a different name."
+            appendLog(level: "error", message: message)
+            if dashboardErrors { dashboardConfigError = message }
+            else { presentRemoteConfigImportResultAlert(success: false, message: message) }
+            return
         }
 
         do {
             let userAgent = await remoteSubscriptionUserAgent()
-            let data = try await downloadRemoteConfigData(from: remoteURL, userAgent: userAgent)
+            let download = try await configService.downloadRemoteConfig(from: remoteURL, userAgent: userAgent)
+            let data = download.data
+            try await validateDownloadedConfig(data, in: configDirectory)
+            guard !FileManager.default.fileExists(atPath: targetURL.path) else {
+                throw CocoaError(.fileWriteFileExists)
+            }
             try writeConfigData(data, to: targetURL)
 
             let subscription = RemoteConfigSubscription(
                 urlString: remoteURL.absoluteString,
                 autoUpdateEnabled: input.autoUpdateEnabled,
                 autoUpdateIntervalHours: input.autoUpdateIntervalHours,
-                lastUpdateCheckAt: Date())
+                lastUpdateCheckAt: Date(),
+                usage: download.usage)
             self.upsertRemoteConfigSubscription(for: fileName, subscription: subscription)
             let message = tr("log.config.import_remote.success", fileName)
             appendLog(level: "info", message: message)
-
-            if existsAlready, self.shouldAutoReloadCurrentConfig(updatedFileNames: [fileName]) {
-                await self.reloadConfig()
-            }
 
             self.presentRemoteConfigImportResultAlert(success: true, message: message)
         } catch {
             let message = tr("log.config.import_remote.failed", fileName, error.localizedDescription)
             appendLog(level: "error", message: message)
-            self.presentRemoteConfigImportResultAlert(success: false, message: message)
+            if dashboardErrors { dashboardConfigError = message }
+            else { self.presentRemoteConfigImportResultAlert(success: false, message: message) }
         }
     }
 
     func updateAllRemoteConfigFiles() async {
-        guard let configDirectory = ensureConfigDirectoryAvailable() else { return }
+        guard ensureConfigDirectoryAvailable() != nil else { return }
         pruneRemoteConfigSubscriptionsIfNeeded()
 
         let subscriptions = remoteConfigSubscriptions
@@ -74,69 +78,18 @@ extension AppViewModel {
             return
         }
 
-        let userAgent = await remoteSubscriptionUserAgent()
-        var updatedFileNames: Set<String> = []
-        var failedCount = 0
-
         for fileName in subscriptions.keys.sorted() {
-            guard let sub = subscriptions[fileName],
-                  let remoteURL = URL(string: sub.urlString),
-                  isSupportedRemoteConfigURL(remoteURL)
-            else {
-                failedCount += 1
-                appendLog(
-                    level: "error",
-                    message: tr(
-                        "log.config.remote.update_item_failed",
-                        fileName,
-                        tr("log.config.remote.invalid_url", subscriptions[fileName]?.urlString ?? fileName)))
-                continue
-            }
-
-            let targetURL = configDirectory.appendingPathComponent(fileName, isDirectory: false)
-            let checkAt = Date()
-            do {
-                let data = try await downloadRemoteConfigData(from: remoteURL, userAgent: userAgent)
-                guard let refreshedSubscription = self.checkedRemoteConfigSubscription(
-                    for: fileName,
-                    baseline: sub,
-                    at: checkAt)
-                else {
-                    continue
-                }
-                let didWrite = try self.writeConfigData(data, to: targetURL)
-                self.remoteConfigSubscriptions[fileName] = refreshedSubscription
-                if didWrite {
-                    updatedFileNames.insert(fileName)
-                    self.refreshConfigStateAfterMutation()
-                    self.syncConfigSignatureSnapshotToMonitorBaseline()
-                }
-            } catch {
-                guard let refreshedSubscription = self.checkedRemoteConfigSubscription(
-                    for: fileName,
-                    baseline: sub,
-                    at: checkAt)
-                else {
-                    continue
-                }
-                self.remoteConfigSubscriptions[fileName] = refreshedSubscription
-                failedCount += 1
-                appendLog(
-                    level: "error",
-                    message: tr("log.config.remote.update_item_failed", fileName, error.localizedDescription))
-            }
-        }
-
-        self.persistRemoteConfigSubscriptions()
-        appendLog(level: "info", message: tr("log.config.remote.update_summary", updatedFileNames.count, failedCount))
-
-        if self.shouldAutoReloadCurrentConfig(updatedFileNames: updatedFileNames) {
-            await self.reloadConfig()
+            await refreshRemoteConfigFile(named: fileName)
         }
     }
 
-    func deleteConfigFile(named fileName: String) async {
-        guard self.confirmDeleteConfig(named: fileName) else { return }
+    func deleteConfigFile(named fileName: String, confirmed: Bool = false) async {
+        if !confirmed, (try? effectiveConfigTransaction.currentRecord()) != nil {
+            await deleteDashboardConfig(fileName)
+            return
+        }
+        guard !dashboardConfigBusy else { return }
+        guard confirmed || self.confirmDeleteConfig(named: fileName) else { return }
         guard let configDirectory = ensureConfigDirectoryAvailable() else { return }
 
         let targetURL = configDirectory.appendingPathComponent(fileName, isDirectory: false)
@@ -147,6 +100,7 @@ extension AppViewModel {
             try FileManager.default.removeItem(at: targetURL)
         } catch {
             appendLog(level: "error", message: tr("log.config.delete.failed", fileName, error.localizedDescription))
+            if confirmed { dashboardConfigError = error.localizedDescription }
             return
         }
 
@@ -178,7 +132,7 @@ extension AppViewModel {
         }
     }
 
-    private func confirmDeleteConfig(named fileName: String) -> Bool {
+    func confirmDeleteConfig(named fileName: String) -> Bool {
         self.runModalAlert(
             style: .warning,
             message: tr("app.config.delete.title", fileName),
@@ -264,15 +218,19 @@ extension AppViewModel {
             let stored = self.remoteConfigSubscriptions[fileName]?.urlString ?? fileName
             let reason = tr("log.config.remote.invalid_url", stored)
             self.appendLog(level: "error", message: tr("log.config.remote.update_item_failed", fileName, reason))
+            self.dashboardSubscriptionErrors[fileName] = reason
             self.setRemoteConfigMenuState(for: fileName, phase: .failed)
             return
         }
+        guard sub.isEnabled else { return }
+        dashboardSubscriptionErrors[fileName] = nil
 
         let checkAt = Date()
         do {
             let userAgent = await self.remoteSubscriptionUserAgent()
-            let data = try await self.downloadRemoteConfigData(from: remoteURL, userAgent: userAgent)
-            guard let refreshedSubscription = self.checkedRemoteConfigSubscription(
+            let download = try await self.configService.downloadRemoteConfig(from: remoteURL, userAgent: userAgent)
+            let data = download.data
+            guard var refreshedSubscription = self.checkedRemoteConfigSubscription(
                 for: fileName,
                 baseline: sub,
                 at: checkAt)
@@ -280,18 +238,34 @@ extension AppViewModel {
                 return
             }
             let targetURL = configDirectory.appendingPathComponent(fileName, isDirectory: false)
-            let didWrite = try self.writeConfigData(data, to: targetURL)
+            let original = try Data(contentsOf: targetURL)
+            let didWrite = original != data
+            if didWrite, fileName == self.selectedConfigName {
+                let changes = (try self.effectiveConfigTransaction.currentRecord())?.changes ?? []
+                guard await self.applyDashboardConfiguration(baseName: fileName, changes: changes, replacementSource: data, precondition: {
+                    guard self.remoteConfigSubscriptions[fileName] == sub, self.selectedConfigName == fileName else {
+                        throw CocoaError(.fileWriteFileExists)
+                    }
+                }) else {
+                    throw NSError(domain: "ClashBar.Config", code: 422,
+                                  userInfo: [NSLocalizedDescriptionKey: self.dashboardConfigError ?? "Configuration update failed"])
+                }
+            } else if didWrite {
+                try await validateDownloadedConfig(data, in: configDirectory)
+                guard self.remoteConfigSubscriptions[fileName] == sub,
+                      try Data(contentsOf: targetURL) == original else {
+                    throw CocoaError(.fileWriteFileExists)
+                }
+                try data.write(to: targetURL, options: .atomic)
+            }
 
+            refreshedSubscription.usage = download.usage
             self.remoteConfigSubscriptions[fileName] = refreshedSubscription
             self.persistRemoteConfigSubscriptions()
 
             if didWrite {
                 self.refreshConfigStateAfterMutation()
                 self.syncConfigSignatureSnapshotToMonitorBaseline()
-
-                if self.shouldAutoReloadCurrentConfig(updatedFileNames: [fileName]) {
-                    await self.reloadConfig()
-                }
             }
 
             self.setRemoteConfigMenuState(
@@ -311,6 +285,10 @@ extension AppViewModel {
             self.appendLog(
                 level: "error",
                 message: tr("log.config.remote.update_item_failed", fileName, error.localizedDescription))
+            self.dashboardSubscriptionErrors[fileName] = error.localizedDescription
+            if self.dashboardConfigError == error.localizedDescription {
+                self.dashboardConfigError = nil
+            }
             self.setRemoteConfigMenuState(for: fileName, phase: .failed)
         }
     }
@@ -404,7 +382,7 @@ extension AppViewModel {
         let autoUpdateIntervalHours: Int
     }
 
-    private func promptRemoteConfigImportInput() -> RemoteConfigImportInput? {
+    private func promptRemoteConfigImportInput(manualOnly: Bool) -> RemoteConfigImportInput? {
         let container = NSView(frame: NSRect(x: 0, y: 0, width: 340, height: 142))
 
         let urlLabel = NSTextField(labelWithString: tr("ui.quick.remote.url_label"))
@@ -449,11 +427,13 @@ extension AppViewModel {
         container.addSubview(urlField)
         container.addSubview(fileLabel)
         container.addSubview(fileField)
-        container.addSubview(separator)
-        container.addSubview(autoUpdateCheckbox)
-        container.addSubview(eachLabel)
-        container.addSubview(intervalField)
-        container.addSubview(intervalUnit)
+        if !manualOnly {
+            container.addSubview(separator)
+            container.addSubview(autoUpdateCheckbox)
+            container.addSubview(eachLabel)
+            container.addSubview(intervalField)
+            container.addSubview(intervalUnit)
+        }
 
         let response = self.runModalAlert(
             style: .informational,
@@ -462,7 +442,7 @@ extension AppViewModel {
             buttons: [tr("ui.action.import"), tr("ui.action.cancel")]) { $0.accessoryView = container }
         guard response == .alertFirstButtonReturn else { return nil }
 
-        let autoUpdate = autoUpdateCheckbox.state == .on
+        let autoUpdate = !manualOnly && autoUpdateCheckbox.state == .on
         let intervalHours = max(
             RemoteConfigSubscription.minimumAutoUpdateIntervalHours,
             Int(intervalField.stringValue) ?? RemoteConfigSubscription.defaultAutoUpdateIntervalHours)
@@ -488,6 +468,14 @@ extension AppViewModel {
 
     private func downloadRemoteConfigData(from remoteURL: URL, userAgent: String? = nil) async throws -> Data {
         try await configService.downloadRemoteConfigData(from: remoteURL, userAgent: userAgent)
+    }
+
+    private func validateDownloadedConfig(_ data: Data, in directory: URL) async throws {
+        let candidate = directory.appendingPathComponent(".clashbar-validation-\(UUID().uuidString).yaml")
+        defer { try? FileManager.default.removeItem(at: candidate) }
+        _ = try ConfigRuleMerger().merge(data, changes: [])
+        try data.write(to: candidate, options: .atomic)
+        try await processManager.validateConfig(configPath: candidate.path)
     }
 
     private static let defaultMihomoVersionForUserAgent = "v1.19.27"
@@ -524,7 +512,7 @@ extension AppViewModel {
         return trimmed
     }
 
-    private func restoreTunAfterConfigReloadIfNeeded(expectedEnabled: Bool) async throws {
+    func restoreTunAfterConfigReloadIfNeeded(expectedEnabled: Bool) async throws {
         guard isRuntimeRunning else { return }
         try await self.patchTunConfig(enable: expectedEnabled)
         try await self.verifyTunRuntimeState(expectedEnabled: expectedEnabled)

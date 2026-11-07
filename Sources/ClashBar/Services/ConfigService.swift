@@ -1,4 +1,5 @@
 import Foundation
+import Yams
 
 struct WorkingDirectoryManager {
     let homeDirectory: URL
@@ -181,6 +182,10 @@ final class ConfigDirectoryManager {
 }
 
 struct ConfigImportService {
+    struct Download {
+        let data: Data
+        let usage: SubscriptionUsage?
+    }
     private let maxRemoteConfigBytes = 5 * 1024 * 1024
 
     @discardableResult
@@ -193,15 +198,10 @@ struct ConfigImportService {
         }
 
         guard self.validateClashConfigData(data) else {
-            let preview = String(data: data.prefix(200), encoding: .utf8) ?? "<binary data>"
-            let message = """
-            Remote config is not a valid Clash configuration (missing proxy keys). \
-            Content preview: \(preview)
-            """
             throw NSError(
                 domain: "ClashBar.ConfigImport",
                 code: 422,
-                userInfo: [NSLocalizedDescriptionKey: message])
+                userInfo: [NSLocalizedDescriptionKey: "Configuration is not a valid YAML mapping"])
         }
 
         if let existing = try? Data(contentsOf: targetURL), existing == data {
@@ -217,11 +217,8 @@ struct ConfigImportService {
             return false
         }
 
-        let hasProxies = text.contains("proxies:")
-        let hasProxyGroups = text.contains("proxy-groups:")
-        let hasProxyProviders = text.contains("proxy-providers:")
-
-        return hasProxies || hasProxyGroups || hasProxyProviders
+        guard let document = try? Yams.compose(yaml: text) else { return false }
+        return document.mapping != nil
     }
 
     func normalizedConfigFileName(_ fileName: String, fallback: String? = nil) -> String? {
@@ -239,21 +236,11 @@ struct ConfigImportService {
     }
 
     func inferredRemoteConfigFileName(from remoteURL: URL) -> String {
-        let rawName = remoteURL.lastPathComponent.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !rawName.isEmpty else { return "remote-config.yaml" }
-
-        let ext = (rawName as NSString).pathExtension.lowercased()
-        if ext == "yaml" || ext == "yml" {
-            return rawName
+        guard let host = remoteURL.host?.trimmingCharacters(in: .whitespacesAndNewlines), !host.isEmpty else {
+            return "remote-config.yaml"
         }
-
-        if ext.isEmpty {
-            return "\(rawName).yaml"
-        }
-
-        let stem = (rawName as NSString).deletingPathExtension
-        let base = stem.trimmingCharacters(in: .whitespacesAndNewlines)
-        return base.isEmpty ? "remote-config.yaml" : "\(base).yaml"
+        let safeHost = host.replacingOccurrences(of: ":", with: "-")
+        return "\(safeHost).yaml"
     }
 
     func isSupportedRemoteConfigURL(_ url: URL) -> Bool {
@@ -262,6 +249,10 @@ struct ConfigImportService {
     }
 
     func downloadRemoteConfigData(from remoteURL: URL, userAgent: String? = nil) async throws -> Data {
+        try await downloadRemoteConfig(from: remoteURL, userAgent: userAgent).data
+    }
+
+    func downloadRemoteConfig(from remoteURL: URL, userAgent: String? = nil) async throws -> Download {
         let session = URLSessionFactory.makeEphemeralSession(options: .init(
             timeoutIntervalForRequest: 15,
             timeoutIntervalForResource: 30))
@@ -295,7 +286,7 @@ struct ConfigImportService {
             }
             data.append(byte)
         }
-        return data
+        return Download(data: data, usage: SubscriptionUsage.parse(http.value(forHTTPHeaderField: "subscription-userinfo")))
     }
 
     private func remoteConfigTooLargeError(limit: Int) -> NSError {
@@ -371,5 +362,9 @@ final class ConfigService {
 
     func downloadRemoteConfigData(from remoteURL: URL, userAgent: String? = nil) async throws -> Data {
         try await self.configImportService.downloadRemoteConfigData(from: remoteURL, userAgent: userAgent)
+    }
+
+    func downloadRemoteConfig(from remoteURL: URL, userAgent: String? = nil) async throws -> ConfigImportService.Download {
+        try await self.configImportService.downloadRemoteConfig(from: remoteURL, userAgent: userAgent)
     }
 }

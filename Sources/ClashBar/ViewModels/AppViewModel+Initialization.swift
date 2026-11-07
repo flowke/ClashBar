@@ -57,11 +57,27 @@ extension AppViewModel {
         }
     }
 
+    func startAgentRuleService() {
+        do {
+            let socket = AgentRuleSocket(stateDirectory: workingDirectoryManager.stateDirectoryURL) { [weak self] request in
+                guard let self else {
+                    return .failure("unavailable", "ClashBar is no longer available.")
+                }
+                return await self.handleAgentRuleRequest(request)
+            }
+            try socket.start()
+            self.agentRuleSocket = socket
+        } catch {
+            appendLog(level: "error", message: "Agent rule service could not start: \(error.localizedDescription)")
+        }
+    }
+
     func start() {
         guard !self.didStart else { return }
         self.didStart = true
         self.bootstrapDirectoriesAndLogs()
         self.performDeferredInitialization()
+        self.startAgentRuleService()
     }
 
     private func performDeferredInitialization() {

@@ -3,9 +3,10 @@ import Foundation
 @MainActor
 extension AppViewModel {
     func switchToMachineTarget(_ target: MachineTarget) async {
+        guard !dashboardConfigBusy else { return }
         if case let .remote(machine) = target {
             let status = await self.remoteMachineStore.refreshConnectivity(for: machine)
-            guard status.isConnected else { return }
+            guard status.isConnected, !dashboardConfigBusy else { return }
         }
 
         self.remoteMachineStore.selectTarget(target)
