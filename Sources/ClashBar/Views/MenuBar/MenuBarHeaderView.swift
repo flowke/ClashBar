@@ -219,6 +219,8 @@ struct MenuBarHeaderView: TranslatingView {
                 }
             })
             .disabled(self.isSwitchingMachine)
+            .help(self.headerConnectionHelpText)
+            .accessibilityLabel(self.headerConnectionAccessibilityLabel)
     }
 
     var headerControllerWarningIcon: some View {
@@ -240,19 +242,25 @@ struct MenuBarHeaderView: TranslatingView {
             .textCase(.uppercase)
     }
 
-    var machineSwitcherStatus: MachineConnectionStatus? {
-        guard case let .remote(machine) = remoteMachineStore.activeTarget else { return nil }
-        return self.remoteMachineStore.statusFor(machine.id)
-    }
-
     var headerConnectionDisplayText: String {
-        self.appViewModel.externalControllerDisplay
+        self.appViewModel.proxyEndpointDisplay
     }
 
     var headerConnectionStatusTint: Color {
-        if let status = self.machineSwitcherStatus {
-            return self.machineStatusTint(status)
-        }
         return self.statusColor
+    }
+
+    var headerConnectionHelpText: String {
+        self.tr(
+            "ui.machine.proxy_endpoint_help",
+            self.appViewModel.proxyEndpointDisplay,
+            self.appViewModel.externalControllerDisplay)
+    }
+
+    var headerConnectionAccessibilityLabel: String {
+        self.tr(
+            "ui.machine.proxy_endpoint_accessibility",
+            self.appViewModel.proxyEndpointDisplay,
+            self.appViewModel.externalControllerDisplay)
     }
 }

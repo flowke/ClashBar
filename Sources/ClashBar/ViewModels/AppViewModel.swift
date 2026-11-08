@@ -297,6 +297,50 @@ final class AppViewModel: ObservableObject {
         self.processManager.isRunning || self.statusText.caseInsensitiveCompare("running") == .orderedSame
     }
 
+    /// The port applications use for proxy traffic. The external controller
+    /// address is kept separately for API requests and must not be shown as
+    /// the proxy endpoint in the menu header.
+    var proxyEndpointDisplay: String {
+        guard let port = self.mixedProxyPort else {
+            return "-"
+        }
+
+        // Keep the compact local status-item header readable. The full host
+        // and management endpoint remain available in the help text and in
+        // the machine switcher popover.
+        if self.remoteMachineStore.activeTarget.isLocal {
+            return String(port)
+        }
+
+        let configuredHost = self.controllerHost(from: self.externalControllerDisplay) ?? "127.0.0.1"
+        let host = Self.isWildcardHost(configuredHost) ? "127.0.0.1" : configuredHost
+        let displayHost = host.contains(":") && !host.hasPrefix("[") ? "[\(host)]" : host
+        return "\(displayHost):\(port)"
+    }
+
+    var mixedProxyPort: Int? {
+        if self.mixedPort > 0 {
+            return self.mixedPort
+        }
+
+        guard let configuredPort = Int(self.settingsMixedPort.trimmingCharacters(in: .whitespacesAndNewlines)),
+              configuredPort > 0,
+              configuredPort <= 65535
+        else {
+            return nil
+        }
+        return configuredPort
+    }
+
+    private static func isWildcardHost(_ value: String) -> Bool {
+        switch value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "", "0.0.0.0", "::", "0:0:0:0:0:0:0:0":
+            true
+        default:
+            false
+        }
+    }
+
     var menuBarSymbolName: String {
         switch self.runtimeVisualStatus {
         case .runningHealthy: "bolt.horizontal.circle.fill"

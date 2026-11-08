@@ -48,6 +48,17 @@ private struct DashboardMenuItemStyle: ButtonStyle {
     }
 }
 
+private extension View {
+    @ViewBuilder
+    func fillGridRowWhen(_ shouldFill: Bool) -> some View {
+        if shouldFill {
+            frame(maxHeight: .infinity, alignment: .topLeading)
+        } else {
+            self
+        }
+    }
+}
+
 struct DashboardCustomRuleRequest: Equatable {
     let id = UUID()
     let operation: CustomRuleChange.Operation
@@ -475,7 +486,8 @@ struct DashboardConfigurationView: View {
                         }
                         .buttonStyle(DashboardTextButtonStyle()).font(.system(size: 12))
                     }
-                    .padding(20).frame(maxWidth: .infinity, minHeight: remote ? 227 : 126, alignment: .topLeading)
+                    .padding(20).frame(maxWidth: .infinity, minHeight: remote ? 0 : 126, alignment: .topLeading)
+                    .fillGridRowWhen(remote)
                     .background {
                         Button { applyBase(name) } label: {
                             RoundedRectangle(cornerRadius: 12)
@@ -528,10 +540,16 @@ struct DashboardConfigurationView: View {
         let subscription = appViewModel.remoteConfigSubscriptions[name]
         let state = appViewModel.remoteConfigMenuState(for: name)
         if subscription?.isEnabled == false { Text(text("已停用", "Disabled")).font(.caption).foregroundStyle(.secondary) }
-        if state.phase == .refreshing {
-            Text(text("正在更新", "Updating")).font(.caption).foregroundStyle(.secondary)
-        } else if let updated = state.updatedAt {
-            Text("\(text("更新于", "Updated")) \(updated.formatted(date: .abbreviated, time: .shortened))").font(.caption).foregroundStyle(.secondary)
+        let expiry = subscription?.usage?.expiresAt
+        let updateDetails: String? = {
+            if state.phase == .refreshing { return text("正在更新", "Updating") }
+            guard let updated = state.updatedAt else { return nil }
+            return "\(text("更新于", "Updated")) \(updated.formatted(date: .abbreviated, time: .shortened))"
+        }()
+        let expiryDetails = expiry.map { "\(text("到期", "Expires")) \($0.formatted(date: .abbreviated, time: .omitted))" }
+        let details = [updateDetails, expiryDetails].compactMap { $0 }.joined(separator: " · ")
+        if !details.isEmpty {
+            Text(details).font(.caption).foregroundStyle(.secondary).lineLimit(2)
         }
         if let usage = subscription?.usage, let used = usage.used, let total = usage.total, total > 0 {
             Text("\(text("剩余", "Remaining")) \(ValueFormatter.bytesCompact(max(0, total - used)))")
@@ -551,9 +569,6 @@ struct DashboardConfigurationView: View {
                 .font(.system(size: 11)).foregroundStyle(muted)
         } else {
             Text(text("暂无流量信息", "No traffic information")).font(.caption).foregroundStyle(.secondary)
-        }
-        if let expiry = subscription?.usage?.expiresAt {
-            Text("\(text("到期", "Expires")) \(expiry.formatted(date: .abbreviated, time: .omitted))").font(.caption).foregroundStyle(.secondary)
         }
     }
 

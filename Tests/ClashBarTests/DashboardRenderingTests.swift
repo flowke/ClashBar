@@ -92,9 +92,11 @@ final class DashboardRenderingTests: XCTestCase {
                 }
                 let content = DashboardView(appViewModel: model, initialPage: page, initialConfigurationTab: tab)
                     .environment(\.colorScheme, .light)
-                let sampleWindow = DashboardWindow(contentRect: NSRect(x: 0, y: 0, width: 1100, height: 740), styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView], backing: .buffered, defer: false)
-                sampleWindow.titlebarAppearsTransparent = true
-                sampleWindow.installContent(content)
+                let sampleWindow = DashboardWindow(contentRect: NSRect(x: 0, y: 0, width: 1100, height: 740), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
+                let controller = NSHostingController(rootView: content)
+                controller.sizingOptions = []
+                sampleWindow.contentViewController = controller
+                sampleWindow.setContentSize(NSSize(width: 1100, height: 740))
                 let host = try XCTUnwrap(sampleWindow.contentView)
                 sampleWindow.setFrameOrigin(NSPoint(x: -10000, y: -10000))
                 sampleWindow.orderFrontRegardless()
@@ -146,24 +148,22 @@ final class DashboardRenderingTests: XCTestCase {
         session.invalidateAndCancel()
     }
 
-    func testWindowControlsStayInsideSidebarAfterResize() throws {
+    func testWindowControlsRemainInStandardTitlebar() throws {
         _ = NSApplication.shared
-        let window = DashboardWindow(contentRect: NSRect(x: 0, y: 0, width: 1100, height: 740), styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView], backing: .buffered, defer: false)
-        window.installContent(Color.white)
+        let window = DashboardWindow(contentRect: NSRect(x: 0, y: 0, width: 1100, height: 740), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
+        window.contentViewController = NSHostingController(rootView: Color.white)
         let content = try XCTUnwrap(window.contentView)
         content.layoutSubtreeIfNeeded()
-        for (index, type) in [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton].enumerated() {
+        for type in [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton] {
             let button = try XCTUnwrap(window.standardWindowButton(type))
-            let rect = button.convert(button.bounds, to: content)
-            XCTAssertEqual(rect.minX, CGFloat(29 + index * 20), accuracy: 0.5)
-            XCTAssertEqual(content.bounds.maxY - rect.maxY, 29, accuracy: 0.5)
-            XCTAssertTrue(content.hitTest(NSPoint(x: rect.midX, y: rect.midY)) === button)
+            XCTAssertFalse(button.isDescendant(of: content))
+            XCTAssertNotNil(button.superview)
             XCTAssertNotNil(button.action)
         }
         window.setContentSize(NSSize(width: 760, height: 520))
         content.layoutSubtreeIfNeeded()
         let close = try XCTUnwrap(window.standardWindowButton(.closeButton))
-        let rect = close.convert(close.bounds, to: content)
-        XCTAssertEqual(content.bounds.maxY - rect.maxY, 29, accuracy: 0.5, "button=\(close.frame), parent=\(String(describing: close.superview?.frame)), content=\(content.bounds)")
+        XCTAssertFalse(close.isDescendant(of: content))
+        XCTAssertNotNil(close.superview)
     }
 }

@@ -1,42 +1,27 @@
 import AppKit
 import SwiftUI
 
-final class DashboardWindow: NSWindow {
-    func installContent<Content: View>(_ view: Content) {
-        let container = NSView(frame: contentView?.bounds ?? .zero)
-        let hosting = NSHostingView(rootView: view.ignoresSafeArea())
-        hosting.frame = container.bounds
-        hosting.autoresizingMask = [.width, .height]
-        container.addSubview(hosting)
-        contentView = container
+final class DashboardWindow: NSWindow, NSToolbarDelegate {
+    func installToolbar() {
+        let toolbar = NSToolbar(identifier: "DashboardToolbar")
+        toolbar.delegate = self
+        toolbar.allowsUserCustomization = false
+        self.toolbar = toolbar
+    }
 
-        let controls = NSView()
-        controls.translatesAutoresizingMaskIntoConstraints = false
-        container.addSubview(controls)
-        NSLayoutConstraint.activate([
-            controls.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 29),
-            controls.topAnchor.constraint(equalTo: container.topAnchor, constant: 29),
-            controls.widthAnchor.constraint(equalToConstant: 54),
-            controls.heightAnchor.constraint(equalToConstant: 14)
-        ])
-        for (index, type) in [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton].enumerated() {
-            guard let button = standardWindowButton(type) else { continue }
-            button.removeFromSuperview()
-            controls.addSubview(button)
-            button.translatesAutoresizingMaskIntoConstraints = false
-            NSLayoutConstraint.activate([
-                button.leadingAnchor.constraint(equalTo: controls.leadingAnchor, constant: CGFloat(index * 20)),
-                button.centerYAnchor.constraint(equalTo: controls.centerYAnchor)
-            ])
-        }
+    func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
+        [.toggleSidebar]
+    }
+
+    func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
+        [.toggleSidebar]
     }
 }
 
 struct DashboardView: View {
     @ObservedObject var appViewModel: AppViewModel
     @ObservedObject private var remoteMachineStore: RemoteMachineStore
-    @State private var selection: Page
-    @State private var hoveredPage: Page?
+    @State private var selection: Page?
     private let initialConfigurationTab: Int
 
     init(appViewModel: AppViewModel, initialPage: Page = .overview, initialConfigurationTab: Int = 0) {
@@ -66,11 +51,12 @@ struct DashboardView: View {
     }
 
     var body: some View {
-        HStack(spacing: 0) {
+        NavigationSplitView {
             self.sidebar
+        } detail: {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
-                    Text(self.selection.title(language: self.appViewModel.uiLanguage))
+                    Text((self.selection ?? .overview).title(language: self.appViewModel.uiLanguage))
                         .font(.system(size: 26, weight: .semibold))
                     if self.selection == .configuration {
                         Text(self.appViewModel.uiLanguage == .zhHans ? "管理本地配置与远程订阅" : "Manage local configurations and subscriptions")
@@ -78,7 +64,7 @@ struct DashboardView: View {
                             .foregroundStyle(Color(red: 0.32, green: 0.40, blue: 0.46))
                             .padding(.top, -14)
                     }
-                    switch self.selection {
+                    switch self.selection ?? .overview {
                     case .overview:
                         DashboardOverviewView(appViewModel: self.appViewModel)
                     case .configuration:
@@ -90,72 +76,57 @@ struct DashboardView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
-        .background(Color.white)
     }
 
     private var sidebar: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text("ClashBar")
-                .font(.system(size: 22, weight: .semibold))
-                .padding(.horizontal, 12)
-                .padding(.top, 58)
-
-            Text(self.appViewModel.uiLanguage == .zhHans ? "工作区" : "Workspace")
-                .font(.system(size: 12))
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 12)
-                .padding(.top, 30)
-                .padding(.bottom, 10)
-
+        List(selection: self.$selection) {
             ForEach(Page.allCases, id: \.self) { page in
-                Button {
-                    self.selection = page
-                } label: {
-                    Label(page.title(language: self.appViewModel.uiLanguage), systemImage: page.symbol)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 12)
-                        .frame(height: 42)
-                        .background(self.selection == page ? Color.black.opacity(0.06) :
-                            self.hoveredPage == page ? Color.black.opacity(0.035) : .clear,
-                                    in: RoundedRectangle(cornerRadius: 9))
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .onHover { isHovering in
-                    if isHovering {
-                        self.hoveredPage = page
-                    } else if self.hoveredPage == page {
-                        self.hoveredPage = nil
-                    }
-                }
+                Label(page.title(language: self.appViewModel.uiLanguage), systemImage: page.symbol)
+                    .frame(minHeight: 22, alignment: .leading)
+                    .tag(page)
+                    .listRowInsets(EdgeInsets(top: 1, leading: 8, bottom: 1, trailing: 8))
+                    .listRowSeparator(.hidden)
             }
-
-            Spacer(minLength: 24)
-
-            Text(self.appViewModel.uiLanguage == .zhHans ? "当前目标" : "Current target")
-                .font(.system(size: 12))
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 12)
-                .padding(.bottom, 10)
-            VStack(alignment: .leading, spacing: 5) {
+        }
+        .listStyle(.sidebar)
+        .environment(\.sidebarRowSize, .small)
+        // Keep the active core visible at the bottom while the workspace list
+        // remains independently scrollable. The inset is part of the native
+        // sidebar, so its material and spacing follow macOS automatically.
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text(self.targetName)
-                Text(self.appViewModel.externalControllerDisplay)
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
+                    .font(.body)
+                    .lineLimit(1)
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(self.appViewModel.runtimeVisualStatus.color)
+                        .frame(width: 8, height: 8)
+                    Text(self.appViewModel.proxyEndpointDisplay)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("\(self.runtimeStatusDescription), \(self.appViewModel.proxyEndpointDisplay)")
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(12)
-            .background(Color.black.opacity(0.035), in: RoundedRectangle(cornerRadius: 10))
-            .padding(.bottom, 12)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(.regularMaterial)
         }
-        .padding(.horizontal, 12)
-        .frame(maxHeight: .infinity, alignment: .topLeading)
-        .background(Color(nsColor: NSColor(calibratedWhite: 0.97, alpha: 1)),
-                    in: RoundedRectangle(cornerRadius: 12))
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.black.opacity(0.10), lineWidth: 1))
-        .shadow(color: .black.opacity(0.10), radius: 4, y: 2)
-        .padding(10)
-        .frame(width: 236)
+        .navigationSplitViewColumnWidth(min: 180, ideal: 220)
+    }
+
+    private var runtimeStatusDescription: String {
+        let chinese = self.appViewModel.uiLanguage == .zhHans
+        switch self.appViewModel.runtimeVisualStatus {
+        case .runningHealthy: return chinese ? "运行正常" : "Running normally"
+        case .runningDegraded: return chinese ? "运行异常" : "Running with degraded status"
+        case .starting: return chinese ? "正在启动" : "Starting"
+        case .failed: return chinese ? "运行失败" : "Failed"
+        case .stopped: return chinese ? "已停止" : "Stopped"
+        }
     }
 
     private var targetName: String {

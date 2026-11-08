@@ -259,12 +259,18 @@ extension MenuBarRootView {
 
 extension TranslatingView {
     var statusColor: Color {
-        switch appViewModel.runtimeVisualStatus {
-        case .runningHealthy: self.nativePositive.opacity(T.Opacity.solid)
-        case .runningDegraded: self.nativeWarning.opacity(T.Opacity.solid)
-        case .starting: self.nativeInfo.opacity(T.Opacity.solid)
-        case .failed: self.nativeCritical.opacity(T.Opacity.solid)
-        case .stopped: self.nativeSecondaryLabel
+        self.appViewModel.runtimeVisualStatus.color
+    }
+}
+
+extension RuntimeVisualStatus {
+    var color: Color {
+        switch self {
+        case .runningHealthy: Color(nsColor: .systemGreen).opacity(T.Opacity.solid)
+        case .runningDegraded: Color(nsColor: .systemOrange).opacity(T.Opacity.solid)
+        case .starting: Color(nsColor: .systemBlue).opacity(T.Opacity.solid)
+        case .failed: Color(nsColor: .systemRed).opacity(T.Opacity.solid)
+        case .stopped: Color(nsColor: .secondaryLabelColor)
         }
     }
 }

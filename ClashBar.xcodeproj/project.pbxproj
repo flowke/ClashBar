@@ -7,6 +7,16 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A00000000000000000000001 = {isa = PBXBuildFile; fileRef = B00000000000000000000001; };
+		A00000000000000000000002 = {isa = PBXBuildFile; fileRef = B00000000000000000000002; };
+		A00000000000000000000003 = {isa = PBXBuildFile; fileRef = B00000000000000000000003; };
+		A00000000000000000000004 = {isa = PBXBuildFile; fileRef = B00000000000000000000004; };
+		A00000000000000000000005 = {isa = PBXBuildFile; fileRef = B00000000000000000000005; };
+		A00000000000000000000006 = {isa = PBXBuildFile; fileRef = B00000000000000000000006; };
+		A00000000000000000000007 = {isa = PBXBuildFile; fileRef = B00000000000000000000007; };
+		A00000000000000000000008 = {isa = PBXBuildFile; fileRef = B00000000000000000000008; };
+		A00000000000000000000009 = {isa = PBXBuildFile; fileRef = B00000000000000000000009; };
+		A2B3C4D5E6F7012345678901 /* Yams in Frameworks */ = {isa = PBXBuildFile; productRef = A2B3C4D5E6F7012345678902 /* Yams */; };
 		006B3466EF84C584B217620D /* AppViewModel+ConfigMonitoring.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0099FD00B975856BAC6F83 /* AppViewModel+ConfigMonitoring.swift */; };
 		0AF53C8C1D4E9B3148CB52C2 /* AppViewModel+LocalConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A51AB16BBAE2E03FEBB825E /* AppViewModel+LocalConfig.swift */; };
 		0C788113F1B50ED65C369942 /* RemoteConfigSubscription.swift in Sources */ = {isa = PBXBuildFile; fileRef = C05A7B1A0280607BC2983C62 /* RemoteConfigSubscription.swift */; };
@@ -146,6 +156,15 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		B00000000000000000000001 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/ClashBar/Services/ConfigRuleMerger.swift; sourceTree = "<group>"; };
+		B00000000000000000000002 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/ClashBar/Services/EffectiveConfigTransaction.swift; sourceTree = "<group>"; };
+		B00000000000000000000003 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/ClashBar/Services/AgentRuleService.swift; sourceTree = "<group>"; };
+		B00000000000000000000004 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/ClashBar/Services/AgentRuleSocket.swift; sourceTree = "<group>"; };
+		B00000000000000000000005 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/ClashBar/Views/Dashboard/DashboardConfigurationView.swift; sourceTree = "<group>"; };
+		B00000000000000000000006 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/ClashBar/Views/Dashboard/DashboardCustomRulesView.swift; sourceTree = "<group>"; };
+		B00000000000000000000007 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/ClashBar/Views/Dashboard/DashboardOverviewView.swift; sourceTree = "<group>"; };
+		B00000000000000000000008 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/ClashBar/Views/Dashboard/DashboardView.swift; sourceTree = "<group>"; };
+		B00000000000000000000009 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sources/ClashBar/ViewModels/AppViewModel+EffectiveConfig.swift"; sourceTree = "<group>"; };
 		028439954A10F134774363F3 /* RemoteMachine.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RemoteMachine.swift; path = Sources/ClashBar/Models/RemoteMachine.swift; sourceTree = "<group>"; };
 		05BBFC30E3FBF0AAFCF00071 /* RulesViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RulesViewModel.swift; path = Sources/ClashBar/ViewModels/RulesViewModel.swift; sourceTree = "<group>"; };
 		09D39F5DA30559DE1C57A05A /* ProxyProvidersAndGroupsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ProxyProvidersAndGroupsView.swift; path = Sources/ClashBar/Views/MenuBar/ProxyProvidersAndGroupsView.swift; sourceTree = "<group>"; };
@@ -268,6 +287,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				9F78600247788658B846EB88 /* AppKit.framework in Frameworks */,
+				A2B3C4D5E6F7012345678901 /* Yams in Frameworks */,
 				0E63F1C733F45D96FB44BC82 /* CoreLocation.framework in Frameworks */,
 				CF484532359E3D3A39849470 /* CoreWLAN.framework in Frameworks */,
 				E0BB6C3E5E354F3A063499B5 /* Network.framework in Frameworks */,
@@ -409,6 +429,15 @@
 				B7B57AB8A155811C3EA82961 /* AppReleaseService.swift */,
 				64967CE03358995D32231C0F /* ConfigDirectoryMonitor.swift */,
 				379A040DB36229649F3AF2D1 /* ConfigService.swift */,
+				B00000000000000000000001,
+				B00000000000000000000002,
+				B00000000000000000000003,
+				B00000000000000000000004,
+				B00000000000000000000005,
+				B00000000000000000000006,
+				B00000000000000000000007,
+				B00000000000000000000008,
+				B00000000000000000000009,
 				9610663EEE5F21E98E262DFB /* CoreService.swift */,
 				BE7F8C9A2EFF3CD1D848E305 /* LaunchAtLoginService.swift */,
 				9C4A603AB810298843561A57 /* MihomoAPIService.swift */,
@@ -504,6 +533,9 @@
 				8DA61C5E23D523C400815458 /* PBXTargetDependency */,
 			);
 			name = ClashBarDev;
+			packageProductDependencies = (
+				A2B3C4D5E6F7012345678902 /* Yams */,
+			);
 			productName = "ClashBar Dev";
 			productReference = 650CFFCDF60D903334F20932 /* ClashBar Dev.app */;
 			productType = "com.apple.product-type.application";
@@ -562,6 +594,9 @@
 			);
 			mainGroup = 3F68156B6171245044E97F54;
 			minimizedProjectReferenceProxies = 0;
+			packageReferences = (
+				A2B3C4D5E6F7012345678903 /* XCRemoteSwiftPackageReference "Yams" */,
+			);
 			preferredProjectObjectVersion = 100;
 			productRefGroup = 68225E4240F23AE7225710AD /* Products */;
 			projectDirPath = "";
@@ -573,6 +608,22 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		A2B3C4D5E6F7012345678903 /* XCRemoteSwiftPackageReference "Yams" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/jpsim/Yams.git";
+			requirement = { kind = upToNextMajorVersion; minimumVersion = 5.4.0; };
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A2B3C4D5E6F7012345678902 /* Yams */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A2B3C4D5E6F7012345678903 /* XCRemoteSwiftPackageReference "Yams" */;
+			productName = Yams;
+		};
+/* End XCSwiftPackageProductDependency section */
 
 /* Begin PBXResourcesBuildPhase section */
 		93237E61ABF7D113CB01E777 /* Resources */ = {
@@ -621,6 +672,15 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A00000000000000000000001,
+				A00000000000000000000002,
+				A00000000000000000000003,
+				A00000000000000000000004,
+				A00000000000000000000005,
+				A00000000000000000000006,
+				A00000000000000000000007,
+				A00000000000000000000008,
+				A00000000000000000000009,
 				605FB24AD261677E174D7A0B /* AppDelegate.swift in Sources */,
 				75B56719D458C6E00B201F3F /* AppDependencies.swift in Sources */,
 				3BEAF2BCF96D3AE0E779B1AB /* ClashBarApp.swift in Sources */,

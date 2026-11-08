@@ -73,6 +73,9 @@ final class ClashBarAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelega
         if self.dashboardWindow == nil {
             let window = DashboardWindow(
                 contentRect: NSRect(x: 0, y: 0, width: 1100, height: 740),
+                // Let AppKit extend the content into the titlebar. This keeps the
+                // standard traffic lights and titlebar controls managed by the
+                // system while allowing the native sidebar to run edge to edge.
                 styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
                 backing: .buffered,
                 defer: false)
@@ -82,8 +85,12 @@ final class ClashBarAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelega
             window.minSize = NSSize(width: 760, height: 520)
             window.isReleasedWhenClosed = false
             window.delegate = self
-            window.installContent(DashboardView(appViewModel: self.appViewModel)
-                .preferredColorScheme(.light))
+            let hosting = NSHostingController(rootView:
+                DashboardView(appViewModel: self.appViewModel).preferredColorScheme(.light))
+            hosting.sizingOptions = []
+            window.contentViewController = hosting
+            window.installToolbar()
+            window.setContentSize(NSSize(width: 1100, height: 740))
             window.center()
             self.dashboardWindow = window
         }

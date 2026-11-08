@@ -68,6 +68,11 @@ enum L10n {
                     .appendingPathComponent("Localization", isDirectory: true)
                     .appendingPathComponent("\(localizationName).lproj", isDirectory: true)
                     .path,
+                bundle.resourceURL?
+                    .appendingPathComponent("Resources", isDirectory: true)
+                    .appendingPathComponent("Localization", isDirectory: true)
+                    .appendingPathComponent("\(localizationName).lproj", isDirectory: true)
+                    .path,
             ]
         }
 

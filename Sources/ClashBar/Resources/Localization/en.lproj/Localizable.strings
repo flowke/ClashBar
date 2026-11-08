@@ -75,6 +75,8 @@
 "ui.machine.remote_readonly" = "(Remote, read-only)";
 "ui.machine.local_label" = "Local";
 "ui.machine.remote_label" = "Remote";
+"ui.machine.proxy_endpoint_help" = "Proxy endpoint: %@\nManagement API: %@";
+"ui.machine.proxy_endpoint_accessibility" = "Core status, proxy endpoint %@. Management API %@.";
 
 "ui.section.local_app_settings" = "App Settings (Local)";
 "ui.section.core_settings" = "Core Settings";
