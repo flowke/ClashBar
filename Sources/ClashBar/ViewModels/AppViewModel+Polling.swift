@@ -623,11 +623,13 @@ extension AppViewModel {
         do {
             self.ensureAPIClient()
             try await block()
+            guard !Task.isCancelled else { return }
             if self.apiStatus != .healthy {
                 self.apiStatus = .healthy
             }
             self.lastAPIRefreshErrorFingerprint = nil
         } catch {
+            guard !Task.isCancelled else { return }
             if self.apiStatus != .degraded {
                 self.apiStatus = .degraded
             }

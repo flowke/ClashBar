@@ -11,6 +11,7 @@ struct ProxyTabView: TranslatingView {
 
     private struct ConfigMenuItemContext: Identifiable {
         let name: String
+        let displayName: String
         let isRemote: Bool
         let isSelected: Bool
         let remoteState: RemoteConfigMenuState
@@ -156,6 +157,7 @@ struct ProxyTabView: TranslatingView {
 
         return ConfigMenuItemContext(
             name: name,
+            displayName: remoteSubscription?.displayName ?? name,
             isRemote: isRemote,
             isSelected: name == self.appViewModel.selectedConfigName,
             remoteState: remoteState,
@@ -201,7 +203,7 @@ struct ProxyTabView: TranslatingView {
 
     private func configMenuItem(for context: ConfigMenuItemContext, dismiss: @escaping () -> Void) -> some View {
         ConfigMenuItemView(
-            title: context.name,
+            title: context.displayName,
             leadingSymbol: self.configMenuLeadingSymbol(for: context),
             leadingTint: self.configMenuLeadingTint(for: context),
             selected: context.isSelected,
@@ -218,7 +220,7 @@ struct ProxyTabView: TranslatingView {
             refreshFailedHelpText: self.tr("ui.quick.remote.refresh_failed"))
         {
             dismiss()
-            Task { await self.appViewModel.selectConfigFile(named: context.name) }
+            Task { await self.appViewModel.selectConfigFile(named: context.name, startIfStopped: true) }
         } onRefresh: {
             Task { await self.appViewModel.refreshRemoteConfigFile(named: context.name) }
         }
@@ -309,7 +311,7 @@ struct ProxyTabView: TranslatingView {
             leadingTint: self.nativePurple.opacity(T.Opacity.solid))
         {
             dismiss()
-            Task { await self.appViewModel.importRemoteConfigFile() }
+            Task { await self.appViewModel.importRemoteConfigFile(source: .menuBar) }
         }
         AttachedPopoverMenuItem(
             title: self.tr("ui.quick.update_remote_configs"),
@@ -668,7 +670,7 @@ struct ProxyTabView: TranslatingView {
                 .labelsHidden()
                 .toggleStyle(.switch)
                 .controlSize(.small)
-                .disabled(self.proxyStore.isProxySyncing)
+                .disabled(!self.appViewModel.isSystemProxyToggleEnabled)
                 .frame(width: 50, alignment: .trailing)
         }
         .frame(maxWidth: .infinity, alignment: .leading)

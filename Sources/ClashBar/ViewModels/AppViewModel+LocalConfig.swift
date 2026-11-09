@@ -5,6 +5,8 @@ import UniformTypeIdentifiers
 @MainActor
 extension AppViewModel {
     func seedBundledConfigIfNeeded() {
+        if defaults.bool(forKey: "clashbar.config.bundled.deleted") { return }
+        if (try? effectiveConfigTransaction.currentRecord())?.baseName == "" { return }
         let fileManager = FileManager.default
         let targetURL = workingDirectoryManager.configDirectoryURL
             .appendingPathComponent("ClashBar.yaml", isDirectory: false)
@@ -67,11 +69,15 @@ extension AppViewModel {
         await restartCoreIfNeededForConfigSwitch(previousPath: previousSelectedPath, nextPath: nextSelectedPath)
     }
 
-    func selectConfigFile(named fileName: String) async {
+    func selectConfigFile(named fileName: String, startIfStopped: Bool = false) async {
         guard !dashboardConfigBusy else { return }
         if (try? effectiveConfigTransaction.currentRecord()) != nil {
             let changes = (try? effectiveConfigTransaction.currentRecord())?.changes ?? []
-            await applyDashboardConfiguration(baseName: fileName, changes: changes)
+            if startIfStopped {
+                await selectDashboardConfiguration(fileName, changes: changes)
+            } else {
+                await applyDashboardConfiguration(baseName: fileName, changes: changes)
+            }
             if let dashboardConfigError {
                 appendLog(level: "error", message: dashboardConfigError)
             }
@@ -110,6 +116,9 @@ extension AppViewModel {
         syncConfigDisplayState()
         appendLog(level: "info", message: tr("log.config.selected", fileName))
         await restartCoreIfNeededForConfigSwitch(previousPath: previousSelectedPath, nextPath: nextSelectedPath)
+        if startIfStopped, !isRemoteTarget, !isRuntimeRunning {
+            await startCore(trigger: .manual)
+        }
     }
 
     func importLocalConfigFile(dashboardErrors: Bool = false) {

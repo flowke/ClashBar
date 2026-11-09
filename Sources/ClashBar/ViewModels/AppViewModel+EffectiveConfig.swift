@@ -47,10 +47,13 @@ extension AppViewModel {
         dashboardConfigBusy = true
         dashboardConfigError = nil
         defer { dashboardConfigBusy = false }
+        cancelProxyPortRetry()
+        await waitForProxyPortRetryToStop()
         let previousURL = effectiveConfigURL(for: selectedConfigName) ?? configService.selectedConfig
         let running = processManager.isRunning
         let previousName = selectedConfigName
         let expectedTun = isTunEnabled
+        let previousProxyPorts = currentSystemProxyPortsFromState()
         guard !running || previousURL != nil else {
             dashboardConfigError = "无法确定当前生效配置，未应用新配置。"
             return false
@@ -62,11 +65,12 @@ extension AppViewModel {
             let record = try await effectiveConfigTransaction.commit(
                 data: data, baseName: baseName, changes: changes,
                 validate: { [self] candidate in
-                    try await processManager.validateConfig(configPath: candidate.path)
+                    try await processManager.validateConfigAsync(configPath: candidate.path)
                 },
                 apply: { [self] candidate in
                     guard running else { return }
                     try await clientOrThrow().requestNoResponse(.putConfigs(force: false, path: candidate.path, payload: nil))
+                    try await applyRuntimeProxyPorts(configURL: candidate)
                     try await restoreTunAfterConfigReloadIfNeeded(expectedEnabled: expectedTun)
                 },
                 finalize: {
@@ -89,6 +93,7 @@ extension AppViewModel {
                     if running, let previousURL {
                         do {
                             try await clientOrThrow().requestNoResponse(.putConfigs(force: false, path: previousURL.path, payload: nil))
+                            try await applyRuntimeProxyPorts(configURL: previousURL)
                             try await restoreTunAfterConfigReloadIfNeeded(expectedEnabled: expectedTun)
                         } catch {
                             if let sourceError {
@@ -104,6 +109,12 @@ extension AppViewModel {
             syncConfigDisplayState()
             dashboardEffectiveRecord = record
             syncConfigSignatureSnapshotToMonitorBaseline()
+            if running {
+                await refreshFromAPI(includeSlowCalls: false)
+                await syncSystemProxyPortIfNeeded(shouldSync: true, previousPorts: previousProxyPorts)
+            } else if let ports = try? resolvedProxyPorts() {
+                showProxyPortValues(ports)
+            }
             return true
         } catch {
             dashboardConfigError = error.localizedDescription
@@ -131,7 +142,13 @@ extension AppViewModel {
     }
 
     @discardableResult
-    func editDashboardSubscription(name: String, newName: String, urlString: String) async -> Bool {
+    func editDashboardSubscription(
+        name: String,
+        newName: String,
+        urlString: String,
+        autoUpdateEnabled: Bool? = nil,
+        autoUpdateIntervalHours: Int? = nil) async -> Bool
+    {
         guard !dashboardConfigBusy, remoteConfigMenuState(for: name).phase != .refreshing else {
             dashboardConfigError = uiLanguage == .zhHans ? "配置正在处理中，请稍后重试。" : "The configuration is busy. Try again shortly."
             return false
@@ -159,9 +176,17 @@ extension AppViewModel {
         }
         guard let existing = remoteConfigSubscriptions[normalized] else { return false }
         remoteConfigSubscriptions[normalized] = RemoteConfigSubscription(
-            urlString: url.absoluteString, autoUpdateEnabled: existing.autoUpdateEnabled,
-            autoUpdateIntervalHours: existing.autoUpdateIntervalHours, lastUpdateCheckAt: existing.lastUpdateCheckAt,
-            usage: existing.usage, enabled: existing.enabled)
+            urlString: url.absoluteString,
+            // An explicit rename is the user's preferred title; retain the
+            // provider title only when the stored file name stays unchanged.
+            displayName: normalized == name ? existing.displayName : nil,
+            autoUpdateEnabled: autoUpdateEnabled ?? existing.autoUpdateEnabled,
+            autoUpdateIntervalHours: max(
+                RemoteConfigSubscription.minimumAutoUpdateIntervalHours,
+                autoUpdateIntervalHours ?? existing.autoUpdateIntervalHours),
+            lastUpdateCheckAt: existing.lastUpdateCheckAt,
+            usage: existing.usage,
+            enabled: existing.enabled)
         persistRemoteConfigSubscriptions()
         restartRemoteConfigBackgroundTasksIfNeeded()
         refreshRemoteConfigMenuStates()
@@ -206,20 +231,31 @@ extension AppViewModel {
         }
     }
 
-    func deleteDashboardConfig(_ name: String) async {
-        guard !dashboardConfigBusy else { return }
-        guard confirmDeleteConfig(named: name) else { return }
+    func deleteDashboardConfig(_ name: String, confirmed: Bool = false) async {
+        guard !dashboardConfigBusy, !isCoreActionProcessing, !isRemoteTarget else { return }
+        guard confirmed || confirmDeleteConfig(named: name) else { return }
         if selectedConfigName == name {
-            guard let fallback = availableConfigFileNames.first(where: {
-                $0 != name && (remoteConfigSubscriptions[$0]?.isEnabled ?? true)
-            }) else {
-                dashboardConfigError = uiLanguage == .zhHans ? "请先添加并选择其他基础配置。" : "Add and select another base configuration first."
+            if isRuntimeRunning { await stopCore(trigger: .manual) }
+            guard !isRuntimeRunning, !isCoreActionProcessing, selectedConfigName == name else {
+                dashboardConfigError = uiLanguage == .zhHans ? "无法停止内核，配置未删除。" : "Unable to stop the core; the configuration was not deleted."
                 return
             }
-            let changes = (try? effectiveConfigTransaction.currentRecord())?.changes ?? []
-            guard await applyDashboardConfiguration(baseName: fallback, changes: changes) else { return }
         }
         await deleteConfigFile(named: name, confirmed: true)
         syncConfigSignatureSnapshotToMonitorBaseline()
+    }
+
+    func selectDashboardConfiguration(_ name: String, changes: [CustomRuleChange]) async {
+        guard !isRemoteTarget, !dashboardConfigBusy, !isCoreActionProcessing else { return }
+        if selectedConfigName != name || dashboardEffectiveRecord?.baseName != name {
+            guard await applyDashboardConfiguration(baseName: name, changes: changes) else { return }
+        }
+        if !isRuntimeRunning {
+            await startCore(trigger: .manual)
+            if !isRuntimeRunning {
+                dashboardConfigError = statusItemBanner?.primaryDetail
+                    ?? (uiLanguage == .zhHans ? "内核启动失败。" : "Failed to start the core.")
+            }
+        }
     }
 }

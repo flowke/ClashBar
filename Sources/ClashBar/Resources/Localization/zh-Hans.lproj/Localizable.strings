@@ -20,6 +20,20 @@
 
 "ui.action.stop" = "停止";
 "ui.action.start_core" = "启动内核";
+"ui.action.install_core" = "安装内核";
+"ui.core.missing.title" = "未检测到 mihomo 内核";
+"ui.core.missing.description" = "点击“安装内核”自动下载安装，或将 mihomo 可执行文件放入内核目录。";
+"ui.core.install.running" = "安装中...";
+"ui.core.install.failed" = "安装失败：%@";
+"ui.core.install.error.release" = "未找到可用的官方内核安装包。";
+"ui.core.install.error.architecture" = "当前设备架构不受支持。";
+"ui.core.install.error.checksum" = "下载文件校验失败，请重试。";
+"ui.core.install.error.binary" = "内核文件无效或与当前设备不兼容。";
+"ui.core.install.error.http" = "下载服务器返回错误（%d）。";
+"log.core_install.success" = "mihomo 内核安装完成";
+"log.core_install.failed" = "mihomo 内核安装失败：%@";
+"ui.core.missing.recheck" = "重新检测";
+"ui.core.missing.copy_path" = "复制内核目录路径";
 "ui.action.stop_core" = "停止内核";
 "ui.action.core_unavailable" = "未找到内核";
 "ui.action.quit" = "退出";
@@ -114,7 +128,7 @@
 "ui.quick.remote.url_label" = "订阅链接";
 "ui.quick.remote.url_placeholder" = "https://example.com/config.yaml";
 "ui.quick.remote.filename_label" = "文件名";
-"ui.quick.remote.filename_placeholder" = "留空则使用订阅域名";
+"ui.quick.remote.filename_placeholder" = "留空则优先使用订阅名称，否则使用域名";
 "ui.quick.remote.refreshing" = "刷新中";
 "ui.quick.remote.refresh_failed" = "刷新失败";
 "ui.quick.ssid.bound_label" = "绑定 Wi-Fi: %@";
@@ -207,7 +221,15 @@
 "ui.settings.port.mixed" = "混合端口";
 "ui.settings.port.redir" = "重定向端口";
 "ui.settings.port.tproxy" = "TProxy 端口";
-"ui.settings.proxy_ports_hint" = "HTTP、SOCKS 或混合端口至少启用一个；填写 0 表示禁用。修改端口后请重启内核。";
+"ui.settings.ports.following" = "跟随配置";
+"ui.settings.ports.manual" = "手动设置";
+"ui.settings.ports.follow_config" = "恢复跟随配置";
+"ui.settings.ports.retry" = "重试端口";
+"app.settings.ports.retrying" = "端口未能启用，正在等待并重试...";
+"app.settings.ports.retry_failed" = "端口未能启用，请检查内核日志后重试。";
+"app.settings.ports.retry_succeeded" = "代理端口重试成功";
+"app.settings.error.port_not_applied" = "%@ 期望为 %d，内核实际为 %d。端口可能被占用，请检查内核日志。";
+"ui.settings.proxy_ports_hint" = "填写 0 表示禁用对应端口。所有代理端口均禁用时，应用无法通过普通代理连接。";
 "ui.settings.system_proxy_exceptions_hint" = "这些条目会写入 macOS 的代理绕过域名列表，并在系统代理重新应用时继续保留。";
 "ui.settings.system_proxy_exceptions_empty" = "暂无绕过规则。";
 "ui.settings.helper_status" = "状态";
@@ -323,7 +345,7 @@
 "app.tun.error.runtime_state_mismatch" = "重启内核后 TUN 状态未生效。";
 "app.tun.error.patch_failed" = "应用 TUN 运行时配置失败: %@";
 "app.tun.mips_requires_upgrade" = "mips 协议栈需要 mihomo v%@ 或更高版本内核，请先升级内核。";
-"app.config.remote_import.prompt" = "请输入订阅链接与保存文件名";
+"app.config.remote_import.prompt" = "请输入订阅链接；名称可留空，系统会优先使用服务商提供的名称。";
 "app.config.import.overwrite.title" = "配置已存在：%@";
 "app.config.import.overwrite.message" = "是否覆盖现有配置文件？";
 "app.config.remote_import.alert.success.title" = "订阅导入成功";

@@ -2,6 +2,42 @@ import Foundation
 
 @MainActor
 extension AppViewModel {
+    func installOrUpgradeCore() async {
+        guard !self.isCoreUpgradeInFlight, !self.isCoreActionProcessing, !self.isCoreBootstrapInFlight else { return }
+        if self.needsMihomoCoreInstallation {
+            self.coreUpgradeFeedbackClearTask?.cancel()
+            self.coreUpgradeFeedbackClearTask = nil
+            self.coreUpgradeState = .running
+            do {
+                try await CoreInstallationService.install(in: self.workingDirectoryManager.coreDirectoryURL)
+                self.refreshManagedCoreMetadata()
+                self.coreUpgradeState = .succeeded
+                self.appendLog(level: "info", message: self.tr("log.core_install.success"))
+                self.scheduleCoreUpgradeFeedbackAutoClear()
+            } catch {
+                let detail: String
+                switch error {
+                case CoreInstallationError.invalidRelease:
+                    detail = self.tr("ui.core.install.error.release")
+                case CoreInstallationError.unsupportedArchitecture:
+                    detail = self.tr("ui.core.install.error.architecture")
+                case CoreInstallationError.checksumMismatch:
+                    detail = self.tr("ui.core.install.error.checksum")
+                case CoreInstallationError.invalidBinary:
+                    detail = self.tr("ui.core.install.error.binary")
+                case let CoreInstallationError.downloadFailed(status):
+                    detail = self.tr("ui.core.install.error.http", status)
+                default:
+                    detail = error.localizedDescription
+                }
+                self.coreUpgradeState = .failed(message: detail)
+                self.appendLog(level: "error", message: self.tr("log.core_install.failed", detail))
+            }
+        } else if self.isRuntimeRunning {
+            await self.upgradeCore()
+        }
+    }
+
     func upgradeCore() async {
         guard !self.isCoreUpgradeInFlight else { return }
 

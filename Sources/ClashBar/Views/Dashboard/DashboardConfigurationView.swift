@@ -131,6 +131,8 @@ struct DashboardConfigurationView: View {
     @State private var editingName: String?
     @State private var editingValue = ""
     @State private var editingURL = ""
+    @State private var editingAutoUpdateEnabled = false
+    @State private var editingAutoUpdateIntervalHours = RemoteConfigSubscription.defaultAutoUpdateIntervalHours
     @State private var editorError: String?
     @State private var editorSaving = false
     @State private var editingRemote = false
@@ -271,7 +273,7 @@ struct DashboardConfigurationView: View {
     }
 
     private var configurationTabs: some View {
-        HStack(spacing: 0) {
+        HStack(spacing: 4) {
             ForEach(Array([text("生效的配置", "Effective"), text("自定义配置", "Custom rules"), text("选择的配置", "Sources")].enumerated()), id: \.offset) { index, title in
                 Button { tab = index } label: {
                     Text(title).font(.system(size: 12, weight: .medium)).lineLimit(1)
@@ -291,7 +293,7 @@ struct DashboardConfigurationView: View {
 
     private var effectiveView: some View {
         VStack(alignment: .leading, spacing: 16) {
-            if let record = appViewModel.dashboardEffectiveRecord {
+            if let record = appViewModel.dashboardEffectiveRecord, !record.baseName.isEmpty {
                 VStack(alignment: .leading, spacing: 5) {
                     Text(text("配置已生成", "Configuration generated"))
                         .font(.system(size: 13, weight: .medium))
@@ -396,7 +398,12 @@ struct DashboardConfigurationView: View {
                         sectionIssues[remote] = nil
                         let previousError = appViewModel.dashboardConfigError
                         appViewModel.dashboardConfigError = nil
-                        if remote { await appViewModel.importRemoteConfigFile(manualOnly: true, dashboardErrors: true) }
+                        if remote {
+                            await appViewModel.importRemoteConfigFile(
+                                manualOnly: true,
+                                dashboardErrors: true,
+                                source: .dashboard)
+                        }
                         else { appViewModel.importLocalConfigFile(dashboardErrors: true) }
                         if let details = appViewModel.dashboardConfigError {
                             sectionIssues[remote] = CardIssue(title: remote ? text("添加失败", "Add failed") : text("导入失败", "Import failed"), details: details)
@@ -414,10 +421,11 @@ struct DashboardConfigurationView: View {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 280, maximum: 299), spacing: 16)], alignment: .leading, spacing: 16) {
                 ForEach(names, id: \.self) { name in
                     let selected = name == appViewModel.selectedConfigName
-                    let canApply = !selected && !appViewModel.dashboardConfigBusy && !appViewModel.isRemoteTarget && (appViewModel.remoteConfigSubscriptions[name]?.isEnabled ?? true)
+                    let canApply = (!selected || !appViewModel.isRuntimeRunning) && !appViewModel.dashboardConfigBusy && !appViewModel.isRemoteTarget && (appViewModel.remoteConfigSubscriptions[name]?.isEnabled ?? true)
                     VStack(alignment: .leading, spacing: 10) {
                         HStack(spacing: 6) {
-                            Text(name).font(.system(size: 15, weight: .semibold)).foregroundStyle(ink).lineLimit(1).truncationMode(.middle)
+                            Text(appViewModel.remoteConfigSubscriptions[name]?.displayName ?? name)
+                                .font(.system(size: 15, weight: .semibold)).foregroundStyle(ink).lineLimit(1).truncationMode(.middle)
                                 .allowsHitTesting(false)
                             Spacer(minLength: 0)
                             if selected { Label(text("当前基础配置", "Current"), systemImage: "checkmark").foregroundStyle(accent).font(.system(size: 11)).fixedSize().allowsHitTesting(false) }
@@ -467,6 +475,11 @@ struct DashboardConfigurationView: View {
                                     editingRemote = true
                                     editingValue = name
                                     editingURL = appViewModel.remoteConfigSubscriptions[name]?.urlString ?? ""
+                                    editingAutoUpdateEnabled = appViewModel.remoteConfigSubscriptions[name]?.autoUpdateEnabled ?? false
+                                    editingAutoUpdateIntervalHours = max(
+                                        RemoteConfigSubscription.minimumAutoUpdateIntervalHours,
+                                        appViewModel.remoteConfigSubscriptions[name]?.autoUpdateIntervalHours
+                                            ?? RemoteConfigSubscription.defaultAutoUpdateIntervalHours)
                                     editorError = nil
                                     editingName = name
                                 }.disabled(appViewModel.dashboardConfigBusy || appViewModel.isRemoteTarget || appViewModel.remoteConfigMenuState(for: name).phase == .refreshing)
@@ -497,6 +510,13 @@ struct DashboardConfigurationView: View {
                         .buttonStyle(.plain)
                         .disabled(!canApply)
                         .accessibilityLabel("\(text("应用配置", "Apply configuration")) \(name)")
+                        .contextMenu {
+                            if remote, let urlString = appViewModel.remoteConfigSubscriptions[name]?.urlString {
+                                Button(text("复制订阅链接", "Copy Subscription URL")) {
+                                    appViewModel.copyTextToPasteboard(urlString)
+                                }
+                            }
+                        }
                     }
                     .overlay(RoundedRectangle(cornerRadius: 12).stroke(selected ? accent.opacity(0.75) : .clear, lineWidth: 1).allowsHitTesting(false))
                     .onHover { hoveredSource = $0 ? name : (hoveredSource == name ? nil : hoveredSource) }
@@ -547,7 +567,12 @@ struct DashboardConfigurationView: View {
             return "\(text("更新于", "Updated")) \(updated.formatted(date: .abbreviated, time: .shortened))"
         }()
         let expiryDetails = expiry.map { "\(text("到期", "Expires")) \($0.formatted(date: .abbreviated, time: .omitted))" }
-        let details = [updateDetails, expiryDetails].compactMap { $0 }.joined(separator: " · ")
+        let autoUpdateDetails: String? = {
+            guard let subscription else { return nil }
+            guard subscription.autoUpdateEnabled else { return text("自动更新已关闭", "Auto-update off") }
+            return "\(text("每", "Every")) \(max(1, subscription.autoUpdateIntervalHours)) \(text("小时自动更新", "h auto-update"))"
+        }()
+        let details = [updateDetails, expiryDetails, autoUpdateDetails].compactMap { $0 }.joined(separator: " · ")
         if !details.isEmpty {
             Text(details).font(.caption).foregroundStyle(.secondary).lineLimit(2)
         }
@@ -584,6 +609,15 @@ struct DashboardConfigurationView: View {
                     Text(text("订阅地址", "Subscription URL")).font(.caption).foregroundStyle(.secondary)
                     TextField(text("订阅地址", "Subscription URL"), text: $editingURL)
                 }
+                Toggle(text("自动更新", "Auto-update"), isOn: $editingAutoUpdateEnabled)
+                if editingAutoUpdateEnabled {
+                    Stepper(value: $editingAutoUpdateIntervalHours,
+                            in: RemoteConfigSubscription.minimumAutoUpdateIntervalHours...720) {
+                        Text("\(text("更新间隔", "Update interval"))：\(editingAutoUpdateIntervalHours) \(text("小时", "hours"))")
+                            .font(.system(size: 12)).foregroundStyle(muted)
+                    }
+                    .accessibilityLabel(text("自动更新间隔（小时）", "Auto-update interval in hours"))
+                }
             }
             if let editorError { Text(editorError).font(.caption).foregroundStyle(.red).textSelection(.enabled) }
             HStack {
@@ -594,11 +628,18 @@ struct DashboardConfigurationView: View {
                     let next = editingValue
                     if editingRemote {
                         let url = editingURL
+                        let autoUpdateEnabled = editingAutoUpdateEnabled
+                        let autoUpdateIntervalHours = editingAutoUpdateIntervalHours
                         editorSaving = true
                         editorError = nil
                         Task {
                             let previousError = appViewModel.dashboardConfigError
-                            let saved = await appViewModel.editDashboardSubscription(name: name, newName: next, urlString: url)
+                            let saved = await appViewModel.editDashboardSubscription(
+                                name: name,
+                                newName: next,
+                                urlString: url,
+                                autoUpdateEnabled: autoUpdateEnabled,
+                                autoUpdateIntervalHours: autoUpdateIntervalHours)
                             editorError = appViewModel.dashboardConfigError
                             appViewModel.dashboardConfigError = previousError
                             editorSaving = false
@@ -616,7 +657,7 @@ struct DashboardConfigurationView: View {
     private func applyBase(_ name: String) {
         Task {
             await cardOperation(name, title: text("应用失败", "Apply failed")) {
-                await appViewModel.applyDashboardConfiguration(baseName: name, changes: changes)
+                await appViewModel.selectDashboardConfiguration(name, changes: changes)
             }
         }
     }

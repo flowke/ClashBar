@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 // swiftlint:disable:next type_name
@@ -94,11 +95,16 @@ struct MenuBarRootView: TranslatingView {
 
     private var panelSections: some View {
         VStack(spacing: 0) {
-            MenuBarHeaderView(
-                showRemoteMachineManager: self.$showRemoteMachineManager,
-                isSwitchingMachine: self.$isSwitchingMachine)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .reportHeight { updateSectionHeight($0, target: .header) }
+            VStack(spacing: 0) {
+                MenuBarHeaderView(
+                    showRemoteMachineManager: self.$showRemoteMachineManager,
+                    isSwitchingMachine: self.$isSwitchingMachine)
+                if self.appViewModel.needsMihomoCoreInstallation {
+                    self.missingCoreNotice
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .reportHeight { updateSectionHeight($0, target: .header) }
 
             modeAndTabSection
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -115,6 +121,57 @@ struct MenuBarRootView: TranslatingView {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .reportHeight { updateSectionHeight($0, target: .footer) }
         }
+    }
+
+    private var missingCoreNotice: some View {
+        VStack(alignment: .leading, spacing: T.space6) {
+            Label(self.tr("ui.core.missing.title"), systemImage: "exclamationmark.triangle.fill")
+                .font(.app(size: T.FontSize.callout, weight: .semibold))
+                .foregroundStyle(self.nativePrimaryLabel)
+            Text(self.tr("ui.core.missing.description"))
+                .font(.app(size: T.FontSize.subheadline))
+                .foregroundStyle(self.nativeSecondaryLabel)
+                .fixedSize(horizontal: false, vertical: true)
+            if case let .failed(message) = self.appViewModel.coreUpgradeState {
+                Text(self.tr("ui.core.install.failed", message))
+                    .font(.app(size: T.FontSize.caption))
+                    .foregroundStyle(self.nativeCritical)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            HStack(spacing: T.space4) {
+                Text(self.appViewModel.workingDirectoryManager.coreDirectoryURL.path)
+                    .font(.app(size: T.FontSize.caption))
+                    .foregroundStyle(self.nativeSecondaryLabel)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .textSelection(.enabled)
+                    .help(self.appViewModel.workingDirectoryManager.coreDirectoryURL.path)
+                Spacer(minLength: 0)
+                Button {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(
+                        self.appViewModel.workingDirectoryManager.coreDirectoryURL.path, forType: .string)
+                } label: {
+                    Image(systemName: "doc.on.doc")
+                }
+                .buttonStyle(.plain)
+                .help(self.tr("ui.core.missing.copy_path"))
+                .accessibilityLabel(self.tr("ui.core.missing.copy_path"))
+            }
+            HStack(spacing: T.space8) {
+                Button(self.tr("ui.action.open_core_directory")) {
+                    self.appViewModel.showCoreDirectoryInFinder()
+                }
+                Button(self.tr("ui.core.missing.recheck")) {
+                    self.appViewModel.refreshManagedCoreMetadata()
+                }
+            }
+            .controlSize(.small)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(T.space8)
+        .background(self.nativeWarning.opacity(0.10), in: RoundedRectangle(cornerRadius: T.cornerRadius))
+        .padding(.bottom, T.space8)
     }
 
     private var styledPanelContent: some View {

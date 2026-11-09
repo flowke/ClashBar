@@ -1,13 +1,60 @@
 import AppKit
 
 @MainActor
+final class NonModalAlertPresenter: NSObject, NSWindowDelegate {
+    let alert: NSAlert
+    private var continuation: CheckedContinuation<NSApplication.ModalResponse, Never>?
+
+    init(alert: NSAlert) {
+        self.alert = alert
+        super.init()
+        alert.window.isReleasedWhenClosed = false
+        alert.window.delegate = self
+        for (index, button) in alert.buttons.enumerated() {
+            button.tag = index
+            button.target = self
+            button.action = #selector(self.selectButton(_:))
+        }
+    }
+
+    func present() async -> NSApplication.ModalResponse {
+        await withCheckedContinuation { continuation in
+            self.continuation = continuation
+            self.show()
+        }
+    }
+
+    func show() {
+        NSApp.activate(ignoringOtherApps: true)
+        self.alert.window.makeKeyAndOrderFront(nil)
+    }
+
+    @objc private func selectButton(_ button: NSButton) {
+        self.finish(NSApplication.ModalResponse(rawValue: NSApplication.ModalResponse.alertFirstButtonReturn.rawValue + button.tag))
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        self.finish(.cancel, closeWindow: false)
+    }
+
+    private func finish(_ response: NSApplication.ModalResponse, closeWindow: Bool = true) {
+        guard let continuation = self.continuation else { return }
+        self.continuation = nil
+        if closeWindow { self.alert.window.close() }
+        continuation.resume(returning: response)
+    }
+}
+
+@MainActor
 extension AppViewModel {
     func prepareModalWindowPresentation() {
         NSApp.activate(ignoringOtherApps: true)
     }
 
     func configureModalWindow(_ window: NSWindow) {
+        window.identifier = ClashBarAppDelegate.managedModalWindowIdentifier
         window.level = .statusBar
+        window.hidesOnDeactivate = false
         window.collectionBehavior.insert(.moveToActiveSpace)
     }
 
@@ -27,8 +74,8 @@ extension AppViewModel {
             alert.addButton(withTitle: title)
         }
         configure?(alert)
-        self.prepareModalWindowPresentation()
         self.configureModalWindow(alert.window)
+        self.prepareModalWindowPresentation()
         return alert.runModal()
     }
 }
@@ -93,26 +140,4 @@ extension AppViewModel {
         return needles.contains { lower.contains($0) }
     }
 
-    func presentInitialNoCoreSetupGuideIfNeeded() {
-        guard self.shouldPresentInitialNoCoreSetupGuide() else { return }
-        guard !didPresentInitialNoCoreSetupGuide else { return }
-
-        didPresentInitialNoCoreSetupGuide = true
-        defaults.set(true, forKey: initialNoCoreSetupGuideShownKey)
-
-        let response = self.runModalAlert(
-            style: .informational,
-            message: tr("app.core.setup_required.title"),
-            informative: tr("app.core.setup_required.message", workingDirectoryManager.coreDirectoryURL.path),
-            buttons: [tr("ui.action.open_core_directory"), tr("ui.action.ok")])
-        if response == .alertFirstButtonReturn {
-            self.showCoreDirectoryInFinder()
-        }
-    }
-
-    func shouldPresentInitialNoCoreSetupGuide() -> Bool {
-        guard self.shouldDeferAutoStartForMissingManagedCore() else { return false }
-        guard !defaults.bool(forKey: initialNoCoreSetupGuideShownKey) else { return false }
-        return true
-    }
 }

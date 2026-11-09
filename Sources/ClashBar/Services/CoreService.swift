@@ -1,5 +1,159 @@
 import Darwin
 import Foundation
+import CryptoKit
+
+enum CoreInstallationError: Error {
+    case invalidRelease
+    case unsupportedArchitecture
+    case checksumMismatch
+    case invalidBinary
+    case downloadFailed(Int)
+}
+
+enum CoreInstallationService {
+    struct Release: Decodable {
+        struct Asset: Decodable {
+            let name: String
+            let browserDownloadURL: URL
+            let digest: String?
+
+            enum CodingKeys: String, CodingKey {
+                case name, digest
+                case browserDownloadURL = "browser_download_url"
+            }
+        }
+
+        let tagName: String
+        let assets: [Asset]
+
+        enum CodingKeys: String, CodingKey {
+            case tagName = "tag_name"
+            case assets
+        }
+    }
+
+    static var architecture: String? {
+        #if arch(arm64)
+        "arm64"
+        #elseif arch(x86_64)
+        "amd64"
+        #else
+        nil
+        #endif
+    }
+
+    static func selectAsset(from release: Release, architecture: String) throws -> Release.Asset {
+        guard release.tagName.range(of: #"^v[0-9]+(?:\.[0-9]+)+(?:[-.][0-9A-Za-z.-]+)?$"#,
+                                    options: .regularExpression) != nil else {
+            throw CoreInstallationError.invalidRelease
+        }
+        let prefixes: [String]
+        switch architecture {
+        case "arm64": prefixes = ["mihomo-darwin-arm64-go122", "mihomo-darwin-arm64"]
+        case "amd64": prefixes = ["mihomo-darwin-amd64-v2-go122", "mihomo-darwin-amd64"]
+        default: throw CoreInstallationError.unsupportedArchitecture
+        }
+        for prefix in prefixes {
+            let name = "\(prefix)-\(release.tagName).gz"
+            guard let asset = release.assets.first(where: { $0.name == name }),
+                  asset.browserDownloadURL.absoluteString ==
+                  "https://github.com/MetaCubeX/mihomo/releases/download/\(release.tagName)/\(name)",
+                  let digest = asset.digest,
+                  digest.range(of: #"^sha256:[0-9a-fA-F]{64}$"#, options: .regularExpression) != nil
+            else { continue }
+            return asset
+        }
+        throw CoreInstallationError.invalidRelease
+    }
+
+    static func install(in directory: URL) async throws {
+        let session = URLSessionFactory.makeEphemeralSession(options: .init(
+            timeoutIntervalForRequest: 30, timeoutIntervalForResource: 90))
+        defer { session.invalidateAndCancel() }
+        try await self.install(in: directory, session: session)
+    }
+
+    static func install(in directory: URL, session: URLSession) async throws {
+        guard let architecture = self.architecture else { throw CoreInstallationError.unsupportedArchitecture }
+        var request = URLRequest(url: URL(string: "https://api.github.com/repos/MetaCubeX/mihomo/releases/latest")!)
+        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+        request.setValue("ClashBar", forHTTPHeaderField: "User-Agent")
+        let (data, response) = try await session.data(for: request)
+        try self.checkResponse(response)
+        let release = try JSONDecoder().decode(Release.self, from: data)
+        let asset = try self.selectAsset(from: release, architecture: architecture)
+        let (download, downloadResponse) = try await session.download(from: asset.browserDownloadURL)
+        try self.checkResponse(downloadResponse)
+
+        let manager = FileManager.default
+        try manager.createDirectory(at: directory, withIntermediateDirectories: true)
+        let temporaryDirectory = directory.appendingPathComponent(".install-\(UUID().uuidString)", isDirectory: true)
+        try manager.createDirectory(at: temporaryDirectory, withIntermediateDirectories: false)
+        defer { try? manager.removeItem(at: temporaryDirectory) }
+        let archive = temporaryDirectory.appendingPathComponent("mihomo.gz")
+        try manager.moveItem(at: download, to: archive)
+        try Task.checkCancellation()
+        let installTask = Task.detached {
+            try self.installArchive(archive, digest: asset.digest!, architecture: architecture,
+                                    destination: directory.appendingPathComponent("mihomo"))
+        }
+        try await withTaskCancellationHandler {
+            try await installTask.value
+        } onCancel: {
+            installTask.cancel()
+        }
+    }
+
+    private static func checkResponse(_ response: URLResponse) throws {
+        guard let response = response as? HTTPURLResponse else { throw CoreInstallationError.invalidRelease }
+        guard (200..<300).contains(response.statusCode) else {
+            throw CoreInstallationError.downloadFailed(response.statusCode)
+        }
+    }
+
+    static func installArchive(_ archive: URL, digest: String, architecture: String, destination: URL) throws {
+        guard architecture == "arm64" || architecture == "amd64" else {
+            throw CoreInstallationError.unsupportedArchitecture
+        }
+        let handle = try FileHandle(forReadingFrom: archive)
+        defer { try? handle.close() }
+        var hasher = SHA256()
+        while let chunk = try handle.read(upToCount: 1_048_576), !chunk.isEmpty {
+            hasher.update(data: chunk)
+        }
+        let actualDigest = "sha256:" + hasher.finalize().map { String(format: "%02x", $0) }.joined()
+        guard actualDigest == digest.lowercased() else { throw CoreInstallationError.checksumMismatch }
+        try Task.checkCancellation()
+
+        let output = archive.deletingLastPathComponent().appendingPathComponent("mihomo")
+        guard FileManager.default.createFile(atPath: output.path, contents: nil) else {
+            throw CoreInstallationError.invalidBinary
+        }
+        let outputHandle = try FileHandle(forWritingTo: output)
+        defer { try? outputHandle.close() }
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/gunzip")
+        process.arguments = ["-c", archive.path]
+        process.standardOutput = outputHandle
+        process.standardError = FileHandle.nullDevice
+        try process.run()
+        process.waitUntilExit()
+        try outputHandle.close()
+        guard process.terminationStatus == 0 else { throw CoreInstallationError.invalidBinary }
+
+        let binary = try FileHandle(forReadingFrom: output)
+        defer { try? binary.close() }
+        let header = [UInt8](try binary.read(upToCount: 16) ?? Data())
+        let cpu: [UInt8] = architecture == "arm64" ? [0x0c, 0, 0, 1] : [0x07, 0, 0, 1]
+        guard header.count == 16, Array(header[0..<4]) == [0xcf, 0xfa, 0xed, 0xfe],
+              Array(header[4..<8]) == cpu, Array(header[12..<16]) == [2, 0, 0, 0] else {
+            throw CoreInstallationError.invalidBinary
+        }
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: output.path)
+        try Task.checkCancellation()
+        try FileManager.default.moveItem(at: output, to: destination)
+    }
+}
 
 enum CoreLifecycleStatus: Equatable {
     case stopped
@@ -21,12 +175,7 @@ protocol MihomoControlling: AnyObject, Sendable {
     @discardableResult
     func restartAsync(configPath: String, controller: String) async throws -> CoreLifecycleStatus
 
-    func validateConfig(configPath: String) async throws
-    @discardableResult
-    func start(configPath: String, controller: String) async throws -> CoreLifecycleStatus
     func stopImmediately()
-    @discardableResult
-    func restart(configPath: String, controller: String) async throws -> CoreLifecycleStatus
 }
 
 extension MihomoControlling {
@@ -34,26 +183,8 @@ extension MihomoControlling {
         nil
     }
 
-    func validateConfig(configPath: String) async throws {
-        try await self.validateConfigAsync(configPath: configPath)
-    }
-
-    @discardableResult
-    func start(configPath: String, controller: String) async throws -> CoreLifecycleStatus {
-        try await self.startAsync(configPath: configPath, controller: controller)
-    }
-
     func stopImmediately() {
         self.stop()
-    }
-
-    func stop() async {
-        await self.stopAsync()
-    }
-
-    @discardableResult
-    func restart(configPath: String, controller: String) async throws -> CoreLifecycleStatus {
-        try await self.restartAsync(configPath: configPath, controller: controller)
     }
 }
 

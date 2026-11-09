@@ -127,20 +127,22 @@ extension MenuBarRootView {
             fontSize: T.FontSize.caption,
             hierarchicalSymbol: true)
         {
-            await self.appViewModel.upgradeCore()
+            await self.appViewModel.installOrUpgradeCore()
         }
         .disabled(!self.isFooterCoreUpgradeEnabled)
         .help(self.footerCoreUpgradeButtonHelp)
     }
 
     var isFooterCoreUpgradeEnabled: Bool {
-        self.appViewModel.isRuntimeRunning && !self.appViewModel.isCoreUpgradeInFlight
+        (self.appViewModel.needsMihomoCoreInstallation || self.appViewModel.isRuntimeRunning)
+            && !self.appViewModel.isCoreUpgradeInFlight && !self.appViewModel.isCoreActionProcessing
+            && !self.appViewModel.isCoreBootstrapInFlight
     }
 
     var footerCoreUpgradeButtonTitle: String {
         switch self.appViewModel.coreUpgradeState {
         case .idle:
-            tr("ui.action.upgrade_core")
+            tr(self.appViewModel.needsMihomoCoreInstallation ? "ui.action.install_core" : "ui.action.upgrade_core")
         case .running:
             tr("ui.footer.core_upgrade.running")
         case .succeeded:
@@ -179,6 +181,12 @@ extension MenuBarRootView {
     }
 
     var footerCoreUpgradeButtonHelp: String {
+        if self.appViewModel.needsMihomoCoreInstallation {
+            if case let .failed(message) = self.appViewModel.coreUpgradeState {
+                return tr("ui.core.install.failed", message)
+            }
+            return tr(self.appViewModel.isCoreUpgradeInFlight ? "ui.core.install.running" : "ui.action.install_core")
+        }
         if !self.appViewModel.isRuntimeRunning {
             return tr("ui.footer.core_upgrade.help.disabled")
         }

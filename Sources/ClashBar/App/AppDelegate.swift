@@ -3,6 +3,7 @@ import SwiftUI
 
 @MainActor
 final class ClashBarAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
+    static let managedModalWindowIdentifier = NSUserInterfaceItemIdentifier("ClashBar.ManagedModalWindow")
     let appViewModel = AppViewModel(dependencies: .live)
     private var statusItemController: StatusItemController?
     private var dashboardWindow: NSWindow?
@@ -26,7 +27,6 @@ final class ClashBarAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelega
         self.statusItemController = StatusItemController(appViewModel: self.appViewModel) { [weak self] in
             self?.showDashboard()
         }
-        self.appViewModel.presentInitialNoCoreSetupGuideIfNeeded()
 
         DispatchQueue.main.async { [weak self] in
             self?.suppressNonPanelWindows()
@@ -51,7 +51,14 @@ final class ClashBarAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelega
 
     func applicationDidBecomeActive(_ notification: Notification) {
         self.suppressNonPanelWindows()
+        self.restoreManagedModalWindowIfNeeded()
         self.appViewModel.handleApplicationDidBecomeActive()
+    }
+
+    func restoreManagedModalWindowIfNeeded() {
+        guard let window = NSApp.modalWindow,
+              window.identifier == Self.managedModalWindowIdentifier else { return }
+        window.makeKeyAndOrderFront(nil)
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -139,7 +146,10 @@ final class ClashBarAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelega
         }
     }
 
-    private func suppressWindowIfNeeded(_ window: NSWindow) {
+    func suppressWindowIfNeeded(_ window: NSWindow) {
+        if window.identifier == Self.managedModalWindowIdentifier || window === NSApp.modalWindow {
+            return
+        }
         if window is DashboardWindow {
             return
         }

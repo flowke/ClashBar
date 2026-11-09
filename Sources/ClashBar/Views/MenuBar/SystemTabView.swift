@@ -131,16 +131,21 @@ struct SystemTabView: TranslatingView {
 
             Spacer(minLength: 0)
 
-            TextField(self.tr("ui.placeholder.port"), text: text)
+            TextField(self.tr("ui.placeholder.port"), text: Binding(
+                get: { text.wrappedValue },
+                set: { value in
+                    guard value != text.wrappedValue else { return }
+                    text.wrappedValue = value
+                    self.appViewModel.scheduleProxyPortsAutoSaveIfNeeded()
+                }))
                 .textFieldStyle(.roundedBorder)
                 .font(.app(size: T.FontSize.body, weight: .regular))
                 .foregroundStyle(nativePrimaryLabel)
                 .multilineTextAlignment(.trailing)
                 .frame(width: self.settingsPortFieldWidth, alignment: .trailing)
-                .onChange(of: text.wrappedValue) { _ in
-                    self.appViewModel.scheduleProxyPortsAutoSaveIfNeeded()
-                }
                 .onSubmit {
+                    guard self.appViewModel.proxyPortsAutoSaveTask != nil else { return }
+                    self.appViewModel.cancelProxyPortsAutoSave()
                     Task { await self.appViewModel.applyProxyPorts(autoSaved: true) }
                 }
         }
@@ -803,11 +808,36 @@ struct SystemTabView: TranslatingView {
                     symbol: "point.3.connected.trianglepath.dotted")
 
                 VStack(alignment: .leading, spacing: T.space4) {
+                    if !isRemote {
+                        HStack {
+                            Text(self.tr(self.appViewModel.manualProxyPorts == nil
+                                ? "ui.settings.ports.following" : "ui.settings.ports.manual"))
+                                .font(.app(size: T.FontSize.caption, weight: .regular))
+                                .foregroundStyle(self.nativeSecondaryLabel)
+                            Spacer()
+                            if self.appViewModel.manualProxyPorts != nil {
+                                Button(self.tr("ui.settings.ports.follow_config")) {
+                                    Task { await self.appViewModel.followConfigProxyPorts() }
+                                }
+                                .controlSize(.small)
+                            }
+                        }
+                    }
                     ForEach(proxyPortFields, id: \.titleKey) { item in
                         self.settingsPortFieldRow(
                             self.tr(item.titleKey),
                             symbol: item.symbol,
                             text: item.text)
+                    }
+
+                    if let warning = self.appViewModel.proxyPortWarning {
+                        self.settingsFeedbackBanner(text: warning, color: self.nativeWarning, symbol: "exclamationmark.triangle.fill")
+                        if !isRemote && !self.appViewModel.isRetryingProxyPorts && self.appViewModel.isRuntimeRunning {
+                            Button(self.tr("ui.settings.ports.retry")) {
+                                self.appViewModel.retryProxyPorts()
+                            }
+                            .controlSize(.small)
+                        }
                     }
 
                     Text(self.tr("ui.settings.proxy_ports_hint"))

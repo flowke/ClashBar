@@ -9,6 +9,7 @@ extension AppViewModel {
             guard status.isConnected, !dashboardConfigBusy else { return }
         }
 
+        self.cancelCoreBootstrap()
         self.remoteMachineStore.selectTarget(target)
 
         self.cancelPolling()
@@ -21,6 +22,7 @@ extension AppViewModel {
 
         switch target {
         case .local:
+            self.refreshManagedCoreMetadata()
             self.appendLog(level: "info", message: self.tr("log.remote.switched_to_local"))
             if let configPath = await self.resolveSelectedConfigPath() {
                 self.applyExternalControllerFromSelectedConfigFile(configPath: configPath)

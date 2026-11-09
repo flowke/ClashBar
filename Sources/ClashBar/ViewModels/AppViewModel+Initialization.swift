@@ -14,18 +14,19 @@ extension AppViewModel {
             managedProcess.onTermination = { [weak self] code in
                 Task { @MainActor in
                     guard self?.isRemoteTarget != true else { return }
+                    self?.cancelCoreBootstrap()
                     let message = self?.tr("log.process.terminated", code) ?? ""
                     self?.statusText = "Failed"
                     self?.apiStatus = .failed
                     self?.resetTrafficPresentation()
                     self?.appendLog(level: "error", message: message)
                     self?.cancelPolling()
-                    if self?.coreActionState == .idle, let self, !message.isEmpty {
-                        self.presentCoreFailureAlert(
+                    if let self, !message.isEmpty {
+                        self.statusItemBanner = StatusItemBanner(
+                            symbolName: "exclamationmark.triangle.fill",
                             title: self.tr("app.core.alert.process_terminated.title"),
-                            message: message,
-                            dedupeKey: "core-process-terminated",
-                            style: .critical)
+                            primaryDetail: message,
+                            secondaryDetail: nil)
                     }
                 }
             }
@@ -36,9 +37,12 @@ extension AppViewModel {
         guard !self.isRemoteTarget else { return }
 
         let detectedPath = self.processManager.detectedBinaryPath
-        self.mihomoBinaryPath = detectedPath ?? "-"
-        self.isMihomoCoreAvailable = detectedPath != nil
+        let path = detectedPath ?? "-"
+        if self.mihomoBinaryPath != path { self.mihomoBinaryPath = path }
+        let available = detectedPath != nil
+        if self.isMihomoCoreAvailable != available { self.isMihomoCoreAvailable = available }
 
+        guard available, self.version == "-" else { return }
         Task { [weak self] in
             guard let self else { return }
             guard let detectedVersion = await self.processManager.detectedBinaryVersion() else { return }
@@ -76,8 +80,24 @@ extension AppViewModel {
         guard !self.didStart else { return }
         self.didStart = true
         self.bootstrapDirectoriesAndLogs()
+        self.startCoreDirectoryMonitoring()
         self.performDeferredInitialization()
         self.startAgentRuleService()
+    }
+
+    func startCoreDirectoryMonitoring() {
+        guard self.coreDirectoryMonitor == nil else { return }
+        self.coreDirectoryMonitor = ConfigDirectoryMonitor(
+            directoryURL: self.workingDirectoryManager.coreDirectoryURL,
+            selectedFileURL: self.workingDirectoryManager.managedMihomoBinaryURL)
+        { [weak self] in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.coreDirectoryMonitor?.updateSelectedFile(self.workingDirectoryManager.managedMihomoBinaryURL)
+                self.refreshManagedCoreMetadata()
+            }
+        }
+        self.refreshManagedCoreMetadata()
     }
 
     private func performDeferredInitialization() {
@@ -95,10 +115,14 @@ extension AppViewModel {
         } else {
             self.refreshControllerUIURL()
         }
+        manualProxyPorts = decodeFromDefaults(ProxyPortValues.self, key: "clashbar.settings.proxyPorts.manual.v1")
         if let persisted = loadPersistedEditableSettingsSnapshot() {
             applyEditableSettingsSnapshotToUI(persisted)
             self.preserveLocalSettingsOnNextSync = true
             self.pendingAppLaunchOverlaySettings = persisted
+        }
+        if let ports = try? resolvedProxyPorts() {
+            showProxyPortValues(ports)
         }
         let persistedSystemProxyExceptions = loadPersistedSystemProxyExceptions() ?? Self.defaultSystemProxyExceptions
         self.replaceSystemProxyExceptionsDraft(with: persistedSystemProxyExceptions)

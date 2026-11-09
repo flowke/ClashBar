@@ -29,6 +29,7 @@ extension AppViewModel {
     }
 
     func toggleSystemProxy(_ enabled: Bool) async {
+        guard !self.isProxySyncing, !enabled || self.canEnableSystemProxy else { return }
         isProxySyncing = true
         self.systemProxyEnableIntentInFlight = enabled
         self.clearSystemProxyOpenFailureHint()
@@ -46,8 +47,10 @@ extension AppViewModel {
                 systemProxyActiveDisplay = nil
             }
 
-            try await self.clientOrThrow()
-                .requestNoResponse(.patchConfigs(body: ["mode": .string(currentMode.rawValue)]))
+            if enabled {
+                try await self.clientOrThrow()
+                    .requestNoResponse(.patchConfigs(body: ["mode": .string(currentMode.rawValue)]))
+            }
 
             isSystemProxyEnabled = enabled
             self.clearSystemProxyOpenFailureHint()

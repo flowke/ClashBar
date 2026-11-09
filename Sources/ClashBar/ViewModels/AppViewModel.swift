@@ -63,6 +63,10 @@ final class AppViewModel: ObservableObject {
 
     @Published var mihomoBinaryPath: String = "-"
     @Published var isMihomoCoreAvailable = false
+
+    var needsMihomoCoreInstallation: Bool {
+        !self.isRemoteTarget && !self.isRuntimeRunning && !self.isMihomoCoreAvailable
+    }
     @Published var selectedConfigName: String = "-"
     @Published var configDirectoryPath: String = "-"
     @Published var availableConfigFileNames: [String] = []
@@ -221,6 +225,7 @@ final class AppViewModel: ObservableObject {
     }
 
     @Published var coreActionState: CoreActionState = .idle
+    @Published var isCoreBootstrapInFlight = false
     @Published var coreUpgradeState: CoreUpgradeState = .idle
     @Published var geoUpdateState: GeoUpdateState = .idle
     var providerRefreshStatus: ProviderRefreshStatus {
@@ -254,6 +259,9 @@ final class AppViewModel: ObservableObject {
     @Published var settingsPort: String = "0"
     @Published var settingsSocksPort: String = "0"
     @Published var settingsMixedPort: String = "7890"
+    @Published var manualProxyPorts: ProxyPortValues?
+    @Published var proxyPortWarning: String?
+    @Published var isRetryingProxyPorts = false
     @Published var settingsRedirPort: String = "0"
     @Published var settingsTProxyPort: String = "0"
 
@@ -410,10 +418,22 @@ final class AppViewModel: ObservableObject {
         (self.isRemoteTarget || self.isRuntimeRunning)
             && self.apiStatus == .healthy
             && !self.isCoreActionProcessing
+            && !self.isCoreBootstrapInFlight
     }
 
     var isTunToggleEnabled: Bool {
-        (self.isRemoteTarget || self.isRuntimeRunning) && !self.isCoreActionProcessing && !self.isTunSyncing
+        (self.isRemoteTarget || self.isRuntimeRunning) && self.apiStatus == .healthy
+            && !self.isCoreActionProcessing && !self.isCoreBootstrapInFlight && !self.isTunSyncing
+    }
+
+    var canEnableSystemProxy: Bool {
+        let coreRunning = self.isRemoteTarget || self.processManager.isRunning
+        return coreRunning && self.apiStatus == .healthy
+            && !self.isCoreActionProcessing && !self.isCoreBootstrapInFlight
+    }
+
+    var isSystemProxyToggleEnabled: Bool {
+        !self.isProxySyncing && (self.isSystemProxyEnabled || self.canEnableSystemProxy)
     }
 
     var autoStartCoreEnabled: Bool {
@@ -440,8 +460,7 @@ final class AppViewModel: ObservableObject {
     }
 
     var isPrimaryCoreActionEnabled: Bool {
-        !self.isCoreActionProcessing &&
-            (self.isRuntimeRunning || self.isRemoteTarget || self.isMihomoCoreAvailable)
+        !self.isCoreActionProcessing && !self.isCoreUpgradeInFlight && !self.isCoreBootstrapInFlight
     }
 
     let processManager: any MihomoControlling
@@ -461,6 +480,8 @@ final class AppViewModel: ObservableObject {
     var lowFrequencyTask: Task<Void, Never>?
     let streamCoordinator = StreamCoordinator()
     var proxyPortsAutoSaveTask: Task<Void, Never>?
+    var proxyPortRetryTask: Task<Void, Never>?
+    var proxyPortRetryID: UUID?
     var settingsFeedbackClearTask: Task<Void, Never>?
     var providerRefreshTask: Task<Void, Never>?
     var networkAutoStopTask: Task<Void, Never>?
@@ -469,11 +490,16 @@ final class AppViewModel: ObservableObject {
     var coreUpgradeFeedbackClearTask: Task<Void, Never>?
     var geoUpdateFeedbackClearTask: Task<Void, Never>?
     var configDirectoryMonitor: ConfigDirectoryMonitor?
+    var coreDirectoryMonitor: ConfigDirectoryMonitor?
     var agentRuleSocket: AgentRuleSocket?
     var trafficDecodeTask: Task<Void, Never>?
     var mihomoLogFlushTask: Task<Void, Never>?
     var startupRefreshTask: Task<Void, Never>?
     var autoStartTask: Task<Void, Never>?
+    var coreBootstrapTask: Task<Void, Never>?
+    var remoteConfigImportPrompt: RemoteConfigImportPanelPresenter?
+    var remoteConfigImportAnchorContextProvider: (() -> PanelAnchorContext?)?
+    var coreBootstrapID: UUID?
     var configDirectoryDebounceTask: Task<Void, Never>?
     var providerRefreshGeneration: Int = 0
     var lastTrafficSampleAt: Date?
@@ -554,9 +580,7 @@ final class AppViewModel: ObservableObject {
     var remoteConfigMenuRefreshTask: Task<Void, Never>?
     var externalControllerWarningKeys: Set<String> = []
     let streamJSONDecoder = JSONDecoder()
-    let initialNoCoreSetupGuideShownKey = "clashbar.core.install.guide.shown.v1"
     let bundlesMihomoCore: Bool
-    var didPresentInitialNoCoreSetupGuide = false
 
     init(dependencies: AppDependencies) {
         self.processManager = dependencies.processManager

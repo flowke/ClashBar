@@ -267,6 +267,10 @@ final class StatusItemController: NSObject {
         self.configurePanel()
         self.configureBannerPanel()
         self.configureStatusItem()
+        self.appViewModel.remoteConfigImportAnchorContextProvider = { [weak self] in
+            guard let self else { return nil }
+            return self.resolvedStatusItemAnchorContext(for: self.statusItem.button)
+        }
         self.bindSession()
         self.bindPopoverLayout()
         self.bindBanner()
@@ -283,6 +287,7 @@ final class StatusItemController: NSObject {
         self.panelStabilizationTask = nil
         self.bannerDismissTask?.cancel()
         self.bannerDismissTask = nil
+        self.appViewModel.remoteConfigImportAnchorContextProvider = nil
         self.changeCancellable?.cancel()
         self.layoutCancellable?.cancel()
         self.pinStateCancellable?.cancel()
@@ -296,6 +301,7 @@ final class StatusItemController: NSObject {
     }
 
     func presentPopover(tab: RootTab? = nil) {
+        guard !self.focusModalWindowIfNeeded() else { return }
         if let tab {
             self.appViewModel.setActiveMenuTab(tab)
         }
@@ -306,6 +312,7 @@ final class StatusItemController: NSObject {
 
     @objc
     private func togglePopover(_ sender: AnyObject?) {
+        guard !self.focusModalWindowIfNeeded() else { return }
         if self.panel.isVisible || self.appViewModel.isPanelPresented {
             self.closePopover(nil)
             return
@@ -313,6 +320,14 @@ final class StatusItemController: NSObject {
 
         guard let button = statusItem.button else { return }
         self.openPopover(relativeTo: button)
+    }
+
+    private func focusModalWindowIfNeeded() -> Bool {
+        guard let modalWindow = NSApp.modalWindow ?? self.appViewModel.remoteConfigImportPrompt?.window,
+              modalWindow.isVisible else { return false }
+        NSApp.activate(ignoringOtherApps: true)
+        modalWindow.makeKeyAndOrderFront(nil)
+        return true
     }
 
     private func openPopover(relativeTo button: NSStatusBarButton) {

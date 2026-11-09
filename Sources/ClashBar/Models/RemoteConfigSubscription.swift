@@ -28,6 +28,10 @@ struct SubscriptionUsage: Codable, Equatable {
 
 struct RemoteConfigSubscription: Codable, Equatable {
     let urlString: String
+    /// A human-readable name discovered from the remote document. The file name
+    /// remains the stable storage key, so changing this metadata never breaks
+    /// config references.
+    var displayName: String?
     var autoUpdateEnabled: Bool
     var autoUpdateIntervalHours: Int
     var lastUpdateCheckAt: Date?
@@ -40,6 +44,7 @@ struct RemoteConfigSubscription: Codable, Equatable {
 
     init(
         urlString: String,
+        displayName: String? = nil,
         autoUpdateEnabled: Bool = false,
         autoUpdateIntervalHours: Int = defaultAutoUpdateIntervalHours,
         lastUpdateCheckAt: Date? = nil,
@@ -47,6 +52,7 @@ struct RemoteConfigSubscription: Codable, Equatable {
         enabled: Bool? = nil)
     {
         self.urlString = urlString
+        self.displayName = displayName
         self.autoUpdateEnabled = autoUpdateEnabled
         self.autoUpdateIntervalHours = max(Self.minimumAutoUpdateIntervalHours, autoUpdateIntervalHours)
         self.lastUpdateCheckAt = lastUpdateCheckAt
@@ -68,6 +74,7 @@ struct RemoteConfigSubscription: Codable, Equatable {
     func markChecked(at date: Date = Date()) -> RemoteConfigSubscription {
         RemoteConfigSubscription(
             urlString: self.urlString,
+            displayName: self.displayName,
             autoUpdateEnabled: self.autoUpdateEnabled,
             autoUpdateIntervalHours: self.autoUpdateIntervalHours,
             lastUpdateCheckAt: date,

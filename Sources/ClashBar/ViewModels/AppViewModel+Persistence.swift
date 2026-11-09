@@ -5,6 +5,7 @@ extension AppViewModel {
     func resolveSelectedConfigPath() async -> String? {
         do {
             if let record = try effectiveConfigTransaction.currentRecord() {
+                guard !record.baseName.isEmpty else { return nil }
                 guard let source = configService.availableConfigs.first(where: { $0.lastPathComponent == record.baseName }),
                       let effective = effectiveConfigTransaction.currentFile(record),
                       FileManager.default.fileExists(atPath: effective.path) else {
@@ -57,6 +58,13 @@ extension AppViewModel {
     func restoreSavedConfigDirectory() {
         configService.setConfigDirectory(workingDirectoryManager.configDirectoryURL)
         let record = try? effectiveConfigTransaction.currentRecord()
+        if record?.baseName == "" || defaults.string(forKey: selectedConfigKey) == "-" {
+            configService.clearSelection()
+            selectedConfigName = "-"
+            dashboardEffectiveRecord = record
+            syncConfigDisplayState()
+            return
+        }
         let preferredName = record?.baseName ?? defaults.string(forKey: selectedConfigKey)
         if let preferredName,
            let preferred = configService.availableConfigs.first(where: { $0.lastPathComponent == preferredName }) {
@@ -70,6 +78,7 @@ extension AppViewModel {
     }
 
     func restoreLastSuccessfulConfigIfAvailable() {
+        if defaults.string(forKey: selectedConfigKey) == "-" { return }
         if (try? effectiveConfigTransaction.currentRecord()) != nil { return }
         guard let lastPath = defaults.string(forKey: lastSuccessfulConfigPathKey), !lastPath.isEmpty else { return }
         let candidate = URL(fileURLWithPath: lastPath)
@@ -88,7 +97,7 @@ extension AppViewModel {
     func syncConfigDisplayState() {
         configDirectoryPath = configService.configDirectory?.path ?? "-"
         availableConfigFileNames = configService.availableConfigs.map(\.lastPathComponent)
-        if selectedConfigName == "-", let first = availableConfigFileNames.first {
+        if selectedConfigName == "-", let first = configService.selectedConfig?.lastPathComponent {
             selectedConfigName = first
         }
         self.pruneSSIDStrategyRulesIfNeeded()

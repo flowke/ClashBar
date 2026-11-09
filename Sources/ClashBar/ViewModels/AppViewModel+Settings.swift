@@ -81,6 +81,8 @@ extension AppViewModel {
     }
 
     func applyProxyPorts(autoSaved: Bool = false) async {
+        cancelProxyPortRetry()
+        await waitForProxyPortRetryToStop()
         guard let body = self.validatedPortPatchBody(
             fields: self.proxyPortFields,
             errorMessageKey: "app.settings.error.port_range",
@@ -89,11 +91,27 @@ extension AppViewModel {
 
         let syncingKey = autoSaved ? "ports-auto" : "ports"
         let successMessage = autoSaved ? tr("app.settings.saved.ports_auto") : tr("app.settings.saved.ports")
-        await self.patchConfigBody(body, syncingKey: syncingKey, successMessage: successMessage)
+        let values = proxyPortFields.compactMap { Int($0.value.trimmed) }
+        if !isRemoteTarget, !isRuntimeRunning, values.count == 5 {
+            let ports = ProxyPortValues(port: values[0], socksPort: values[1], mixedPort: values[2], redirPort: values[3], tproxyPort: values[4])
+            manualProxyPorts = ports
+            encodeToDefaults(ports, key: "clashbar.settings.proxyPorts.manual.v1")
+            settingsErrorMessage = nil
+            settingsSavedMessage = successMessage
+            scheduleSettingsFeedbackAutoClearIfNeeded(message: successMessage)
+            return
+        }
+        let applied = await self.patchConfigBody(body, syncingKey: syncingKey, successMessage: successMessage)
+        if applied, !isRemoteTarget, values.count == 5 {
+            let ports = ProxyPortValues(port: values[0], socksPort: values[1], mixedPort: values[2], redirPort: values[3], tproxyPort: values[4])
+            manualProxyPorts = ports
+            encodeToDefaults(ports, key: "clashbar.settings.proxyPorts.manual.v1")
+        }
     }
 
     func scheduleProxyPortsAutoSaveIfNeeded() {
         guard !suppressSettingsPersistence else { return }
+        cancelProxyPortRetry()
         guard settingsSyncingKey == nil else { return }
 
         proxyPortsAutoSaveTask?.cancel()
@@ -252,11 +270,22 @@ extension AppViewModel {
                 key: "tproxy-port",
                 value: overlay.tproxyPort.trimmedNonEmpty ?? fallback?.tproxyPort.trimmed ?? ""),
         ]
-        guard let portBody = validatedPortPatchBody(
-            fields: resolvedPortFields,
-            errorMessageKey: "app.settings.error.overlay_port_range",
-            skipEmptyValues: true)
-        else { return false }
+        let portBody: [String: ConfigPatchValue]
+        if isRemoteTarget {
+            guard let body = validatedPortPatchBody(
+                fields: resolvedPortFields,
+                errorMessageKey: "app.settings.error.overlay_port_range",
+                skipEmptyValues: true) else { return false }
+            portBody = body
+        } else {
+            do {
+                portBody = try resolvedProxyPorts().patch
+            } catch {
+                settingsErrorMessage = error.localizedDescription
+                appendLog(level: "error", message: error.localizedDescription)
+                return false
+            }
+        }
 
         var body: [String: ConfigPatchValue] = [
             "mode": .string(overlay.mode.rawValue),

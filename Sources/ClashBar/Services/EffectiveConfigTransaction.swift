@@ -35,6 +35,32 @@ struct EffectiveConfigTransaction {
         return configDirectory.appendingPathComponent(record.fileName)
     }
 
+    func deleteSelectedSource(_ source: URL) throws -> EffectiveConfigRecord {
+        let previousData = try FileManager.default.fileExists(atPath: recordURL.path) ? Data(contentsOf: recordURL) : nil
+        let previous = try currentRecord()
+        let detached = EffectiveConfigRecord(fileName: "", baseName: "", changes: previous?.changes ?? [])
+        try FileManager.default.createDirectory(at: stateDirectory, withIntermediateDirectories: true)
+        try JSONEncoder().encode(detached).write(to: recordURL, options: .atomic)
+        do {
+            try FileManager.default.removeItem(at: source)
+        } catch {
+            do {
+                if let previousData {
+                    try previousData.write(to: recordURL, options: .atomic)
+                } else {
+                    try FileManager.default.removeItem(at: recordURL)
+                }
+            } catch let rollbackError {
+                throw EffectiveConfigTransactionError.rollbackFailed(error.localizedDescription, rollbackError.localizedDescription)
+            }
+            throw error
+        }
+        if let previous, let oldURL = currentFile(previous) {
+            try? FileManager.default.removeItem(at: oldURL)
+        }
+        return detached
+    }
+
     @discardableResult
     func commit(
         data: Data,

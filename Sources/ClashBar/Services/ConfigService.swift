@@ -102,6 +102,7 @@ final class ConfigDirectoryManager {
     private(set) var configDirectory: URL?
     private(set) var availableConfigs: [URL] = []
     private(set) var selectedConfig: URL?
+    private var selectionCleared = false
 
     init(workingDirectoryManager: WorkingDirectoryManager = WorkingDirectoryManager()) {
         self.workingDirectoryManager = workingDirectoryManager
@@ -141,6 +142,12 @@ final class ConfigDirectoryManager {
             return
         }
         self.selectedConfig = safeConfig
+        self.selectionCleared = false
+    }
+
+    func clearSelection() {
+        self.selectedConfig = nil
+        self.selectionCleared = true
     }
 
     @discardableResult
@@ -160,7 +167,7 @@ final class ConfigDirectoryManager {
         if let selectedConfig, files.contains(selectedConfig) {
             return
         }
-        self.selectedConfig = files.first
+        self.selectedConfig = selectionCleared ? nil : files.first
     }
 
     nonisolated static func scanConfigFiles(in directory: URL) -> [URL] {
@@ -185,6 +192,7 @@ struct ConfigImportService {
     struct Download {
         let data: Data
         let usage: SubscriptionUsage?
+        let suggestedName: String?
     }
     private let maxRemoteConfigBytes = 5 * 1024 * 1024
 
@@ -243,6 +251,56 @@ struct ConfigImportService {
         return "\(safeHost).yaml"
     }
 
+    /// Reads the optional human-readable title emitted by subscription
+    /// providers. Clash itself does not require a name field, so callers must
+    /// always retain a URL-based fallback.
+    func inferredRemoteConfigDisplayName(from data: Data) -> String? {
+        guard let text = String(data: data, encoding: .utf8),
+              let document = try? Yams.compose(yaml: text),
+              document.mapping != nil else {
+            return nil
+        }
+
+        let topLevelKeys = ["name", "display-name", "display_name", "profile-name", "profile_name", "title", "remarks"]
+        for key in topLevelKeys {
+            if let name = self.normalizedRemoteConfigDisplayName(document[key]?.string) {
+                return name
+            }
+        }
+
+        // A few providers wrap metadata under profile or metadata. Do not
+        // inspect proxy names/groups: those are not subscription titles.
+        for containerKey in ["profile", "metadata", "meta"] {
+            guard let container = document[containerKey] else { continue }
+            for key in ["name", "display-name", "display_name", "title", "remarks"] {
+                if let name = self.normalizedRemoteConfigDisplayName(container[key]?.string) {
+                    return name
+                }
+            }
+        }
+        return nil
+    }
+
+    private func normalizedRemoteConfigDisplayName(_ raw: String?) -> String? {
+        guard var value = raw?.trimmingCharacters(in: .whitespacesAndNewlines), !value.isEmpty else {
+            return nil
+        }
+        guard !value.contains("/"), !value.contains("\\"), !value.contains(":") else { return nil }
+        value = value.unicodeScalars
+            .filter { !CharacterSet.controlCharacters.contains($0) }
+            .map(String.init)
+            .joined()
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !value.isEmpty, value != ".", value != "..", value.count <= 120 else { return nil }
+        if value.lowercased().hasSuffix(".yaml") {
+            value = String(value.dropLast(5)).trimmingCharacters(in: .whitespacesAndNewlines)
+        } else if value.lowercased().hasSuffix(".yml") {
+            value = String(value.dropLast(4)).trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        guard !value.isEmpty else { return nil }
+        return value
+    }
+
     func isSupportedRemoteConfigURL(_ url: URL) -> Bool {
         guard let scheme = url.scheme?.lowercased() else { return false }
         return scheme == "http" || scheme == "https"
@@ -286,7 +344,54 @@ struct ConfigImportService {
             }
             data.append(byte)
         }
-        return Download(data: data, usage: SubscriptionUsage.parse(http.value(forHTTPHeaderField: "subscription-userinfo")))
+        let suggestedName = Self.normalizedSuggestedName(
+            http.value(forHTTPHeaderField: "profile-title")
+                ?? http.value(forHTTPHeaderField: "profile-name")
+                ?? Self.contentDispositionFileName(http.value(forHTTPHeaderField: "content-disposition")))
+        return Download(
+            data: data,
+            usage: SubscriptionUsage.parse(http.value(forHTTPHeaderField: "subscription-userinfo")),
+            suggestedName: suggestedName)
+    }
+
+    private static func normalizedSuggestedName(_ raw: String?) -> String? {
+        guard let raw else { return nil }
+        let value = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !value.isEmpty, !value.contains("/"), !value.contains("\\"), !value.contains(":") else { return nil }
+        let withoutExtension: String
+        if value.lowercased().hasSuffix(".yaml") {
+            withoutExtension = String(value.dropLast(5))
+        } else if value.lowercased().hasSuffix(".yml") {
+            withoutExtension = String(value.dropLast(4))
+        } else {
+            withoutExtension = value
+        }
+        guard !withoutExtension.isEmpty else { return nil }
+        return withoutExtension.count <= 120
+            ? withoutExtension
+            : String(withoutExtension.prefix(120)).trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private static func contentDispositionFileName(_ header: String?) -> String? {
+        guard let header else { return nil }
+        for key in ["filename*=", "filename="] {
+            guard let range = header.range(of: key, options: [.caseInsensitive]) else { continue }
+            var value = String(header[range.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
+            if let separator = value.firstIndex(of: ";") {
+                value = String(value[..<separator])
+            }
+            value = value.trimmingCharacters(in: CharacterSet(charactersIn: "\"'"))
+            if key == "filename*=" {
+                value = String(value.split(separator: "'", maxSplits: 2).last ?? Substring(value))
+                    .removingPercentEncoding ?? value
+            } else {
+                value = value.removingPercentEncoding ?? value
+            }
+            if let normalized = Self.normalizedSuggestedName(value) {
+                return normalized
+            }
+        }
+        return nil
     }
 
     private func remoteConfigTooLargeError(limit: Int) -> NSError {
@@ -334,6 +439,10 @@ final class ConfigService {
         self.configManager.selectConfig(url)
     }
 
+    func clearSelection() {
+        self.configManager.clearSelection()
+    }
+
     @discardableResult
     func reloadConfigs() -> [URL] {
         self.configManager.reloadConfigs()
@@ -354,6 +463,10 @@ final class ConfigService {
 
     func inferredRemoteConfigFileName(from remoteURL: URL) -> String {
         self.configImportService.inferredRemoteConfigFileName(from: remoteURL)
+    }
+
+    func inferredRemoteConfigDisplayName(from data: Data) -> String? {
+        self.configImportService.inferredRemoteConfigDisplayName(from: data)
     }
 
     func isSupportedRemoteConfigURL(_ url: URL) -> Bool {

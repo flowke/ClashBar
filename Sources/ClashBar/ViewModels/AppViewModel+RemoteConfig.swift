@@ -1,15 +1,17 @@
 import AppKit
 import Foundation
+import SwiftUI
 import UniformTypeIdentifiers
-
-// swiftlint:disable:next type_name
-private typealias T = MenuBarLayoutTokens
 
 @MainActor
 extension AppViewModel {
-    func importRemoteConfigFile(manualOnly: Bool = false, dashboardErrors: Bool = false) async {
+    func importRemoteConfigFile(
+        manualOnly: Bool = false,
+        dashboardErrors: Bool = false,
+        source: RemoteConfigImportSource = .menuBar) async
+    {
         guard let configDirectory = ensureConfigDirectoryAvailable() else { return }
-        guard let input = promptRemoteConfigImportInput(manualOnly: manualOnly) else { return }
+        guard let input = await promptRemoteConfigImportInput(manualOnly: manualOnly, source: source) else { return }
 
         let urlText = input.urlString.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let remoteURL = URL(string: urlText), isSupportedRemoteConfigURL(remoteURL) else {
@@ -20,37 +22,58 @@ extension AppViewModel {
             return
         }
 
-        let fallbackName = self.inferredRemoteConfigFileName(from: remoteURL)
-        guard let fileName = normalizedConfigFileName(input.fileName, fallback: fallbackName) else {
-            let message = tr("log.config.import.invalid_filename", input.fileName)
-            appendLog(level: "error", message: message)
-            if dashboardErrors { dashboardConfigError = message }
-            else { self.presentRemoteConfigImportResultAlert(success: false, message: message) }
-            return
+        let hostFallbackName = self.inferredRemoteConfigFileName(from: remoteURL)
+        let requestedName = input.fileName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !requestedName.isEmpty {
+            guard let fileName = normalizedConfigFileName(requestedName) else {
+                let message = tr("log.config.import.invalid_filename", input.fileName)
+                appendLog(level: "error", message: message)
+                if dashboardErrors { dashboardConfigError = message }
+                else { self.presentRemoteConfigImportResultAlert(success: false, message: message) }
+                return
+            }
+            let targetURL = configDirectory.appendingPathComponent(fileName, isDirectory: false)
+            guard !FileManager.default.fileExists(atPath: targetURL.path) else {
+                let message = self.uiLanguage == .zhHans ? "同名配置已存在，请使用其他名称。" : "A configuration with this name already exists. Choose a different name."
+                appendLog(level: "error", message: message)
+                if dashboardErrors { dashboardConfigError = message }
+                else { presentRemoteConfigImportResultAlert(success: false, message: message) }
+                return
+            }
         }
-
-        let targetURL = configDirectory.appendingPathComponent(fileName, isDirectory: false)
-        let existsAlready = FileManager.default.fileExists(atPath: targetURL.path)
-        if existsAlready {
-            let message = self.uiLanguage == .zhHans ? "同名配置已存在，请使用其他名称。" : "A configuration with this name already exists. Choose a different name."
-            appendLog(level: "error", message: message)
-            if dashboardErrors { dashboardConfigError = message }
-            else { presentRemoteConfigImportResultAlert(success: false, message: message) }
-            return
-        }
-
+        var fileNameForLog = requestedName.isEmpty
+            ? hostFallbackName
+            : (normalizedConfigFileName(requestedName) ?? hostFallbackName)
         do {
             let userAgent = await remoteSubscriptionUserAgent()
             let download = try await configService.downloadRemoteConfig(from: remoteURL, userAgent: userAgent)
             let data = download.data
             try await validateDownloadedConfig(data, in: configDirectory)
+
+            let embeddedName = download.suggestedName ?? self.configService.inferredRemoteConfigDisplayName(from: data)
+            let isUsingAutomaticName = requestedName.isEmpty
+            let fallbackName = isUsingAutomaticName ? (embeddedName ?? hostFallbackName) : hostFallbackName
+            guard let fileName = normalizedConfigFileName(input.fileName, fallback: fallbackName) else {
+                throw NSError(
+                    domain: "ClashBar.ConfigImport",
+                    code: 422,
+                    userInfo: [NSLocalizedDescriptionKey: tr("log.config.import.invalid_filename", input.fileName)])
+            }
+            fileNameForLog = fileName
+            let targetURL = configDirectory.appendingPathComponent(fileName, isDirectory: false)
             guard !FileManager.default.fileExists(atPath: targetURL.path) else {
-                throw CocoaError(.fileWriteFileExists)
+                throw NSError(
+                    domain: "ClashBar.ConfigImport",
+                    code: CocoaError.fileWriteFileExists.rawValue,
+                    userInfo: [NSLocalizedDescriptionKey: self.uiLanguage == .zhHans
+                        ? "同名配置已存在，请使用其他名称。"
+                        : "A configuration with this name already exists. Choose a different name."])
             }
             try writeConfigData(data, to: targetURL)
 
             let subscription = RemoteConfigSubscription(
                 urlString: remoteURL.absoluteString,
+                displayName: isUsingAutomaticName ? embeddedName : nil,
                 autoUpdateEnabled: input.autoUpdateEnabled,
                 autoUpdateIntervalHours: input.autoUpdateIntervalHours,
                 lastUpdateCheckAt: Date(),
@@ -61,7 +84,7 @@ extension AppViewModel {
 
             self.presentRemoteConfigImportResultAlert(success: true, message: message)
         } catch {
-            let message = tr("log.config.import_remote.failed", fileName, error.localizedDescription)
+            let message = tr("log.config.import_remote.failed", fileNameForLog, error.localizedDescription)
             appendLog(level: "error", message: message)
             if dashboardErrors { dashboardConfigError = message }
             else { self.presentRemoteConfigImportResultAlert(success: false, message: message) }
@@ -84,7 +107,7 @@ extension AppViewModel {
     }
 
     func deleteConfigFile(named fileName: String, confirmed: Bool = false) async {
-        if !confirmed, (try? effectiveConfigTransaction.currentRecord()) != nil {
+        if !confirmed {
             await deleteDashboardConfig(fileName)
             return
         }
@@ -94,14 +117,29 @@ extension AppViewModel {
 
         let targetURL = configDirectory.appendingPathComponent(fileName, isDirectory: false)
         let isDeletingSelected = fileName == selectedConfigName
-        let isCurrentlyRunning = isRuntimeRunning
-
+        guard !isDeletingSelected || (!isRuntimeRunning && !isCoreActionProcessing) else {
+            dashboardConfigError = uiLanguage == .zhHans ? "请先停止内核。" : "Stop the core first."
+            return
+        }
         do {
-            try FileManager.default.removeItem(at: targetURL)
+            if isDeletingSelected {
+                dashboardEffectiveRecord = try effectiveConfigTransaction.deleteSelectedSource(targetURL)
+                configService.clearSelection()
+                selectedConfigName = "-"
+                defaults.set("-", forKey: selectedConfigKey)
+                defaults.removeObject(forKey: legacySelectedConfigKey)
+                configDirectoryMonitor?.updateSelectedFile(nil)
+            } else {
+                try FileManager.default.removeItem(at: targetURL)
+            }
         } catch {
             appendLog(level: "error", message: tr("log.config.delete.failed", fileName, error.localizedDescription))
             if confirmed { dashboardConfigError = error.localizedDescription }
             return
+        }
+
+        if fileName == "ClashBar.yaml" {
+            defaults.set(true, forKey: "clashbar.config.bundled.deleted")
         }
 
         self.removeRemoteConfigSubscription(for: fileName)
@@ -110,33 +148,15 @@ extension AppViewModel {
 
         appendLog(level: "info", message: tr("log.config.delete.success", fileName))
 
-        guard isDeletingSelected else { return }
-
-        if let nextConfig = configService.availableConfigs.first {
-            configService.selectConfig(nextConfig)
-            let nextName = nextConfig.lastPathComponent
-            selectedConfigName = nextName
-            defaults.set(nextName, forKey: selectedConfigKey)
-            appendLog(level: "info", message: tr("log.config.selected", nextName))
-            if isCurrentlyRunning {
-                await restartCoreIfNeededForConfigSwitch(
-                    previousPath: targetURL.path,
-                    nextPath: nextConfig.path)
-            }
-        } else {
-            selectedConfigName = "-"
-            defaults.removeObject(forKey: selectedConfigKey)
-            if isCurrentlyRunning {
-                await stopCore(trigger: .manual)
-            }
-        }
     }
 
     func confirmDeleteConfig(named fileName: String) -> Bool {
         self.runModalAlert(
             style: .warning,
             message: tr("app.config.delete.title", fileName),
-            informative: tr("app.config.delete.message"),
+            informative: fileName == selectedConfigName && isRuntimeRunning
+                ? (uiLanguage == .zhHans ? "删除当前配置将停止内核并中断代理连接。远程订阅的更新信息也会被删除。" : "Deleting the current configuration will stop the core and interrupt proxy connections. Subscription metadata will also be removed.")
+                : tr("app.config.delete.message"),
             buttons: [tr("ui.action.delete"), tr("ui.action.cancel")]) == .alertFirstButtonReturn
     }
 
@@ -260,6 +280,9 @@ extension AppViewModel {
             }
 
             refreshedSubscription.usage = download.usage
+            if let displayName = download.suggestedName ?? self.configService.inferredRemoteConfigDisplayName(from: data) {
+                refreshedSubscription.displayName = displayName
+            }
             self.remoteConfigSubscriptions[fileName] = refreshedSubscription
             self.persistRemoteConfigSubscriptions()
 
@@ -294,8 +317,11 @@ extension AppViewModel {
     }
 
     func reloadConfig() async {
+        cancelProxyPortRetry()
+        await waitForProxyPortRetryToStop()
         let actionName = tr("log.action_name.reload_config")
         let expectedTunEnabled = isTunEnabled
+        let previousProxyPorts = currentSystemProxyPortsFromState()
 
         do {
             ensureAPIClient()
@@ -304,7 +330,12 @@ extension AppViewModel {
                 return
             }
             try await self.clientOrThrow().requestNoResponse(.putConfigs(force: false, path: configPath, payload: nil))
+            if !isRemoteTarget {
+                try await self.applyRuntimeProxyPorts(configURL: URL(fileURLWithPath: configPath))
+            }
             try await self.restoreTunAfterConfigReloadIfNeeded(expectedEnabled: expectedTunEnabled)
+            await refreshFromAPI(includeSlowCalls: false)
+            await syncSystemProxyPortIfNeeded(shouldSync: !isRemoteTarget, previousPorts: previousProxyPorts)
             appendLog(level: "info", message: tr("log.action.success", actionName))
         } catch {
             appendLog(level: "error", message: tr("log.action.failed", actionName, error.localizedDescription))
@@ -375,83 +406,45 @@ extension AppViewModel {
             buttons: [tr("ui.action.ok")])
     }
 
-    private struct RemoteConfigImportInput {
-        let urlString: String
-        let fileName: String
-        let autoUpdateEnabled: Bool
-        let autoUpdateIntervalHours: Int
-    }
-
-    private func promptRemoteConfigImportInput(manualOnly: Bool) -> RemoteConfigImportInput? {
-        let container = NSView(frame: NSRect(x: 0, y: 0, width: 340, height: 142))
-
-        let urlLabel = NSTextField(labelWithString: tr("ui.quick.remote.url_label"))
-        urlLabel.font = .systemFont(ofSize: T.FontSize.callout, weight: .medium)
-        urlLabel.frame = NSRect(x: 0, y: 124, width: 340, height: 16)
-
-        let urlField = NSTextField(frame: NSRect(x: 0, y: 98, width: 340, height: 24))
-        urlField.placeholderString = tr("ui.quick.remote.url_placeholder")
-
-        let fileLabel = NSTextField(labelWithString: tr("ui.quick.remote.filename_label"))
-        fileLabel.font = .systemFont(ofSize: T.FontSize.callout, weight: .medium)
-        fileLabel.frame = NSRect(x: 0, y: 76, width: 340, height: 16)
-
-        let fileField = NSTextField(frame: NSRect(x: 0, y: 50, width: 340, height: 24))
-        fileField.placeholderString = tr("ui.quick.remote.filename_placeholder")
-
-        let separator = NSBox(frame: NSRect(x: 0, y: 38, width: 340, height: 1))
-        separator.boxType = .separator
-
-        let autoUpdateCheckbox = NSButton(
-            checkboxWithTitle: tr("ui.quick.remote.auto_update_label"),
-            target: nil,
-            action: nil)
-        autoUpdateCheckbox.frame = NSRect(x: 0, y: 8, width: 140, height: 22)
-        autoUpdateCheckbox.state = .on
-
-        let intervalUnit = NSTextField(labelWithString: tr("ui.quick.remote.interval_unit"))
-        intervalUnit.font = .systemFont(ofSize: T.FontSize.callout, weight: .regular)
-        intervalUnit.textColor = .secondaryLabelColor
-        intervalUnit.frame = NSRect(x: 306, y: 12, width: 34, height: 16)
-
-        let intervalField = NSTextField(frame: NSRect(x: 252, y: 8, width: 50, height: 22))
-        intervalField.stringValue = "\(RemoteConfigSubscription.defaultAutoUpdateIntervalHours)"
-        intervalField.alignment = .center
-
-        let eachLabel = NSTextField(labelWithString: tr("ui.quick.remote.interval_each"))
-        eachLabel.font = .systemFont(ofSize: T.FontSize.callout, weight: .regular)
-        eachLabel.textColor = .secondaryLabelColor
-        eachLabel.frame = NSRect(x: 220, y: 12, width: 28, height: 16)
-
-        container.addSubview(urlLabel)
-        container.addSubview(urlField)
-        container.addSubview(fileLabel)
-        container.addSubview(fileField)
-        if !manualOnly {
-            container.addSubview(separator)
-            container.addSubview(autoUpdateCheckbox)
-            container.addSubview(eachLabel)
-            container.addSubview(intervalField)
-            container.addSubview(intervalUnit)
+    private func promptRemoteConfigImportInput(
+        manualOnly: Bool,
+        source: RemoteConfigImportSource) async -> RemoteConfigImportInput?
+    {
+        if let prompt = self.remoteConfigImportPrompt {
+            prompt.focus()
+            return nil
         }
-
-        let response = self.runModalAlert(
-            style: .informational,
-            message: tr("ui.quick.import_remote_config"),
-            informative: tr("app.config.remote_import.prompt"),
-            buttons: [tr("ui.action.import"), tr("ui.action.cancel")]) { $0.accessoryView = container }
-        guard response == .alertFirstButtonReturn else { return nil }
-
-        let autoUpdate = !manualOnly && autoUpdateCheckbox.state == .on
-        let intervalHours = max(
-            RemoteConfigSubscription.minimumAutoUpdateIntervalHours,
-            Int(intervalField.stringValue) ?? RemoteConfigSubscription.defaultAutoUpdateIntervalHours)
-
-        return RemoteConfigImportInput(
-            urlString: urlField.stringValue,
-            fileName: fileField.stringValue,
-            autoUpdateEnabled: autoUpdate,
-            autoUpdateIntervalHours: intervalHours)
+        let anchorContext: PanelAnchorContext?
+        switch source {
+        case .menuBar:
+            anchorContext = self.remoteConfigImportAnchorContextProvider?()
+        case .dashboard:
+            anchorContext = PanelAnchorContext.resolve(for: (NSApp.keyWindow ?? NSApp.mainWindow)?.contentView)
+        }
+        let presenter = RemoteConfigImportPanelPresenter(
+            appViewModel: self,
+            manualOnly: manualOnly,
+            source: source,
+            anchorContext: anchorContext,
+            copy: RemoteConfigImportPanelCopy(
+                title: tr("ui.quick.import_remote_config"),
+                description: tr("app.config.remote_import.prompt"),
+                urlLabel: tr("ui.quick.remote.url_label"),
+                urlPlaceholder: tr("ui.quick.remote.url_placeholder"),
+                fileNameLabel: tr("ui.quick.remote.filename_label"),
+                fileNamePlaceholder: tr("ui.quick.remote.filename_placeholder"),
+                autoUpdateLabel: tr("ui.quick.remote.auto_update_label"),
+                intervalEach: tr("ui.quick.remote.interval_each"),
+                intervalUnit: tr("ui.quick.remote.interval_unit"),
+                close: tr("ui.action.close"),
+                cancel: tr("ui.action.cancel"),
+                import: tr("ui.action.import")))
+        self.remoteConfigImportPrompt = presenter
+        let input = await presenter.present()
+        if self.remoteConfigImportPrompt === presenter {
+            self.remoteConfigImportPrompt = nil
+        }
+        return input
     }
 
     func normalizedConfigFileName(_ fileName: String, fallback: String? = nil) -> String? {
@@ -475,7 +468,7 @@ extension AppViewModel {
         defer { try? FileManager.default.removeItem(at: candidate) }
         _ = try ConfigRuleMerger().merge(data, changes: [])
         try data.write(to: candidate, options: .atomic)
-        try await processManager.validateConfig(configPath: candidate.path)
+        try await processManager.validateConfigAsync(configPath: candidate.path)
     }
 
     private static let defaultMihomoVersionForUserAgent = "v1.19.27"
@@ -651,5 +644,252 @@ extension AppViewModel {
     func stopRemoteConfigMenuRefreshTimer() {
         remoteConfigMenuRefreshTask?.cancel()
         remoteConfigMenuRefreshTask = nil
+    }
+}
+
+enum RemoteConfigImportSource {
+    case menuBar
+    case dashboard
+}
+
+struct RemoteConfigImportInput {
+    let urlString: String
+    let fileName: String
+    let autoUpdateEnabled: Bool
+    let autoUpdateIntervalHours: Int
+}
+
+struct RemoteConfigImportPanelCopy {
+    let title: String
+    let description: String
+    let urlLabel: String
+    let urlPlaceholder: String
+    let fileNameLabel: String
+    let fileNamePlaceholder: String
+    let autoUpdateLabel: String
+    let intervalEach: String
+    let intervalUnit: String
+    let close: String
+    let cancel: String
+    let `import`: String
+}
+
+@MainActor
+private final class RemoteConfigImportWindow: NSPanel {
+    override var canBecomeKey: Bool {
+        true
+    }
+
+    override var canBecomeMain: Bool {
+        false
+    }
+}
+
+@MainActor
+final class RemoteConfigImportPanelPresenter: NSObject, NSWindowDelegate {
+    let window: NSPanel
+    private let source: RemoteConfigImportSource
+    private let anchorContext: PanelAnchorContext?
+    private var continuation: CheckedContinuation<RemoteConfigImportInput?, Never>?
+
+    init(
+        appViewModel: AppViewModel,
+        manualOnly: Bool,
+        source: RemoteConfigImportSource,
+        anchorContext: PanelAnchorContext?,
+        copy: RemoteConfigImportPanelCopy)
+    {
+        self.source = source
+        self.anchorContext = anchorContext
+        let panelSize = NSSize(width: 432, height: manualOnly ? 264 : 336)
+        let panel = RemoteConfigImportWindow(
+            contentRect: NSRect(origin: .zero, size: panelSize),
+            styleMask: [.borderless],
+            backing: .buffered,
+            defer: false)
+        self.window = panel
+        super.init()
+
+        panel.isFloatingPanel = true
+        panel.hidesOnDeactivate = false
+        panel.hasShadow = true
+        panel.isOpaque = false
+        panel.backgroundColor = .clear
+        panel.delegate = self
+        appViewModel.configureModalWindow(panel)
+
+        let hostingController = NSHostingController(rootView: RemoteConfigImportForm(
+            manualOnly: manualOnly,
+            copy: copy,
+            onImport: { [weak self] input in self?.finish(input) },
+            onCancel: { [weak self] in self?.finish(nil) }))
+        hostingController.sizingOptions = []
+        panel.contentViewController = hostingController
+        panel.setContentSize(panelSize)
+        self.placePanel()
+    }
+
+    func present() async -> RemoteConfigImportInput? {
+        await withCheckedContinuation { continuation in
+            self.continuation = continuation
+            self.focus()
+        }
+    }
+
+    func focus() {
+        NSApp.activate(ignoringOtherApps: true)
+        self.window.makeKeyAndOrderFront(nil)
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        self.finish(nil, closeWindow: false)
+    }
+
+    private func placePanel() {
+        let panelSize = self.window.frame.size
+        let placement: PanelPlacement?
+        if let anchorContext {
+            switch self.source {
+            case .menuBar:
+                placement = anchorContext.menuBarDropdownPlacement(
+                    panelSize: panelSize,
+                    options: MenuBarDropdownPlacementOptions(
+                        horizontalPadding: 10,
+                        verticalSpacing: 6,
+                        screenPadding: 10,
+                        lockedOriginX: nil,
+                        preserveHorizontalPosition: false))
+            case .dashboard:
+                placement = anchorContext.centeredWindowPlacement(panelSize: panelSize, screenPadding: 16)
+            }
+        } else {
+            placement = nil
+        }
+
+        if let placement {
+            self.window.setFrame(placement.frame, display: false)
+        } else if let visibleFrame = NSScreen.main?.visibleFrame {
+            let origin = CGPoint(
+                x: visibleFrame.midX - panelSize.width / 2,
+                y: visibleFrame.midY - panelSize.height / 2)
+            self.window.setFrame(CGRect(origin: origin, size: panelSize), display: false)
+        }
+    }
+
+    private func finish(_ input: RemoteConfigImportInput?, closeWindow: Bool = true) {
+        guard let continuation else { return }
+        self.continuation = nil
+        if closeWindow {
+            self.window.close()
+        }
+        continuation.resume(returning: input)
+    }
+}
+
+@MainActor
+private struct RemoteConfigImportForm: View {
+    let manualOnly: Bool
+    let copy: RemoteConfigImportPanelCopy
+    let onImport: (RemoteConfigImportInput) -> Void
+    let onCancel: () -> Void
+
+    @State private var urlString = ""
+    @State private var fileName = ""
+    @State private var autoUpdateEnabled = true
+    @State private var intervalHours = "\(RemoteConfigSubscription.defaultAutoUpdateIntervalHours)"
+    @FocusState private var isURLFocused: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(self.copy.title)
+                        .font(.headline)
+                    Text(self.copy.description)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 4)
+                Button(action: self.onCancel) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 11, weight: .semibold))
+                        .frame(width: 24, height: 24)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help(self.copy.close)
+                .accessibilityLabel(self.copy.close)
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(self.copy.urlLabel)
+                    .font(.callout.weight(.medium))
+                TextField(self.copy.urlPlaceholder, text: self.$urlString)
+                    .textFieldStyle(.roundedBorder)
+                    .focused(self.$isURLFocused)
+                    .onSubmit(self.submit)
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(self.copy.fileNameLabel)
+                    .font(.callout.weight(.medium))
+                TextField(self.copy.fileNamePlaceholder, text: self.$fileName)
+                    .textFieldStyle(.roundedBorder)
+                    .onSubmit(self.submit)
+            }
+
+            if !self.manualOnly {
+                VStack(spacing: 10) {
+                    Divider()
+                    HStack(spacing: 8) {
+                        Toggle(self.copy.autoUpdateLabel, isOn: self.$autoUpdateEnabled)
+                            .toggleStyle(.checkbox)
+                            .fixedSize()
+                        Spacer(minLength: 6)
+                        Text(self.copy.intervalEach)
+                            .foregroundStyle(.secondary)
+                        TextField("", text: self.$intervalHours)
+                            .textFieldStyle(.roundedBorder)
+                            .frame(width: 52)
+                            .multilineTextAlignment(.center)
+                            .disabled(!self.autoUpdateEnabled)
+                            .onSubmit(self.submit)
+                        Text(self.copy.intervalUnit)
+                            .foregroundStyle(.secondary)
+                            .fixedSize()
+                    }
+                }
+            }
+
+            Spacer(minLength: 0)
+
+            HStack(spacing: 8) {
+                Spacer()
+                Button(self.copy.cancel, action: self.onCancel)
+                    .keyboardShortcut(.cancelAction)
+                Button(self.copy.import) {
+                    self.submit()
+                }
+                .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(22)
+        .frame(width: 432, height: self.manualOnly ? 264 : 336)
+        .background(Color(nsColor: .windowBackgroundColor))
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .task {
+            await Task.yield()
+            self.isURLFocused = true
+        }
+    }
+
+    private func submit() {
+        let parsedInterval = Int(self.intervalHours) ?? RemoteConfigSubscription.defaultAutoUpdateIntervalHours
+        self.onImport(RemoteConfigImportInput(
+            urlString: self.urlString,
+            fileName: self.fileName,
+            autoUpdateEnabled: !self.manualOnly && self.autoUpdateEnabled,
+            autoUpdateIntervalHours: max(RemoteConfigSubscription.minimumAutoUpdateIntervalHours, parsedInterval)))
     }
 }

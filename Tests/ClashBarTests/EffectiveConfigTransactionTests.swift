@@ -4,6 +4,17 @@ import XCTest
 
 @MainActor
 final class EffectiveConfigTransactionTests: XCTestCase {
+    func testDeletingMissingSourceRestoresPreviousRecord() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let transaction = EffectiveConfigTransaction(configDirectory: root, stateDirectory: root)
+        let original = try await transaction.commit(data: Data("first".utf8), baseName: "a.yaml", changes: [], validate: { _ in }, apply: { _ in }, rollback: {})
+        XCTAssertThrowsError(try transaction.deleteSelectedSource(root.appendingPathComponent("missing.yaml")))
+        XCTAssertEqual(try transaction.currentRecord(), original)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: try XCTUnwrap(transaction.currentFile(original)).path))
+    }
+
     func testValidationFailurePreservesPreviousVersion() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)

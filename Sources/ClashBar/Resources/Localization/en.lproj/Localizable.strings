@@ -20,6 +20,20 @@
 
 "ui.action.stop" = "Stop";
 "ui.action.start_core" = "Start Core";
+"ui.action.install_core" = "Install Core";
+"ui.core.missing.title" = "Mihomo core not detected";
+"ui.core.missing.description" = "Select Install Core to download it automatically, or place a mihomo executable in the core directory.";
+"ui.core.install.running" = "Installing...";
+"ui.core.install.failed" = "Installation failed: %@";
+"ui.core.install.error.release" = "No suitable official core package was found.";
+"ui.core.install.error.architecture" = "This device architecture is not supported.";
+"ui.core.install.error.checksum" = "Download verification failed. Please try again.";
+"ui.core.install.error.binary" = "The core binary is invalid or incompatible with this device.";
+"ui.core.install.error.http" = "The download server returned an error (%d).";
+"log.core_install.success" = "Mihomo core installed";
+"log.core_install.failed" = "Mihomo core installation failed: %@";
+"ui.core.missing.recheck" = "Check Again";
+"ui.core.missing.copy_path" = "Copy core directory path";
 "ui.action.stop_core" = "Stop Core";
 "ui.action.core_unavailable" = "Core unavailable";
 "ui.action.quit" = "Quit";
@@ -110,7 +124,7 @@
 "ui.quick.remote.url_label" = "Subscription URL";
 "ui.quick.remote.url_placeholder" = "https://example.com/config.yaml";
 "ui.quick.remote.filename_label" = "File Name";
-"ui.quick.remote.filename_placeholder" = "Leave empty to use the subscription host";
+"ui.quick.remote.filename_placeholder" = "Leave empty to use the subscription name or host";
 "ui.quick.remote.refreshing" = "Refreshing";
 "ui.quick.remote.refresh_failed" = "Refresh Failed";
 "ui.quick.ssid.bound_label" = "Bound Wi-Fi: %@";
@@ -203,7 +217,15 @@
 "ui.settings.port.mixed" = "Mixed Port";
 "ui.settings.port.redir" = "Redir Port";
 "ui.settings.port.tproxy" = "TProxy Port";
-"ui.settings.proxy_ports_hint" = "Enable at least one HTTP, SOCKS, or Mixed port. 0 disables a port. Restart the core after changing ports.";
+"ui.settings.ports.following" = "Following configuration";
+"ui.settings.ports.manual" = "Manual settings";
+"ui.settings.ports.follow_config" = "Follow configuration";
+"ui.settings.ports.retry" = "Retry ports";
+"app.settings.ports.retrying" = "Waiting to retry the proxy ports...";
+"app.settings.ports.retry_failed" = "Could not enable the proxy ports. Check the core logs and retry.";
+"app.settings.ports.retry_succeeded" = "Proxy port retry succeeded";
+"app.settings.error.port_not_applied" = "%@ is set to %d, but the core reports %d. The port may be in use; check the core logs.";
+"ui.settings.proxy_ports_hint" = "Enter 0 to disable a port. Applications cannot use a standard proxy when all proxy ports are disabled.";
 "ui.settings.system_proxy_exceptions_hint" = "These entries are written to macOS proxy bypass domains and preserved when system proxy is re-applied.";
 "ui.settings.system_proxy_exceptions_empty" = "No bypass rules yet.";
 "ui.settings.helper_status" = "Status";
@@ -319,7 +341,7 @@
 "app.tun.error.runtime_state_mismatch" = "TUN mode did not take effect after core restart.";
 "app.tun.error.patch_failed" = "Failed to patch TUN runtime config: %@";
 "app.tun.mips_requires_upgrade" = "The mips stack requires mihomo core v%@ or newer. Please upgrade the core first.";
-"app.config.remote_import.prompt" = "Enter the subscription URL and file name.";
+"app.config.remote_import.prompt" = "Enter a subscription URL. The name is optional; we will use the provider name when available.";
 "app.config.import.overwrite.title" = "Config already exists: %@";
 "app.config.import.overwrite.message" = "Do you want to overwrite the existing config file?";
 "app.config.remote_import.alert.success.title" = "Subscription Imported";

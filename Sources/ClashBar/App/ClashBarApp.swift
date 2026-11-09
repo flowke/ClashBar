@@ -59,6 +59,7 @@ private struct AppCommands: Commands {
                 }
             }
             .keyboardShortcut("s", modifiers: .command)
+            .disabled(!self.session.isSystemProxyToggleEnabled)
 
             Button(self.session.isTunEnabled ? self.tr("ui.action.disable_tun") : self.tr("ui.action.enable_tun")) {
                 Task {

@@ -20,7 +20,7 @@ extension AppViewModel {
     func startCore(trigger: StartTrigger = .manual) async {
         guard !self.isRemoteTarget else { return }
         guard !dashboardConfigBusy else { return }
-        guard !isCoreActionProcessing else { return }
+        guard !isCoreActionProcessing, !self.isCoreUpgradeInFlight, !self.isCoreBootstrapInFlight else { return }
         self.refreshManagedCoreMetadata()
         guard self.isMihomoCoreAvailable else {
             self.statusText = "Stopped"
@@ -52,11 +52,19 @@ extension AppViewModel {
 
             self.prepareManagedWebUIConfiguration(at: configPath)
 
-            guard await self.validateConfigBeforeCoreLaunch(configPath: configPath) else {
+            guard await self.validateConfigBeforeCoreLaunch(
+                configPath: configPath,
+                presentAlert: false) else {
                 preserveLocalSettingsOnNextSync = false
+                let fileName = URL(fileURLWithPath: configPath).lastPathComponent
+                let message = tr("app.config.validation_failed.startup", fileName)
+                self.statusItemBanner = StatusItemBanner(
+                    symbolName: "exclamationmark.triangle.fill",
+                    title: self.tr("app.core.alert.start_failed.title"),
+                    primaryDetail: message,
+                    secondaryDetail: nil)
                 if trigger == .auto {
-                    let fileName = URL(fileURLWithPath: configPath).lastPathComponent
-                    startupErrorMessage = tr("app.config.validation_failed.startup", fileName)
+                    startupErrorMessage = message
                     statusText = "Stopped"
                     apiStatus = .unknown
                 } else {
@@ -68,10 +76,10 @@ extension AppViewModel {
 
             let launchController = applyExternalControllerFromSelectedConfigFile(configPath: configPath)
             statusText = "Starting"
-            _ = try await self.processManager.start(configPath: configPath, controller: launchController)
+            _ = try await self.processManager.startAsync(configPath: configPath, controller: launchController)
             self.refreshManagedCoreMetadata()
 
-            await self.completeCoreBootstrap(
+            self.scheduleCoreBootstrap(
                 configPath: configPath,
                 settingsOverlay: settingsOverlay,
                 options: CoreBootstrapOptions(
@@ -91,10 +99,11 @@ extension AppViewModel {
 
     private func reportCoreStartFailure(message: String, trigger: StartTrigger, markFailedOnManual: Bool) {
         self.appendLog(level: "error", message: message)
-        self.presentCoreFailureAlert(
+        self.statusItemBanner = StatusItemBanner(
+            symbolName: "exclamationmark.triangle.fill",
             title: self.tr("app.core.alert.start_failed.title"),
-            message: message,
-            dedupeKey: "core-start-failed")
+            primaryDetail: message,
+            secondaryDetail: nil)
         if trigger == .auto {
             self.startupErrorMessage = message
             self.statusText = "Stopped"
@@ -109,6 +118,8 @@ extension AppViewModel {
         guard !self.isRemoteTarget else { return }
         if trigger == .manual, dashboardConfigBusy { return }
         guard !isCoreActionProcessing else { return }
+        self.cancelCoreBootstrap()
+        await self.waitForProxyPortRetryToStop()
         if trigger == .manual {
             shouldResumeCoreAfterNetworkRecovery = false
         }
@@ -121,7 +132,7 @@ extension AppViewModel {
             disableRuntimeTunBeforeStop: trigger == .networkLoss)
         self.cancelDeferredEditableSettingsOverlaySync()
         cancelProviderRefresh(reason: "stop requested")
-        await self.processManager.stop()
+        await self.processManager.stopAsync()
         cancelPolling()
         statusText = "Stopped"
         apiStatus = .unknown
@@ -150,6 +161,8 @@ extension AppViewModel {
                 return
             }
 
+            self.cancelCoreBootstrap()
+            await self.waitForProxyPortRetryToStop()
             let launchController = applyExternalControllerFromSelectedConfigFile(configPath: configPath)
             let recoverySnapshotBeforeRestart = self.currentCoreFeatureRecoverySnapshot()
             await self.prepareCoreFeatureRecoveryBeforeCoreTransition(
@@ -157,8 +170,8 @@ extension AppViewModel {
                 transitionKind: .restart,
                 disableRuntimeTunBeforeStop: false)
             let settingsOverlay = self.overlayApplyingPendingCoreFeatureRecovery(currentEditableSettingsSnapshot())
-            _ = try await self.processManager.restart(configPath: configPath, controller: launchController)
-            await self.completeCoreBootstrap(
+            _ = try await self.processManager.restartAsync(configPath: configPath, controller: launchController)
+            self.scheduleCoreBootstrap(
                 configPath: configPath,
                 settingsOverlay: settingsOverlay,
                 options: CoreBootstrapOptions(
@@ -233,6 +246,8 @@ extension AppViewModel {
         self.shouldResumeCoreAfterNetworkRecovery = false
         self.stopNetworkReachabilityMonitoring()
         self.stopConfigDirectoryMonitoring()
+        self.coreDirectoryMonitor?.cancel()
+        self.coreDirectoryMonitor = nil
         self.cancelDeferredEditableSettingsOverlaySync()
         self.cancelProviderRefresh(reason: "quit requested")
         self.cancelPolling()
@@ -247,6 +262,7 @@ extension AppViewModel {
         self.trafficDecodeTask = nil
         self.mihomoLogFlushTask?.cancel()
         self.mihomoLogFlushTask = nil
+        self.cancelCoreBootstrap()
         self.startupRefreshTask?.cancel()
         self.startupRefreshTask = nil
         self.autoStartTask?.cancel()
@@ -287,18 +303,18 @@ extension AppViewModel {
     }
 
     @discardableResult
-    func validateConfigBeforeCoreLaunch(configPath: String) async -> Bool {
+    func validateConfigBeforeCoreLaunch(configPath: String, presentAlert: Bool = true) async -> Bool {
         guard let details = await self.configValidationFailureDetails(configPath: configPath) else {
             return true
         }
 
-        self.handleConfigValidationFailure(configPath: configPath, details: details)
+        self.handleConfigValidationFailure(configPath: configPath, details: details, presentAlert: presentAlert)
         return false
     }
 
     func configValidationFailureDetails(configPath: String) async -> String? {
         do {
-            try await self.processManager.validateConfig(configPath: configPath)
+            try await self.processManager.validateConfigAsync(configPath: configPath)
             return nil
         } catch {
             let detailsRaw = self.coreErrorMessage(error).trimmingCharacters(in: .whitespacesAndNewlines)
@@ -306,10 +322,12 @@ extension AppViewModel {
         }
     }
 
-    func handleConfigValidationFailure(configPath: String, details: String) {
+    func handleConfigValidationFailure(configPath: String, details: String, presentAlert: Bool = true) {
         let fileName = URL(fileURLWithPath: configPath).lastPathComponent
         appendLog(level: "error", message: tr("log.config.validate_failed", fileName, details))
-        self.presentConfigValidationFailedAlert(fileName: fileName, details: details)
+        if presentAlert {
+            self.presentConfigValidationFailedAlert(fileName: fileName, details: details)
+        }
     }
 
     func restartCoreIfNeededForConfigSwitch(previousPath: String?, nextPath: String?) async {
@@ -344,28 +362,74 @@ extension AppViewModel {
         await self.startCore(trigger: .auto)
     }
 
+    private func scheduleCoreBootstrap(
+        configPath: String,
+        settingsOverlay: EditableSettingsSnapshot,
+        options: CoreBootstrapOptions)
+    {
+        self.cancelCoreBootstrap()
+        let bootstrapID = UUID()
+        self.coreBootstrapID = bootstrapID
+        self.isCoreBootstrapInFlight = true
+        self.statusText = "Running"
+        self.apiStatus = .unknown
+        self.coreBootstrapTask = Task { [weak self] in
+            guard let self else { return }
+            await self.completeCoreBootstrap(
+                configPath: configPath,
+                settingsOverlay: settingsOverlay,
+                options: options,
+                bootstrapID: bootstrapID)
+            guard self.coreBootstrapID == bootstrapID else { return }
+            self.coreBootstrapID = nil
+            self.coreBootstrapTask = nil
+            self.isCoreBootstrapInFlight = false
+        }
+    }
+
+    func cancelCoreBootstrap() {
+        self.cancelProxyPortRetry()
+        self.coreBootstrapTask?.cancel()
+        self.coreBootstrapTask = nil
+        self.coreBootstrapID = nil
+        self.isCoreBootstrapInFlight = false
+        self.cancelDeferredEditableSettingsOverlaySync()
+    }
+
+    private func isCurrentCoreBootstrap(_ bootstrapID: UUID) -> Bool {
+        !Task.isCancelled && self.coreBootstrapID == bootstrapID && self.processManager.isRunning
+    }
+
     private func completeCoreBootstrap(
         configPath: String,
         settingsOverlay: EditableSettingsSnapshot,
-        options: CoreBootstrapOptions) async
+        options: CoreBootstrapOptions,
+        bootstrapID: UUID) async
     {
+        guard self.isCurrentCoreBootstrap(bootstrapID), self.processManager.isRunning else { return }
         statusText = "Running"
-        apiStatus = .healthy
+        apiStatus = .unknown
         resetTrafficPresentation()
         ensureAPIClient()
         startPolling()
-        await refreshFromAPI(includeSlowCalls: true)
+        await refreshFromAPI(includeSlowCalls: false)
+        guard self.isCurrentCoreBootstrap(bootstrapID) else { return }
 
         await self.syncEditableSettingsOverlayForCoreBootstrap(
             settingsOverlay,
             syncingKey: options.overlaySyncingKey)
+        guard self.isCurrentCoreBootstrap(bootstrapID) else { return }
         await validateTunPermissionsOnStartup()
+        guard self.isCurrentCoreBootstrap(bootstrapID) else { return }
         await ensureTunStackOnStartupIfNeeded()
+        guard self.isCurrentCoreBootstrap(bootstrapID) else { return }
         await self.verifyTunAfterOverlayIfNeeded(overlay: settingsOverlay)
+        guard self.isCurrentCoreBootstrap(bootstrapID) else { return }
         enqueueProviderRefresh(trigger: options.providerTrigger)
 
         if options.refreshProxyGroupsAfterBootstrap {
             await self.refreshProxyGroupsAfterRestart()
+            guard self.isCurrentCoreBootstrap(bootstrapID) else { return }
         }
 
         scheduleSystemProxyStartupPostflight(
@@ -375,6 +439,7 @@ extension AppViewModel {
         defaults.set(configPath, forKey: lastSuccessfulConfigPathKey)
         startupErrorMessage = nil
         await self.restoreCoreFeaturesAfterStartupIfNeeded()
+        guard self.isCurrentCoreBootstrap(bootstrapID) else { return }
         enforceNetworkManagedCorePolicyIfNeeded()
 
         if options.autoTestGroupLatencies {

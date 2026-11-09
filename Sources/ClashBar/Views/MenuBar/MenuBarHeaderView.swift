@@ -12,8 +12,8 @@ struct MenuBarHeaderView: TranslatingView {
     @State private var isCoreButtonHovered = false
 
     private var isCoreButtonDisabled: Bool {
-        self.appViewModel.isRemoteTarget || self.appViewModel.isCoreActionProcessing || self.appViewModel.dashboardConfigBusy ||
-            (!self.appViewModel.isRuntimeRunning && !self.appViewModel.isMihomoCoreAvailable)
+        self.appViewModel.isRemoteTarget || self.appViewModel.isCoreUpgradeInFlight || self.appViewModel.isCoreActionProcessing ||
+            self.appViewModel.dashboardConfigBusy
     }
 
     var headerLogoSize: CGFloat {
@@ -69,6 +69,10 @@ struct MenuBarHeaderView: TranslatingView {
 
             HStack(spacing: T.space6) {
                 Button {
+                    if self.appViewModel.needsMihomoCoreInstallation {
+                        Task { await self.appViewModel.installOrUpgradeCore() }
+                        return
+                    }
                     Task {
                         if self.appViewModel.isRuntimeRunning {
                             await self.appViewModel.stopCore()
@@ -78,13 +82,17 @@ struct MenuBarHeaderView: TranslatingView {
                     }
                 } label: {
                     HStack(spacing: T.space2) {
-                        if self.appViewModel.isCoreActionProcessing {
+                        if self.appViewModel.isCoreActionProcessing || self.appViewModel.isCoreUpgradeInFlight {
                             ProgressView().controlSize(.mini)
                         } else {
-                            Image(systemName: self.appViewModel.isRuntimeRunning ? "stop.circle" : "play.circle")
-                                .foregroundStyle(self.appViewModel.isRuntimeRunning ? nativeWarning : nativePositive)
+                            Image(systemName: self.appViewModel.needsMihomoCoreInstallation ? "arrow.down.circle" :
+                                (self.appViewModel.isRuntimeRunning ? "stop.circle" : "play.circle"))
+                                .foregroundStyle(self.appViewModel.isRuntimeRunning || self.appViewModel.needsMihomoCoreInstallation ? nativeWarning : nativePositive)
                         }
-                        Text(self.tr(self.appViewModel.isRuntimeRunning ? "ui.action.stop_core" : "ui.action.start_core"))
+                        Text(self.tr(self.appViewModel.isCoreUpgradeInFlight
+                            ? (self.appViewModel.needsMihomoCoreInstallation ? "ui.core.install.running" : "ui.footer.core_upgrade.running") :
+                            self.appViewModel.needsMihomoCoreInstallation ? "ui.action.install_core" :
+                            (self.appViewModel.isRuntimeRunning ? "ui.action.stop_core" : "ui.action.start_core")))
                             .font(.app(size: T.FontSize.caption, weight: .semibold))
                             .lineLimit(1)
                     }
@@ -98,9 +106,8 @@ struct MenuBarHeaderView: TranslatingView {
                 .buttonStyle(.plain)
                 .disabled(self.isCoreButtonDisabled)
                 .onHover { self.isCoreButtonHovered = $0 }
-                .help(!self.appViewModel.isRemoteTarget && !self.appViewModel.isRuntimeRunning &&
-                    !self.appViewModel.isMihomoCoreAvailable
-                    ? self.tr("app.core.setup_required.message", self.appViewModel.workingDirectoryManager.coreDirectoryURL.path)
+                .help(self.appViewModel.needsMihomoCoreInstallation
+                    ? self.tr("ui.action.install_core")
                     : self.tr(self.appViewModel.isRuntimeRunning ? "ui.action.stop_core" : "ui.action.start_core"))
 
                 self.compactTopIcon(
