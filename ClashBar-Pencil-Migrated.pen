@@ -15,204 +15,14 @@
       "layout": "none",
       "children": [
         {
-          "type": "frame",
-          "id": "CSVHP",
+          "id": "dceY8",
+          "type": "ref",
+          "ref": "DdeXH",
+          "name": "侧边栏 / 组件实例",
           "x": 0,
           "y": 0,
-          "name": "Sidebar",
           "width": 236,
-          "height": 800,
-          "fill": "#E4E4E4",
-          "layout": "none",
-          "children": [
-            {
-              "type": "frame",
-              "id": "xrHD1",
-              "x": 18,
-              "y": 18,
-              "name": "Traffic light red",
-              "width": 14,
-              "height": 14,
-              "fill": "#FF5F57",
-              "cornerRadius": 7,
-              "layout": "none"
-            },
-            {
-              "type": "frame",
-              "id": "CSa86",
-              "x": 42,
-              "y": 18,
-              "name": "Traffic light yellow",
-              "width": 14,
-              "height": 14,
-              "fill": "#FEBC2E",
-              "cornerRadius": 7,
-              "layout": "none"
-            },
-            {
-              "type": "frame",
-              "id": "pkDmv",
-              "x": 66,
-              "y": 18,
-              "name": "Traffic light green",
-              "width": 14,
-              "height": 14,
-              "fill": "#28C840",
-              "cornerRadius": 7,
-              "layout": "none"
-            },
-            {
-              "type": "frame",
-              "id": "Jd6lB",
-              "x": 151,
-              "y": 8,
-              "name": "Sidebar toggle",
-              "width": 40,
-              "height": 40,
-              "fill": "#F7F7F7",
-              "cornerRadius": 20,
-              "stroke": "#D5D5D5",
-              "strokeWidth": 1,
-              "layout": "none"
-            },
-            {
-              "type": "icon",
-              "id": "y8g7c",
-              "x": 163,
-              "y": 19,
-              "name": "Sidebar toggle icon",
-              "width": 16,
-              "height": 16,
-              "icon": "panel-left",
-              "library": "lucide",
-              "fill": "#34424D"
-            },
-            {
-              "type": "icon",
-              "id": "zkSW0",
-              "x": 24,
-              "y": 45,
-              "name": "Overview icon",
-              "width": 17,
-              "height": 17,
-              "icon": "layout-grid",
-              "library": "lucide",
-              "fill": "#1685F5"
-            },
-            {
-              "type": "text",
-              "id": "TrRnW",
-              "x": 46,
-              "y": 43,
-              "name": "Overview label",
-              "fill": "#1B2933",
-              "textGrowth": "fixed-width-height",
-              "width": 150,
-              "height": 20,
-              "content": "概览",
-              "textAlignVertical": "middle",
-              "fontFamily": "Inter",
-              "fontSize": 15,
-              "fontWeight": "normal"
-            },
-            {
-              "type": "frame",
-              "id": "hOLkF",
-              "x": 10,
-              "y": 102,
-              "name": "Config selected",
-              "width": 216,
-              "height": 26,
-              "fill": "#1685F5",
-              "cornerRadius": 6,
-              "layout": "none"
-            },
-            {
-              "type": "icon",
-              "id": "G5Chx",
-              "x": 26,
-              "y": 107,
-              "name": "Config icon",
-              "width": 16,
-              "height": 16,
-              "icon": "file-text",
-              "library": "lucide",
-              "fill": "#FFFFFF"
-            },
-            {
-              "type": "text",
-              "id": "i2v9V",
-              "x": 54,
-              "y": 105,
-              "name": "Config label",
-              "fill": "#FFFFFF",
-              "textGrowth": "fixed-width-height",
-              "width": 150,
-              "height": 20,
-              "content": "配置",
-              "textAlignVertical": "middle",
-              "fontFamily": "Inter",
-              "fontSize": 15,
-              "fontWeight": "normal"
-            },
-            {
-              "type": "frame",
-              "id": "Nj5En",
-              "x": 0,
-              "y": 740,
-              "name": "Core footer",
-              "width": 236,
-              "height": 60,
-              "fill": "#EEEEEE",
-              "layout": "none",
-              "children": [
-                {
-                  "type": "text",
-                  "id": "IaeuX",
-                  "x": 12,
-                  "y": 8,
-                  "name": "Core name",
-                  "fill": "#22333F",
-                  "textGrowth": "fixed-width-height",
-                  "width": 190,
-                  "height": 20,
-                  "content": "本地核心",
-                  "textAlignVertical": "middle",
-                  "fontFamily": "Inter",
-                  "fontSize": 14,
-                  "fontWeight": "normal"
-                },
-                {
-                  "type": "frame",
-                  "id": "RBj0K",
-                  "x": 12,
-                  "y": 40,
-                  "name": "Core status dot",
-                  "width": 8,
-                  "height": 8,
-                  "fill": "#2BCB67",
-                  "cornerRadius": 4,
-                  "layout": "none"
-                },
-                {
-                  "type": "text",
-                  "id": "Sxdc8",
-                  "x": 28,
-                  "y": 34,
-                  "name": "Core endpoint",
-                  "fill": "#4C5D69",
-                  "textGrowth": "fixed-width-height",
-                  "width": 170,
-                  "height": 18,
-                  "content": "127.0.0.1:9090",
-                  "textAlignVertical": "middle",
-                  "fontFamily": "Inter",
-                  "fontSize": 12,
-                  "fontWeight": "normal"
-                }
-              ]
-            }
-          ]
+          "height": 820
         },
         {
           "type": "text",
@@ -839,204 +649,14 @@
       "layout": "none",
       "children": [
         {
-          "type": "frame",
-          "id": "pvaQG",
+          "id": "iZMZ1",
+          "type": "ref",
+          "ref": "DdeXH",
+          "name": "侧边栏 / 组件实例",
           "x": 0,
           "y": 0,
-          "name": "Sidebar",
           "width": 236,
-          "height": 800,
-          "fill": "#E4E4E4",
-          "layout": "none",
-          "children": [
-            {
-              "type": "frame",
-              "id": "Q4pN9",
-              "x": 18,
-              "y": 18,
-              "name": "Traffic light red",
-              "width": 14,
-              "height": 14,
-              "fill": "#FF5F57",
-              "cornerRadius": 7,
-              "layout": "none"
-            },
-            {
-              "type": "frame",
-              "id": "w1ttP",
-              "x": 42,
-              "y": 18,
-              "name": "Traffic light yellow",
-              "width": 14,
-              "height": 14,
-              "fill": "#FEBC2E",
-              "cornerRadius": 7,
-              "layout": "none"
-            },
-            {
-              "type": "frame",
-              "id": "z0P1c",
-              "x": 66,
-              "y": 18,
-              "name": "Traffic light green",
-              "width": 14,
-              "height": 14,
-              "fill": "#28C840",
-              "cornerRadius": 7,
-              "layout": "none"
-            },
-            {
-              "type": "frame",
-              "id": "jvup8",
-              "x": 151,
-              "y": 8,
-              "name": "Sidebar toggle",
-              "width": 40,
-              "height": 40,
-              "fill": "#F7F7F7",
-              "cornerRadius": 20,
-              "stroke": "#D5D5D5",
-              "strokeWidth": 1,
-              "layout": "none"
-            },
-            {
-              "type": "icon",
-              "id": "pfslF",
-              "x": 163,
-              "y": 19,
-              "name": "Sidebar toggle icon",
-              "width": 16,
-              "height": 16,
-              "icon": "panel-left",
-              "library": "lucide",
-              "fill": "#34424D"
-            },
-            {
-              "type": "icon",
-              "id": "U8shcX",
-              "x": 24,
-              "y": 45,
-              "name": "Overview icon",
-              "width": 17,
-              "height": 17,
-              "icon": "layout-grid",
-              "library": "lucide",
-              "fill": "#1685F5"
-            },
-            {
-              "type": "text",
-              "id": "zAFjp",
-              "x": 46,
-              "y": 43,
-              "name": "Overview label",
-              "fill": "#1B2933",
-              "textGrowth": "fixed-width-height",
-              "width": 150,
-              "height": 20,
-              "content": "概览",
-              "textAlignVertical": "middle",
-              "fontFamily": "Inter",
-              "fontSize": 15,
-              "fontWeight": "normal"
-            },
-            {
-              "type": "frame",
-              "id": "w6Ehuk",
-              "x": 10,
-              "y": 102,
-              "name": "Config selected",
-              "width": 216,
-              "height": 26,
-              "fill": "#1685F5",
-              "cornerRadius": 6,
-              "layout": "none"
-            },
-            {
-              "type": "icon",
-              "id": "fpp9Y",
-              "x": 26,
-              "y": 107,
-              "name": "Config icon",
-              "width": 16,
-              "height": 16,
-              "icon": "file-text",
-              "library": "lucide",
-              "fill": "#FFFFFF"
-            },
-            {
-              "type": "text",
-              "id": "C1dfg",
-              "x": 54,
-              "y": 105,
-              "name": "Config label",
-              "fill": "#FFFFFF",
-              "textGrowth": "fixed-width-height",
-              "width": 150,
-              "height": 20,
-              "content": "配置",
-              "textAlignVertical": "middle",
-              "fontFamily": "Inter",
-              "fontSize": 15,
-              "fontWeight": "normal"
-            },
-            {
-              "type": "frame",
-              "id": "Lncra",
-              "x": 0,
-              "y": 740,
-              "name": "Core footer",
-              "width": 236,
-              "height": 60,
-              "fill": "#EEEEEE",
-              "layout": "none",
-              "children": [
-                {
-                  "type": "text",
-                  "id": "s8K6iY",
-                  "x": 12,
-                  "y": 8,
-                  "name": "Core name",
-                  "fill": "#22333F",
-                  "textGrowth": "fixed-width-height",
-                  "width": 190,
-                  "height": 20,
-                  "content": "本地核心",
-                  "textAlignVertical": "middle",
-                  "fontFamily": "Inter",
-                  "fontSize": 14,
-                  "fontWeight": "normal"
-                },
-                {
-                  "type": "frame",
-                  "id": "TaEW2",
-                  "x": 12,
-                  "y": 40,
-                  "name": "Core status dot",
-                  "width": 8,
-                  "height": 8,
-                  "fill": "#2BCB67",
-                  "cornerRadius": 4,
-                  "layout": "none"
-                },
-                {
-                  "type": "text",
-                  "id": "DuLVx",
-                  "x": 28,
-                  "y": 34,
-                  "name": "Core endpoint",
-                  "fill": "#4C5D69",
-                  "textGrowth": "fixed-width-height",
-                  "width": 170,
-                  "height": 18,
-                  "content": "127.0.0.1:9090",
-                  "textAlignVertical": "middle",
-                  "fontFamily": "Inter",
-                  "fontSize": 12,
-                  "fontWeight": "normal"
-                }
-              ]
-            }
-          ]
+          "height": 820
         },
         {
           "type": "text",
@@ -1509,204 +1129,14 @@
       "layout": "none",
       "children": [
         {
-          "type": "frame",
-          "id": "SPxcZ",
+          "id": "D9h5v0",
+          "type": "ref",
+          "ref": "DdeXH",
+          "name": "侧边栏 / 组件实例",
           "x": 0,
           "y": 0,
-          "name": "Sidebar",
           "width": 236,
-          "height": 800,
-          "fill": "#E4E4E4",
-          "layout": "none",
-          "children": [
-            {
-              "type": "frame",
-              "id": "xzOHn",
-              "x": 18,
-              "y": 18,
-              "name": "Traffic light red",
-              "width": 14,
-              "height": 14,
-              "fill": "#FF5F57",
-              "cornerRadius": 7,
-              "layout": "none"
-            },
-            {
-              "type": "frame",
-              "id": "EfyKd",
-              "x": 42,
-              "y": 18,
-              "name": "Traffic light yellow",
-              "width": 14,
-              "height": 14,
-              "fill": "#FEBC2E",
-              "cornerRadius": 7,
-              "layout": "none"
-            },
-            {
-              "type": "frame",
-              "id": "cav3i",
-              "x": 66,
-              "y": 18,
-              "name": "Traffic light green",
-              "width": 14,
-              "height": 14,
-              "fill": "#28C840",
-              "cornerRadius": 7,
-              "layout": "none"
-            },
-            {
-              "type": "frame",
-              "id": "PQAXB",
-              "x": 151,
-              "y": 8,
-              "name": "Sidebar toggle",
-              "width": 40,
-              "height": 40,
-              "fill": "#F7F7F7",
-              "cornerRadius": 20,
-              "stroke": "#D5D5D5",
-              "strokeWidth": 1,
-              "layout": "none"
-            },
-            {
-              "type": "icon",
-              "id": "L36wH",
-              "x": 163,
-              "y": 19,
-              "name": "Sidebar toggle icon",
-              "width": 16,
-              "height": 16,
-              "icon": "panel-left",
-              "library": "lucide",
-              "fill": "#34424D"
-            },
-            {
-              "type": "icon",
-              "id": "PL7gU",
-              "x": 24,
-              "y": 45,
-              "name": "Overview icon",
-              "width": 17,
-              "height": 17,
-              "icon": "layout-grid",
-              "library": "lucide",
-              "fill": "#1685F5"
-            },
-            {
-              "type": "text",
-              "id": "Mhwme",
-              "x": 46,
-              "y": 43,
-              "name": "Overview label",
-              "fill": "#1B2933",
-              "textGrowth": "fixed-width-height",
-              "width": 150,
-              "height": 20,
-              "content": "概览",
-              "textAlignVertical": "middle",
-              "fontFamily": "Inter",
-              "fontSize": 15,
-              "fontWeight": "normal"
-            },
-            {
-              "type": "frame",
-              "id": "MdVbB",
-              "x": 10,
-              "y": 102,
-              "name": "Config selected",
-              "width": 216,
-              "height": 26,
-              "fill": "#1685F5",
-              "cornerRadius": 6,
-              "layout": "none"
-            },
-            {
-              "type": "icon",
-              "id": "g8KJT5",
-              "x": 26,
-              "y": 107,
-              "name": "Config icon",
-              "width": 16,
-              "height": 16,
-              "icon": "file-text",
-              "library": "lucide",
-              "fill": "#FFFFFF"
-            },
-            {
-              "type": "text",
-              "id": "tnSV8",
-              "x": 54,
-              "y": 105,
-              "name": "Config label",
-              "fill": "#FFFFFF",
-              "textGrowth": "fixed-width-height",
-              "width": 150,
-              "height": 20,
-              "content": "配置",
-              "textAlignVertical": "middle",
-              "fontFamily": "Inter",
-              "fontSize": 15,
-              "fontWeight": "normal"
-            },
-            {
-              "type": "frame",
-              "id": "PCmWr",
-              "x": 0,
-              "y": 740,
-              "name": "Core footer",
-              "width": 236,
-              "height": 60,
-              "fill": "#EEEEEE",
-              "layout": "none",
-              "children": [
-                {
-                  "type": "text",
-                  "id": "HOQQ6",
-                  "x": 12,
-                  "y": 8,
-                  "name": "Core name",
-                  "fill": "#22333F",
-                  "textGrowth": "fixed-width-height",
-                  "width": 190,
-                  "height": 20,
-                  "content": "本地核心",
-                  "textAlignVertical": "middle",
-                  "fontFamily": "Inter",
-                  "fontSize": 14,
-                  "fontWeight": "normal"
-                },
-                {
-                  "type": "frame",
-                  "id": "E5NrU",
-                  "x": 12,
-                  "y": 40,
-                  "name": "Core status dot",
-                  "width": 8,
-                  "height": 8,
-                  "fill": "#2BCB67",
-                  "cornerRadius": 4,
-                  "layout": "none"
-                },
-                {
-                  "type": "text",
-                  "id": "XWK1Q",
-                  "x": 28,
-                  "y": 34,
-                  "name": "Core endpoint",
-                  "fill": "#4C5D69",
-                  "textGrowth": "fixed-width-height",
-                  "width": 170,
-                  "height": 18,
-                  "content": "127.0.0.1:9090",
-                  "textAlignVertical": "middle",
-                  "fontFamily": "Inter",
-                  "fontSize": 12,
-                  "fontWeight": "normal"
-                }
-              ]
-            }
-          ]
+          "height": 820
         },
         {
           "type": "text",
@@ -2558,204 +1988,14 @@
       "layout": "none",
       "children": [
         {
-          "type": "frame",
-          "id": "krlfZ",
+          "id": "m4mOGS",
+          "type": "ref",
+          "ref": "DdeXH",
+          "name": "侧边栏 / 组件实例",
           "x": 0,
           "y": 0,
-          "name": "Sidebar",
           "width": 236,
-          "height": 800,
-          "fill": "#E4E4E4",
-          "layout": "none",
-          "children": [
-            {
-              "type": "frame",
-              "id": "uH1Lp",
-              "x": 18,
-              "y": 18,
-              "name": "Traffic light red",
-              "width": 14,
-              "height": 14,
-              "fill": "#FF5F57",
-              "cornerRadius": 7,
-              "layout": "none"
-            },
-            {
-              "type": "frame",
-              "id": "b9c0A4",
-              "x": 42,
-              "y": 18,
-              "name": "Traffic light yellow",
-              "width": 14,
-              "height": 14,
-              "fill": "#FEBC2E",
-              "cornerRadius": 7,
-              "layout": "none"
-            },
-            {
-              "type": "frame",
-              "id": "m8iDi",
-              "x": 66,
-              "y": 18,
-              "name": "Traffic light green",
-              "width": 14,
-              "height": 14,
-              "fill": "#28C840",
-              "cornerRadius": 7,
-              "layout": "none"
-            },
-            {
-              "type": "frame",
-              "id": "YdRPj",
-              "x": 151,
-              "y": 8,
-              "name": "Sidebar toggle",
-              "width": 40,
-              "height": 40,
-              "fill": "#F7F7F7",
-              "cornerRadius": 20,
-              "stroke": "#D5D5D5",
-              "strokeWidth": 1,
-              "layout": "none"
-            },
-            {
-              "type": "icon",
-              "id": "yJJWU",
-              "x": 163,
-              "y": 19,
-              "name": "Sidebar toggle icon",
-              "width": 16,
-              "height": 16,
-              "icon": "panel-left",
-              "library": "lucide",
-              "fill": "#34424D"
-            },
-            {
-              "type": "icon",
-              "id": "gd0Lp",
-              "x": 24,
-              "y": 45,
-              "name": "Overview icon",
-              "width": 17,
-              "height": 17,
-              "icon": "layout-grid",
-              "library": "lucide",
-              "fill": "#1685F5"
-            },
-            {
-              "type": "text",
-              "id": "MlkeK",
-              "x": 46,
-              "y": 43,
-              "name": "Overview label",
-              "fill": "#1B2933",
-              "textGrowth": "fixed-width-height",
-              "width": 150,
-              "height": 20,
-              "content": "概览",
-              "textAlignVertical": "middle",
-              "fontFamily": "Inter",
-              "fontSize": 15,
-              "fontWeight": "normal"
-            },
-            {
-              "type": "frame",
-              "id": "uERzG",
-              "x": 10,
-              "y": 102,
-              "name": "Config selected",
-              "width": 216,
-              "height": 26,
-              "fill": "#1685F5",
-              "cornerRadius": 6,
-              "layout": "none"
-            },
-            {
-              "type": "icon",
-              "id": "U1N0DA",
-              "x": 26,
-              "y": 107,
-              "name": "Config icon",
-              "width": 16,
-              "height": 16,
-              "icon": "file-text",
-              "library": "lucide",
-              "fill": "#FFFFFF"
-            },
-            {
-              "type": "text",
-              "id": "b9sWAn",
-              "x": 54,
-              "y": 105,
-              "name": "Config label",
-              "fill": "#FFFFFF",
-              "textGrowth": "fixed-width-height",
-              "width": 150,
-              "height": 20,
-              "content": "配置",
-              "textAlignVertical": "middle",
-              "fontFamily": "Inter",
-              "fontSize": 15,
-              "fontWeight": "normal"
-            },
-            {
-              "type": "frame",
-              "id": "o6hlle",
-              "x": 0,
-              "y": 740,
-              "name": "Core footer",
-              "width": 236,
-              "height": 60,
-              "fill": "#EEEEEE",
-              "layout": "none",
-              "children": [
-                {
-                  "type": "text",
-                  "id": "uELrt",
-                  "x": 12,
-                  "y": 8,
-                  "name": "Core name",
-                  "fill": "#22333F",
-                  "textGrowth": "fixed-width-height",
-                  "width": 190,
-                  "height": 20,
-                  "content": "本地核心",
-                  "textAlignVertical": "middle",
-                  "fontFamily": "Inter",
-                  "fontSize": 14,
-                  "fontWeight": "normal"
-                },
-                {
-                  "type": "frame",
-                  "id": "d1tEX",
-                  "x": 12,
-                  "y": 40,
-                  "name": "Core status dot",
-                  "width": 8,
-                  "height": 8,
-                  "fill": "#2BCB67",
-                  "cornerRadius": 4,
-                  "layout": "none"
-                },
-                {
-                  "type": "text",
-                  "id": "C9DzLR",
-                  "x": 28,
-                  "y": 34,
-                  "name": "Core endpoint",
-                  "fill": "#4C5D69",
-                  "textGrowth": "fixed-width-height",
-                  "width": 170,
-                  "height": 18,
-                  "content": "127.0.0.1:9090",
-                  "textAlignVertical": "middle",
-                  "fontFamily": "Inter",
-                  "fontSize": 12,
-                  "fontWeight": "normal"
-                }
-              ]
-            }
-          ]
+          "height": 820
         },
         {
           "type": "text",
@@ -3607,204 +2847,14 @@
       "layout": "none",
       "children": [
         {
-          "type": "frame",
-          "id": "lcxqo",
+          "id": "Z9vyY",
+          "type": "ref",
+          "ref": "DdeXH",
+          "name": "侧边栏 / 组件实例",
           "x": 0,
           "y": 0,
-          "name": "Sidebar",
           "width": 236,
-          "height": 800,
-          "fill": "#E4E4E4",
-          "layout": "none",
-          "children": [
-            {
-              "type": "frame",
-              "id": "IPOG8",
-              "x": 18,
-              "y": 18,
-              "name": "Traffic light red",
-              "width": 14,
-              "height": 14,
-              "fill": "#FF5F57",
-              "cornerRadius": 7,
-              "layout": "none"
-            },
-            {
-              "type": "frame",
-              "id": "ZVwSP",
-              "x": 42,
-              "y": 18,
-              "name": "Traffic light yellow",
-              "width": 14,
-              "height": 14,
-              "fill": "#FEBC2E",
-              "cornerRadius": 7,
-              "layout": "none"
-            },
-            {
-              "type": "frame",
-              "id": "S7sYX",
-              "x": 66,
-              "y": 18,
-              "name": "Traffic light green",
-              "width": 14,
-              "height": 14,
-              "fill": "#28C840",
-              "cornerRadius": 7,
-              "layout": "none"
-            },
-            {
-              "type": "frame",
-              "id": "q6vYo",
-              "x": 151,
-              "y": 8,
-              "name": "Sidebar toggle",
-              "width": 40,
-              "height": 40,
-              "fill": "#F7F7F7",
-              "cornerRadius": 20,
-              "stroke": "#D5D5D5",
-              "strokeWidth": 1,
-              "layout": "none"
-            },
-            {
-              "type": "icon",
-              "id": "y5OpVq",
-              "x": 163,
-              "y": 19,
-              "name": "Sidebar toggle icon",
-              "width": 16,
-              "height": 16,
-              "icon": "panel-left",
-              "library": "lucide",
-              "fill": "#34424D"
-            },
-            {
-              "type": "icon",
-              "id": "ZSamu",
-              "x": 24,
-              "y": 45,
-              "name": "Overview icon",
-              "width": 17,
-              "height": 17,
-              "icon": "layout-grid",
-              "library": "lucide",
-              "fill": "#1685F5"
-            },
-            {
-              "type": "text",
-              "id": "rML1g",
-              "x": 46,
-              "y": 43,
-              "name": "Overview label",
-              "fill": "#1B2933",
-              "textGrowth": "fixed-width-height",
-              "width": 150,
-              "height": 20,
-              "content": "概览",
-              "textAlignVertical": "middle",
-              "fontFamily": "Inter",
-              "fontSize": 15,
-              "fontWeight": "normal"
-            },
-            {
-              "type": "frame",
-              "id": "KYCIm",
-              "x": 10,
-              "y": 102,
-              "name": "Config selected",
-              "width": 216,
-              "height": 26,
-              "fill": "#1685F5",
-              "cornerRadius": 6,
-              "layout": "none"
-            },
-            {
-              "type": "icon",
-              "id": "DflHC",
-              "x": 26,
-              "y": 107,
-              "name": "Config icon",
-              "width": 16,
-              "height": 16,
-              "icon": "file-text",
-              "library": "lucide",
-              "fill": "#FFFFFF"
-            },
-            {
-              "type": "text",
-              "id": "mD7fd",
-              "x": 54,
-              "y": 105,
-              "name": "Config label",
-              "fill": "#FFFFFF",
-              "textGrowth": "fixed-width-height",
-              "width": 150,
-              "height": 20,
-              "content": "配置",
-              "textAlignVertical": "middle",
-              "fontFamily": "Inter",
-              "fontSize": 15,
-              "fontWeight": "normal"
-            },
-            {
-              "type": "frame",
-              "id": "gyEB3",
-              "x": 0,
-              "y": 740,
-              "name": "Core footer",
-              "width": 236,
-              "height": 60,
-              "fill": "#EEEEEE",
-              "layout": "none",
-              "children": [
-                {
-                  "type": "text",
-                  "id": "P28Tt",
-                  "x": 12,
-                  "y": 8,
-                  "name": "Core name",
-                  "fill": "#22333F",
-                  "textGrowth": "fixed-width-height",
-                  "width": 190,
-                  "height": 20,
-                  "content": "本地核心",
-                  "textAlignVertical": "middle",
-                  "fontFamily": "Inter",
-                  "fontSize": 14,
-                  "fontWeight": "normal"
-                },
-                {
-                  "type": "frame",
-                  "id": "IS2j2",
-                  "x": 12,
-                  "y": 40,
-                  "name": "Core status dot",
-                  "width": 8,
-                  "height": 8,
-                  "fill": "#2BCB67",
-                  "cornerRadius": 4,
-                  "layout": "none"
-                },
-                {
-                  "type": "text",
-                  "id": "j848Yz",
-                  "x": 28,
-                  "y": 34,
-                  "name": "Core endpoint",
-                  "fill": "#4C5D69",
-                  "textGrowth": "fixed-width-height",
-                  "width": 170,
-                  "height": 18,
-                  "content": "127.0.0.1:9090",
-                  "textAlignVertical": "middle",
-                  "fontFamily": "Inter",
-                  "fontSize": 12,
-                  "fontWeight": "normal"
-                }
-              ]
-            }
-          ]
+          "height": 820
         },
         {
           "type": "text",
@@ -4351,204 +3401,14 @@
       "layout": "none",
       "children": [
         {
-          "type": "frame",
-          "id": "GGdhk",
+          "id": "e5wA2I",
+          "type": "ref",
+          "ref": "DdeXH",
+          "name": "侧边栏 / 组件实例",
           "x": 0,
           "y": 0,
-          "name": "Sidebar",
           "width": 236,
-          "height": 800,
-          "fill": "#E4E4E4",
-          "layout": "none",
-          "children": [
-            {
-              "type": "frame",
-              "id": "Oxhyq",
-              "x": 18,
-              "y": 18,
-              "name": "Traffic light red",
-              "width": 14,
-              "height": 14,
-              "fill": "#FF5F57",
-              "cornerRadius": 7,
-              "layout": "none"
-            },
-            {
-              "type": "frame",
-              "id": "rLs2C",
-              "x": 42,
-              "y": 18,
-              "name": "Traffic light yellow",
-              "width": 14,
-              "height": 14,
-              "fill": "#FEBC2E",
-              "cornerRadius": 7,
-              "layout": "none"
-            },
-            {
-              "type": "frame",
-              "id": "QJHqB",
-              "x": 66,
-              "y": 18,
-              "name": "Traffic light green",
-              "width": 14,
-              "height": 14,
-              "fill": "#28C840",
-              "cornerRadius": 7,
-              "layout": "none"
-            },
-            {
-              "type": "frame",
-              "id": "FQXGl",
-              "x": 151,
-              "y": 8,
-              "name": "Sidebar toggle",
-              "width": 40,
-              "height": 40,
-              "fill": "#F7F7F7",
-              "cornerRadius": 20,
-              "stroke": "#D5D5D5",
-              "strokeWidth": 1,
-              "layout": "none"
-            },
-            {
-              "type": "icon",
-              "id": "sDY4V",
-              "x": 163,
-              "y": 19,
-              "name": "Sidebar toggle icon",
-              "width": 16,
-              "height": 16,
-              "icon": "panel-left",
-              "library": "lucide",
-              "fill": "#34424D"
-            },
-            {
-              "type": "icon",
-              "id": "ifWAa",
-              "x": 24,
-              "y": 45,
-              "name": "Overview icon",
-              "width": 17,
-              "height": 17,
-              "icon": "layout-grid",
-              "library": "lucide",
-              "fill": "#1685F5"
-            },
-            {
-              "type": "text",
-              "id": "L5T9pJ",
-              "x": 46,
-              "y": 43,
-              "name": "Overview label",
-              "fill": "#1B2933",
-              "textGrowth": "fixed-width-height",
-              "width": 150,
-              "height": 20,
-              "content": "概览",
-              "textAlignVertical": "middle",
-              "fontFamily": "Inter",
-              "fontSize": 15,
-              "fontWeight": "normal"
-            },
-            {
-              "type": "frame",
-              "id": "g7GcmB",
-              "x": 10,
-              "y": 102,
-              "name": "Config selected",
-              "width": 216,
-              "height": 26,
-              "fill": "#1685F5",
-              "cornerRadius": 6,
-              "layout": "none"
-            },
-            {
-              "type": "icon",
-              "id": "tf714",
-              "x": 26,
-              "y": 107,
-              "name": "Config icon",
-              "width": 16,
-              "height": 16,
-              "icon": "file-text",
-              "library": "lucide",
-              "fill": "#FFFFFF"
-            },
-            {
-              "type": "text",
-              "id": "S5ag6",
-              "x": 54,
-              "y": 105,
-              "name": "Config label",
-              "fill": "#FFFFFF",
-              "textGrowth": "fixed-width-height",
-              "width": 150,
-              "height": 20,
-              "content": "配置",
-              "textAlignVertical": "middle",
-              "fontFamily": "Inter",
-              "fontSize": 15,
-              "fontWeight": "normal"
-            },
-            {
-              "type": "frame",
-              "id": "bs7GD",
-              "x": 0,
-              "y": 740,
-              "name": "Core footer",
-              "width": 236,
-              "height": 60,
-              "fill": "#EEEEEE",
-              "layout": "none",
-              "children": [
-                {
-                  "type": "text",
-                  "id": "FV8yM",
-                  "x": 12,
-                  "y": 8,
-                  "name": "Core name",
-                  "fill": "#22333F",
-                  "textGrowth": "fixed-width-height",
-                  "width": 190,
-                  "height": 20,
-                  "content": "本地核心",
-                  "textAlignVertical": "middle",
-                  "fontFamily": "Inter",
-                  "fontSize": 14,
-                  "fontWeight": "normal"
-                },
-                {
-                  "type": "frame",
-                  "id": "kb1nD",
-                  "x": 12,
-                  "y": 40,
-                  "name": "Core status dot",
-                  "width": 8,
-                  "height": 8,
-                  "fill": "#2BCB67",
-                  "cornerRadius": 4,
-                  "layout": "none"
-                },
-                {
-                  "type": "text",
-                  "id": "A4UAR",
-                  "x": 28,
-                  "y": 34,
-                  "name": "Core endpoint",
-                  "fill": "#4C5D69",
-                  "textGrowth": "fixed-width-height",
-                  "width": 170,
-                  "height": 18,
-                  "content": "127.0.0.1:9090",
-                  "textAlignVertical": "middle",
-                  "fontFamily": "Inter",
-                  "fontSize": 12,
-                  "fontWeight": "normal"
-                }
-              ]
-            }
-          ]
+          "height": 820
         },
         {
           "type": "text",
@@ -5053,204 +3913,34 @@
       "layout": "none",
       "children": [
         {
-          "type": "frame",
-          "id": "yxlhW",
+          "id": "H0cUzW",
+          "type": "ref",
+          "ref": "DdeXH",
+          "name": "侧边栏 / 组件实例",
           "x": 0,
           "y": 0,
-          "name": "Sidebar",
           "width": 236,
           "height": 820,
-          "fill": "#E4E4E4",
-          "layout": "none",
-          "children": [
-            {
-              "type": "frame",
-              "id": "RVj98",
-              "x": 18,
-              "y": 18,
-              "name": "Traffic light red",
-              "width": 14,
-              "height": 14,
-              "fill": "#FF5F57",
-              "cornerRadius": 7,
-              "layout": "none"
-            },
-            {
-              "type": "frame",
-              "id": "Sxldq",
-              "x": 42,
-              "y": 18,
-              "name": "Traffic light yellow",
-              "width": 14,
-              "height": 14,
-              "fill": "#FEBC2E",
-              "cornerRadius": 7,
-              "layout": "none"
-            },
-            {
-              "type": "frame",
-              "id": "Q06Km3",
-              "x": 66,
-              "y": 18,
-              "name": "Traffic light green",
-              "width": 14,
-              "height": 14,
-              "fill": "#28C840",
-              "cornerRadius": 7,
-              "layout": "none"
-            },
-            {
-              "type": "frame",
-              "id": "NbhBM",
-              "x": 151,
-              "y": 8,
-              "name": "Sidebar toggle",
-              "width": 40,
-              "height": 40,
-              "fill": "#F7F7F7",
-              "cornerRadius": 20,
-              "stroke": "#D5D5D5",
-              "strokeWidth": 1,
-              "layout": "none"
-            },
-            {
-              "type": "icon",
-              "id": "c36R5w",
-              "x": 163,
-              "y": 19,
-              "name": "Sidebar toggle icon",
-              "width": 16,
-              "height": 16,
-              "icon": "panel-left",
-              "library": "lucide",
-              "fill": "#34424D"
-            },
-            {
-              "type": "frame",
-              "id": "C4Rtng",
-              "x": 10,
-              "y": 60,
-              "name": "Overview selected",
-              "width": 216,
-              "height": 38,
-              "fill": "#1685F5",
-              "cornerRadius": 8,
-              "layout": "none"
-            },
-            {
-              "type": "icon",
-              "id": "ZIDJ0",
-              "x": 26,
-              "y": 70,
-              "name": "Overview icon",
-              "width": 16,
-              "height": 16,
-              "icon": "layout-grid",
-              "library": "lucide",
-              "fill": "#FFFFFF"
-            },
-            {
-              "type": "text",
-              "id": "GrX8V",
-              "x": 54,
-              "y": 60,
-              "name": "Overview label",
-              "fill": "#FFFFFF",
-              "textGrowth": "fixed-width-height",
-              "width": 150,
-              "height": 38,
-              "content": "概览",
-              "textAlignVertical": "middle",
-              "fontFamily": "Inter",
-              "fontSize": 15,
-              "fontWeight": "normal"
-            },
-            {
-              "type": "icon",
-              "id": "RX9uy",
-              "x": 26,
-              "y": 111,
-              "name": "Config icon",
-              "width": 16,
-              "height": 16,
-              "icon": "file-text",
-              "library": "lucide",
+          "descendants": {
+            "oTHIL": {
               "fill": "#1685F5"
             },
-            {
-              "type": "text",
-              "id": "TyQ1Q",
-              "x": 54,
-              "y": 101,
-              "name": "Config label",
-              "fill": "#1B2933",
-              "textGrowth": "fixed-width-height",
-              "width": 150,
-              "height": 38,
-              "content": "配置",
-              "textAlignVertical": "middle",
-              "fontFamily": "Inter",
-              "fontSize": 15,
-              "fontWeight": "normal"
+            "XDWLG": {
+              "fill": "#FFFFFF"
             },
-            {
-              "type": "frame",
-              "id": "c4QMpn",
-              "x": 0,
-              "y": 759,
-              "name": "Core footer",
-              "width": 236,
-              "height": 61,
-              "fill": "#EEEEEE",
-              "layout": "none",
-              "children": [
-                {
-                  "type": "text",
-                  "id": "x1bfQu",
-                  "x": 12,
-                  "y": 8,
-                  "name": "Core name",
-                  "fill": "#22333F",
-                  "textGrowth": "fixed-width-height",
-                  "width": 190,
-                  "height": 20,
-                  "content": "本地核心",
-                  "textAlignVertical": "middle",
-                  "fontFamily": "Inter",
-                  "fontSize": 14,
-                  "fontWeight": "normal"
-                },
-                {
-                  "type": "frame",
-                  "id": "oMI8m",
-                  "x": 12,
-                  "y": 40,
-                  "name": "Core status dot",
-                  "width": 8,
-                  "height": 8,
-                  "fill": "#2BCB67",
-                  "cornerRadius": 4,
-                  "layout": "none"
-                },
-                {
-                  "type": "text",
-                  "id": "l0PkG",
-                  "x": 28,
-                  "y": 34,
-                  "name": "Core endpoint",
-                  "fill": "#4C5D69",
-                  "textGrowth": "fixed-width-height",
-                  "width": 170,
-                  "height": 18,
-                  "content": "127.0.0.1:9090",
-                  "textAlignVertical": "middle",
-                  "fontFamily": "Inter",
-                  "fontSize": 12,
-                  "fontWeight": "normal"
-                }
-              ]
+            "PQaOL": {
+              "fill": "#FFFFFF"
+            },
+            "ZaU5i": {
+              "fill": "#00000000"
+            },
+            "JFCye": {
+              "fill": "#1685F5"
+            },
+            "V4e88a": {
+              "fill": "#1B2933"
             }
-          ]
+          }
         },
         {
           "type": "text",
@@ -5775,204 +4465,14 @@
       "layout": "none",
       "children": [
         {
-          "type": "frame",
-          "id": "ER71C",
+          "id": "g1h1B3",
+          "type": "ref",
+          "ref": "DdeXH",
+          "name": "侧边栏 / 组件实例",
           "x": 0,
           "y": 0,
-          "name": "Sidebar",
           "width": 236,
-          "height": 800,
-          "fill": "#E4E4E4",
-          "layout": "none",
-          "children": [
-            {
-              "type": "frame",
-              "id": "weZEA",
-              "x": 18,
-              "y": 18,
-              "name": "Traffic light red",
-              "width": 14,
-              "height": 14,
-              "fill": "#FF5F57",
-              "cornerRadius": 7,
-              "layout": "none"
-            },
-            {
-              "type": "frame",
-              "id": "UDZf6",
-              "x": 42,
-              "y": 18,
-              "name": "Traffic light yellow",
-              "width": 14,
-              "height": 14,
-              "fill": "#FEBC2E",
-              "cornerRadius": 7,
-              "layout": "none"
-            },
-            {
-              "type": "frame",
-              "id": "McswU",
-              "x": 66,
-              "y": 18,
-              "name": "Traffic light green",
-              "width": 14,
-              "height": 14,
-              "fill": "#28C840",
-              "cornerRadius": 7,
-              "layout": "none"
-            },
-            {
-              "type": "frame",
-              "id": "iBxGi",
-              "x": 151,
-              "y": 8,
-              "name": "Sidebar toggle",
-              "width": 40,
-              "height": 40,
-              "fill": "#F7F7F7",
-              "cornerRadius": 20,
-              "stroke": "#D5D5D5",
-              "strokeWidth": 1,
-              "layout": "none"
-            },
-            {
-              "type": "icon",
-              "id": "QdmeJ",
-              "x": 163,
-              "y": 19,
-              "name": "Sidebar toggle icon",
-              "width": 16,
-              "height": 16,
-              "icon": "panel-left",
-              "library": "lucide",
-              "fill": "#34424D"
-            },
-            {
-              "type": "icon",
-              "id": "P55Vf",
-              "x": 24,
-              "y": 45,
-              "name": "Overview icon",
-              "width": 17,
-              "height": 17,
-              "icon": "layout-grid",
-              "library": "lucide",
-              "fill": "#1685F5"
-            },
-            {
-              "type": "text",
-              "id": "HhdYs",
-              "x": 46,
-              "y": 43,
-              "name": "Overview label",
-              "fill": "#1B2933",
-              "textGrowth": "fixed-width-height",
-              "width": 150,
-              "height": 20,
-              "content": "概览",
-              "textAlignVertical": "middle",
-              "fontFamily": "Inter",
-              "fontSize": 15,
-              "fontWeight": "normal"
-            },
-            {
-              "type": "frame",
-              "id": "O7tzM",
-              "x": 10,
-              "y": 102,
-              "name": "Config selected",
-              "width": 216,
-              "height": 26,
-              "fill": "#1685F5",
-              "cornerRadius": 6,
-              "layout": "none"
-            },
-            {
-              "type": "icon",
-              "id": "DlGbj",
-              "x": 26,
-              "y": 107,
-              "name": "Config icon",
-              "width": 16,
-              "height": 16,
-              "icon": "file-text",
-              "library": "lucide",
-              "fill": "#FFFFFF"
-            },
-            {
-              "type": "text",
-              "id": "htAbV",
-              "x": 54,
-              "y": 105,
-              "name": "Config label",
-              "fill": "#FFFFFF",
-              "textGrowth": "fixed-width-height",
-              "width": 150,
-              "height": 20,
-              "content": "配置",
-              "textAlignVertical": "middle",
-              "fontFamily": "Inter",
-              "fontSize": 15,
-              "fontWeight": "normal"
-            },
-            {
-              "type": "frame",
-              "id": "LYuUq",
-              "x": 0,
-              "y": 740,
-              "name": "Core footer",
-              "width": 236,
-              "height": 60,
-              "fill": "#EEEEEE",
-              "layout": "none",
-              "children": [
-                {
-                  "type": "text",
-                  "id": "JZK25",
-                  "x": 12,
-                  "y": 8,
-                  "name": "Core name",
-                  "fill": "#22333F",
-                  "textGrowth": "fixed-width-height",
-                  "width": 190,
-                  "height": 20,
-                  "content": "本地核心",
-                  "textAlignVertical": "middle",
-                  "fontFamily": "Inter",
-                  "fontSize": 14,
-                  "fontWeight": "normal"
-                },
-                {
-                  "type": "frame",
-                  "id": "x3B45x",
-                  "x": 12,
-                  "y": 40,
-                  "name": "Core status dot",
-                  "width": 8,
-                  "height": 8,
-                  "fill": "#2BCB67",
-                  "cornerRadius": 4,
-                  "layout": "none"
-                },
-                {
-                  "type": "text",
-                  "id": "Ira3s",
-                  "x": 28,
-                  "y": 34,
-                  "name": "Core endpoint",
-                  "fill": "#4C5D69",
-                  "textGrowth": "fixed-width-height",
-                  "width": 170,
-                  "height": 18,
-                  "content": "127.0.0.1:9090",
-                  "textAlignVertical": "middle",
-                  "fontFamily": "Inter",
-                  "fontSize": 12,
-                  "fontWeight": "normal"
-                }
-              ]
-            }
-          ]
+          "height": 820
         },
         {
           "type": "text",
@@ -6753,6 +5253,289 @@
           "fontWeight": "normal"
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "DdeXH",
+      "x": 1320,
+      "y": -920,
+      "name": "组件 / 侧边栏",
+      "reusable": true,
+      "width": 236,
+      "height": 820,
+      "fill": "#E4E4E4",
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "e4UaU",
+          "name": "窗口控制区",
+          "width": "fill_container",
+          "height": 56,
+          "layout": "none",
+          "children": [
+            {
+              "type": "frame",
+              "id": "itTSe",
+              "x": 18,
+              "y": 18,
+              "name": "Traffic light red",
+              "width": 14,
+              "height": 14,
+              "fill": "#FF5F57",
+              "cornerRadius": 7,
+              "layout": "none"
+            },
+            {
+              "type": "frame",
+              "id": "DJBbh",
+              "x": 42,
+              "y": 18,
+              "name": "Traffic light yellow",
+              "width": 14,
+              "height": 14,
+              "fill": "#FEBC2E",
+              "cornerRadius": 7,
+              "layout": "none"
+            },
+            {
+              "type": "frame",
+              "id": "NRF99",
+              "x": 66,
+              "y": 18,
+              "name": "Traffic light green",
+              "width": 14,
+              "height": 14,
+              "fill": "#28C840",
+              "cornerRadius": 7,
+              "layout": "none"
+            },
+            {
+              "type": "frame",
+              "id": "gRyED",
+              "x": 180,
+              "y": 5,
+              "name": "Sidebar toggle",
+              "width": 40,
+              "height": 40,
+              "fill": "#F7F7F7",
+              "cornerRadius": 20,
+              "stroke": "#D5D5D5",
+              "strokeWidth": 1,
+              "layout": "none"
+            },
+            {
+              "type": "icon",
+              "id": "RaBfM",
+              "x": 192,
+              "y": 17,
+              "name": "Sidebar toggle icon",
+              "width": 16,
+              "height": 16,
+              "icon": "panel-left",
+              "library": "lucide",
+              "fill": "#34424D"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "yjUdZ",
+          "name": "主导航",
+          "width": "fill_container",
+          "height": 84,
+          "layout": "vertical",
+          "gap": 4,
+          "padding": [
+            4,
+            10
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "oTHIL",
+              "name": "导航项 / 概览",
+              "width": "fill_container",
+              "height": 36,
+              "cornerRadius": 6,
+              "gap": 12,
+              "padding": [
+                0,
+                14
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "XDWLG",
+                  "name": "Overview icon",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "layout-grid",
+                  "library": "lucide",
+                  "fill": "#1685F5"
+                },
+                {
+                  "type": "text",
+                  "id": "PQaOL",
+                  "name": "Overview label",
+                  "fill": "#1B2933",
+                  "content": "概览",
+                  "textAlignVertical": "middle",
+                  "fontFamily": "Inter",
+                  "fontSize": 15,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "ZaU5i",
+              "name": "导航项 / 配置",
+              "width": "fill_container",
+              "height": 36,
+              "fill": "#1685F5",
+              "cornerRadius": 6,
+              "gap": 12,
+              "padding": [
+                0,
+                14
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "JFCye",
+                  "name": "Config icon",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "file-text",
+                  "library": "lucide",
+                  "fill": "#FFFFFF"
+                },
+                {
+                  "type": "text",
+                  "id": "V4e88a",
+                  "name": "Config label",
+                  "fill": "#FFFFFF",
+                  "content": "配置",
+                  "textAlignVertical": "middle",
+                  "fontFamily": "Inter",
+                  "fontSize": 15,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "a5880Y",
+          "name": "弹性空白",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "none"
+        },
+        {
+          "type": "frame",
+          "id": "K2Poj",
+          "name": "Core footer",
+          "width": "fill_container",
+          "height": 60,
+          "fill": "#EEEEEE",
+          "layout": "none",
+          "children": [
+            {
+              "type": "text",
+              "id": "IpK6m",
+              "x": 12,
+              "y": 8,
+              "name": "Core name",
+              "fill": "#22333F",
+              "textGrowth": "fixed-width-height",
+              "width": 190,
+              "height": 20,
+              "content": "本地核心",
+              "textAlignVertical": "middle",
+              "fontFamily": "Inter",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "oICSz",
+              "x": 12,
+              "y": 40,
+              "name": "Core status dot",
+              "width": 8,
+              "height": 8,
+              "fill": "#2BCB67",
+              "cornerRadius": 4,
+              "layout": "none"
+            },
+            {
+              "type": "text",
+              "id": "nG7Kx",
+              "x": 28,
+              "y": 34,
+              "name": "Core endpoint",
+              "fill": "#4C5D69",
+              "textGrowth": "fixed-width-height",
+              "width": 170,
+              "height": 18,
+              "content": "127.0.0.1:9090",
+              "textAlignVertical": "middle",
+              "fontFamily": "Inter",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "NxTIu",
+      "type": "ref",
+      "ref": "DdeXH",
+      "name": "侧边栏实例验证 · 概览",
+      "x": 1636,
+      "y": -920,
+      "height": 820,
+      "descendants": {
+        "oTHIL": {
+          "fill": "#1685F5"
+        },
+        "XDWLG": {
+          "fill": "#FFFFFF"
+        },
+        "PQaOL": {
+          "fill": "#FFFFFF"
+        },
+        "ZaU5i": {
+          "fill": "#00000000"
+        },
+        "JFCye": {
+          "fill": "#1685F5"
+        },
+        "V4e88a": {
+          "fill": "#1B2933"
+        }
+      }
+    },
+    {
+      "id": "CyAf5",
+      "type": "ref",
+      "ref": "DdeXH",
+      "name": "侧边栏实例 · 概览悬停",
+      "x": 1952,
+      "y": -920,
+      "width": 236,
+      "height": 820,
+      "descendants": {
+        "oTHIL": {
+          "fill": "#D5E5F4"
+        }
+      }
     }
   ],
   "fileToken": "6e4a1c8d-3fe3-4702-8a87-604f3675b3ef"

@@ -1,32 +1,36 @@
 import AppKit
 import SwiftUI
 
-final class DashboardWindow: NSWindow, NSToolbarDelegate {
-    func installToolbar() {
-        let toolbar = NSToolbar(identifier: "DashboardToolbar")
-        toolbar.delegate = self
-        toolbar.allowsUserCustomization = false
-        self.toolbar = toolbar
-    }
+@MainActor
+final class DashboardSidebarState: ObservableObject {
+    @Published var columnVisibility: NavigationSplitViewVisibility = .all
+}
 
-    func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-        [.toggleSidebar]
-    }
+final class DashboardWindow: NSWindow {
+    let sidebarState = DashboardSidebarState()
 
-    func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-        [.toggleSidebar]
+    func configureTitlebar() {
+        self.titleVisibility = .hidden
+        self.titlebarAppearsTransparent = true
+        self.toolbarStyle = .unified
+        self.titlebarSeparatorStyle = .none
+        // NavigationSplitView owns the toolbar, its sidebar section and its
+        // toggle action. Replacing that toolbar here loses that integration.
     }
 }
 
 struct DashboardView: View {
     @ObservedObject var appViewModel: AppViewModel
     @ObservedObject private var remoteMachineStore: RemoteMachineStore
+    @ObservedObject private var sidebarState: DashboardSidebarState
     @State private var selection: Page?
     private let initialConfigurationTab: Int
+    private let sidebarBackground = Color(red: 238 / 255, green: 238 / 255, blue: 238 / 255)
 
-    init(appViewModel: AppViewModel, initialPage: Page = .overview, initialConfigurationTab: Int = 0) {
+    init(appViewModel: AppViewModel, sidebarState: DashboardSidebarState = DashboardSidebarState(), initialPage: Page = .overview, initialConfigurationTab: Int = 0) {
         self.appViewModel = appViewModel
         self.remoteMachineStore = appViewModel.remoteMachineStore
+        self.sidebarState = sidebarState
         self._selection = State(initialValue: initialPage)
         self.initialConfigurationTab = initialConfigurationTab
     }
@@ -51,7 +55,7 @@ struct DashboardView: View {
     }
 
     var body: some View {
-        NavigationSplitView {
+        NavigationSplitView(columnVisibility: self.$sidebarState.columnVisibility) {
             self.sidebar
         } detail: {
             ScrollView {
@@ -75,36 +79,43 @@ struct DashboardView: View {
                 .padding(32)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .background {
+                Color.white.ignoresSafeArea()
+            }
         }
+        .modifier(DashboardToolbarAppearance())
     }
 
     private var sidebar: some View {
-        List(selection: self.$selection) {
-            ForEach(Page.allCases, id: \.self) { page in
-                Label(page.title(language: self.appViewModel.uiLanguage), systemImage: page.symbol)
-                    .frame(minHeight: 22, alignment: .leading)
-                    .tag(page)
-                    .listRowInsets(EdgeInsets(top: 1, leading: 8, bottom: 1, trailing: 8))
-                    .listRowSeparator(.hidden)
+        VStack(spacing: 0) {
+            VStack(spacing: 4) {
+                ForEach(Page.allCases, id: \.self) { page in
+                    SidebarNavigationItem(
+                        title: page.title(language: self.appViewModel.uiLanguage),
+                        symbol: page.symbol,
+                        isSelected: (self.selection ?? .overview) == page)
+                    {
+                        self.selection = page
+                    }
+                }
             }
-        }
-        .listStyle(.sidebar)
-        .environment(\.sidebarRowSize, .small)
-        // Keep the active core visible at the bottom while the workspace list
-        // remains independently scrollable. The inset is part of the native
-        // sidebar, so its material and spacing follow macOS automatically.
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            VStack(alignment: .leading, spacing: 3) {
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+
+            Spacer(minLength: 0)
+
+            VStack(alignment: .leading, spacing: 6) {
                 Text(self.targetName)
-                    .font(.body)
+                    .font(.system(size: 14))
+                    .foregroundStyle(Color(red: 34 / 255, green: 51 / 255, blue: 63 / 255))
                     .lineLimit(1)
-                HStack(spacing: 6) {
+                HStack(spacing: 8) {
                     Circle()
                         .fill(self.appViewModel.runtimeVisualStatus.color)
                         .frame(width: 8, height: 8)
                     Text(self.appViewModel.proxyEndpointDisplay)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .font(.system(size: 12))
+                        .foregroundStyle(Color(red: 76 / 255, green: 93 / 255, blue: 105 / 255))
                         .lineLimit(1)
                 }
                 .accessibilityElement(children: .combine)
@@ -112,10 +123,13 @@ struct DashboardView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .background(.regularMaterial)
+            .frame(height: 60)
         }
-        .navigationSplitViewColumnWidth(min: 180, ideal: 220)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background {
+            self.sidebarBackground.ignoresSafeArea(edges: .top)
+        }
+        .navigationSplitViewColumnWidth(min: 200, ideal: 236)
     }
 
     private var runtimeStatusDescription: String {
@@ -134,5 +148,55 @@ struct DashboardView: View {
         case .local: self.appViewModel.uiLanguage == .zhHans ? "本地核心" : "Local core"
         case .remote(let machine): machine.name
         }
+    }
+}
+
+private struct DashboardToolbarAppearance: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(macOS 15.0, *) {
+            content
+                .toolbarVisibility(.visible, for: .windowToolbar)
+                .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
+        } else {
+            content
+                .toolbar(.visible, for: .windowToolbar)
+                .toolbarBackground(.hidden, for: .windowToolbar)
+        }
+    }
+}
+
+private struct SidebarNavigationItem: View {
+    let title: String
+    let symbol: String
+    let isSelected: Bool
+    let action: () -> Void
+    @State private var isHovered = false
+
+    private let accent = Color(red: 22 / 255, green: 133 / 255, blue: 245 / 255)
+
+    var body: some View {
+        Button(action: self.action) {
+            HStack(spacing: 12) {
+                Image(systemName: self.symbol)
+                    .font(.system(size: 16))
+                    .frame(width: 16, height: 16)
+                    .foregroundStyle(self.isSelected ? Color.white : self.accent)
+                Text(self.title)
+                    .font(.system(size: 15))
+                    .foregroundStyle(self.isSelected ? Color.white : Color(red: 27 / 255, green: 41 / 255, blue: 51 / 255))
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 14)
+            .frame(maxWidth: .infinity, minHeight: 36, maxHeight: 36)
+            .background {
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(self.isSelected ? self.accent : (self.isHovered ? Color(red: 213 / 255, green: 229 / 255, blue: 244 / 255) : .clear))
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { self.isHovered = $0 }
+        .accessibilityAddTraits(self.isSelected ? .isSelected : [])
     }
 }

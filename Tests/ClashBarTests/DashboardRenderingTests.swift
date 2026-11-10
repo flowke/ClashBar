@@ -90,12 +90,13 @@ final class DashboardRenderingTests: XCTestCase {
                     model.remoteConfigMenuStates["Subscription.yaml"] = RemoteConfigMenuState(updatedAt: nil, phase: .failed, autoUpdateEnabled: false, nextUpdateAt: nil)
                     model.dashboardSubscriptionErrors["Subscription.yaml"] = "Could not connect to the server."
                 }
-                let content = DashboardView(appViewModel: model, initialPage: page, initialConfigurationTab: tab)
-                    .environment(\.colorScheme, .light)
                 let sampleWindow = DashboardWindow(contentRect: NSRect(x: 0, y: 0, width: 1100, height: 740), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
+                let content = DashboardView(appViewModel: model, sidebarState: sampleWindow.sidebarState, initialPage: page, initialConfigurationTab: tab)
+                    .environment(\.colorScheme, .light)
                 let controller = NSHostingController(rootView: content)
                 controller.sizingOptions = []
                 sampleWindow.contentViewController = controller
+                sampleWindow.configureTitlebar()
                 sampleWindow.setContentSize(NSSize(width: 1100, height: 740))
                 let host = try XCTUnwrap(sampleWindow.contentView)
                 sampleWindow.setFrameOrigin(NSPoint(x: -10000, y: -10000))
@@ -106,6 +107,66 @@ final class DashboardRenderingTests: XCTestCase {
                 host.cacheDisplay(in: host.bounds, to: image)
                 let data = try XCTUnwrap(image.representation(using: .png, properties: [:]))
                 try data.write(to: URL(fileURLWithPath: directoryPath).appendingPathComponent("\(name).png"), options: .atomic)
+                if name == "effective" {
+                    sampleWindow.setContentSize(NSSize(width: 760, height: 520))
+                    host.layoutSubtreeIfNeeded()
+                    sampleWindow.displayIfNeeded()
+                    let resized = try XCTUnwrap(host.bitmapImageRepForCachingDisplay(in: host.bounds))
+                    host.cacheDisplay(in: host.bounds, to: resized)
+                    let titlebarSidebarColor = try XCTUnwrap(resized.colorAt(x: 4, y: 4))
+                    let sidebarColor = try XCTUnwrap(resized.colorAt(x: 4, y: resized.pixelsHigh / 2))
+                    let footerColor = try XCTUnwrap(resized.colorAt(x: 4, y: resized.pixelsHigh - 4))
+                    XCTAssertEqual(titlebarSidebarColor.redComponent, 238 / 255, accuracy: 0.01)
+                    XCTAssertEqual(sidebarColor.redComponent, 238 / 255, accuracy: 0.01)
+                    XCTAssertEqual(footerColor.redComponent, 238 / 255, accuracy: 0.01)
+                    XCTAssertEqual(sidebarColor.redComponent, footerColor.redComponent, accuracy: 0.01)
+                    XCTAssertEqual(titlebarSidebarColor.redComponent, footerColor.redComponent, accuracy: 0.01)
+                    try XCTUnwrap(resized.representation(using: .png, properties: [:]))
+                        .write(to: URL(fileURLWithPath: directoryPath).appendingPathComponent("sidebar-narrow.png"), options: .atomic)
+                    if ProcessInfo.processInfo.environment["CLASHBAR_TEST_SIDEBAR_MOTION"] == "1" {
+                        func splitViews(in view: NSView) -> [NSSplitView] {
+                            (view as? NSSplitView).map { [$0] } ?? view.subviews.flatMap { splitViews(in: $0) }
+                        }
+                        let split = try XCTUnwrap(splitViews(in: host).first)
+                        sampleWindow.makeKeyAndOrderFront(nil)
+                        RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+                        let expandedWidth = split.subviews[1].frame.width
+                        XCTAssertGreaterThan(expandedWidth, 200)
+                        let togglePoint = NSPoint(x: 200, y: sampleWindow.frame.height - 25)
+                        for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
+                            let event = try XCTUnwrap(NSEvent.mouseEvent(with: type, location: togglePoint, modifierFlags: [], timestamp: 0, windowNumber: sampleWindow.windowNumber, context: nil, eventNumber: 0, clickCount: 1, pressure: 1))
+                            sampleWindow.sendEvent(event)
+                        }
+                        var closingWidths: [CGFloat] = []
+                        for delay in [0.05, 0.1, 0.3] {
+                            RunLoop.current.run(until: Date().addingTimeInterval(delay))
+                            closingWidths.append(split.subviews[1].frame.width)
+                        }
+                        XCTAssertTrue(closingWidths.contains { $0 > 0 && $0 < expandedWidth })
+                        XCTAssertEqual(try XCTUnwrap(closingWidths.last), 0, accuracy: 1)
+                        host.layoutSubtreeIfNeeded()
+                        sampleWindow.displayIfNeeded()
+                        let collapsed = try XCTUnwrap(host.bitmapImageRepForCachingDisplay(in: host.bounds))
+                        host.cacheDisplay(in: host.bounds, to: collapsed)
+                        let scale = CGFloat(collapsed.pixelsWide) / host.bounds.width
+                        let buttonColor = try XCTUnwrap(collapsed.colorAt(x: Int(130 * scale), y: Int(12 * scale)))
+                        XCTAssertGreaterThan(buttonColor.redComponent, 0.94)
+                        try XCTUnwrap(collapsed.representation(using: .png, properties: [:]))
+                            .write(to: URL(fileURLWithPath: directoryPath).appendingPathComponent("sidebar-motion-collapsed.png"), options: .atomic)
+                        let restorePoint = NSPoint(x: 130, y: sampleWindow.frame.height - 25)
+                        for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
+                            let event = try XCTUnwrap(NSEvent.mouseEvent(with: type, location: restorePoint, modifierFlags: [], timestamp: 0, windowNumber: sampleWindow.windowNumber, context: nil, eventNumber: 0, clickCount: 1, pressure: 1))
+                            sampleWindow.sendEvent(event)
+                        }
+                        var openingWidths: [CGFloat] = []
+                        for delay in [0.05, 0.1, 0.3] {
+                            RunLoop.current.run(until: Date().addingTimeInterval(delay))
+                            openingWidths.append(split.subviews[1].frame.width)
+                        }
+                        XCTAssertTrue(openingWidths.contains { $0 > 0 && $0 < expandedWidth })
+                        XCTAssertEqual(try XCTUnwrap(openingWidths.last), expandedWidth, accuracy: 1)
+                    }
+                }
                 sampleWindow.orderOut(nil)
             }
             let editor = DashboardCustomRulesView(
@@ -148,10 +209,15 @@ final class DashboardRenderingTests: XCTestCase {
         session.invalidateAndCancel()
     }
 
-    func testWindowControlsRemainInStandardTitlebar() throws {
+    func testSidebarUsesTransparentFullSizeTitlebarAndKeepsSystemWindowControls() throws {
         _ = NSApplication.shared
-        let window = DashboardWindow(contentRect: NSRect(x: 0, y: 0, width: 1100, height: 740), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
+        let window = DashboardWindow(contentRect: NSRect(x: 0, y: 0, width: 1100, height: 740), styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView], backing: .buffered, defer: false)
         window.contentViewController = NSHostingController(rootView: Color.white)
+        window.configureTitlebar()
+        XCTAssertEqual(window.toolbarStyle, .unified)
+        XCTAssertTrue(window.styleMask.contains(.fullSizeContentView))
+        XCTAssertTrue(window.titlebarAppearsTransparent)
+        XCTAssertEqual(window.titlebarSeparatorStyle, .none)
         let content = try XCTUnwrap(window.contentView)
         content.layoutSubtreeIfNeeded()
         for type in [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton] {

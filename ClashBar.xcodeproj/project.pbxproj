@@ -981,6 +981,7 @@
 				INFOPLIST_FILE = DevApp/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				OTHER_LDFLAGS = "$(inherited) -Xlinker -platform_version -Xlinker macos -Xlinker $(MACOSX_DEPLOYMENT_TARGET) -Xlinker $(SDK_VERSION)";
 				PRODUCT_BUNDLE_IDENTIFIER = com.clashbar.dev;
 				PRODUCT_NAME = "ClashBar Dev";
 				SDKROOT = macosx;
@@ -1024,6 +1025,7 @@
 				INFOPLIST_FILE = DevApp/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				OTHER_LDFLAGS = "$(inherited) -Xlinker -platform_version -Xlinker macos -Xlinker $(MACOSX_DEPLOYMENT_TARGET) -Xlinker $(SDK_VERSION)";
 				PRODUCT_BUNDLE_IDENTIFIER = com.clashbar.dev;
 				PRODUCT_NAME = "ClashBar Dev";
 				SDKROOT = macosx;
