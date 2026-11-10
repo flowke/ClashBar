@@ -100,12 +100,13 @@ struct CustomRuleChange: Codable, Equatable, Identifiable {
 }
 
 enum ConfigRuleMergeError: LocalizedError {
-    case invalidDocument, invalidRules, emptyRule, missingOriginal(String)
+    case invalidDocument, invalidRules, invalidProfile, emptyRule, missingOriginal(String)
 
     var errorDescription: String? {
         switch self {
         case .invalidDocument: "Configuration must be a YAML mapping."
         case .invalidRules: "The rules field must be a list of strings."
+        case .invalidProfile: "The profile field must be a mapping."
         case .emptyRule: "A rule cannot be empty."
         case .missingOriginal(let rule): "The original rule was not found: \(rule)"
         }
@@ -140,7 +141,25 @@ struct ConfigRuleMerger {
         if !changes.isEmpty || document["rules"] != nil {
             document["rules"] = Node(result.map { Node($0.value, .implicit, .doubleQuoted) })
         }
+        try enableSelectionPersistence(in: &document)
         return Data(try Yams.serialize(node: document).utf8)
+    }
+
+    func enablingSelectionPersistence(_ data: Data) throws -> Data? {
+        guard let text = String(data: data, encoding: .utf8),
+              var document = try Yams.compose(yaml: text), document.mapping != nil else {
+            throw ConfigRuleMergeError.invalidDocument
+        }
+        if document["profile"]?["store-selected"]?.scalar?.string == "true" { return nil }
+        try enableSelectionPersistence(in: &document)
+        return Data(try Yams.serialize(node: document).utf8)
+    }
+
+    private func enableSelectionPersistence(in document: inout Node) throws {
+        var profile = document["profile"] ?? Node([(Node, Node)]())
+        guard profile.mapping != nil else { throw ConfigRuleMergeError.invalidProfile }
+        profile["store-selected"] = Node("true", Tag(.bool))
+        document["profile"] = profile
     }
 
     func resolve(rules originalRules: [String], changes: [CustomRuleChange]) throws -> [ResolvedRule] {

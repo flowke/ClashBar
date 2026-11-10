@@ -6,6 +6,10 @@ extension AppViewModel {
         do {
             if let record = try effectiveConfigTransaction.currentRecord() {
                 guard !record.baseName.isEmpty else { return nil }
+                guard remoteConfigSubscriptions[record.baseName]?.isEnabled != false else {
+                    dashboardConfigError = uiLanguage == .zhHans ? "该订阅已停用。" : "This subscription is disabled."
+                    return nil
+                }
                 guard let source = configService.availableConfigs.first(where: { $0.lastPathComponent == record.baseName }),
                       let effective = effectiveConfigTransaction.currentFile(record),
                       FileManager.default.fileExists(atPath: effective.path) else {
@@ -16,7 +20,7 @@ extension AppViewModel {
                 _ = self.syncSelectedConfigSelection(source)
                 self.syncConfigDisplayState()
                 dashboardEffectiveRecord = record
-                return effective.path
+                return try runtimeConfigPathEnsuringSelectionPersistence(effective)
             }
         } catch {
             dashboardConfigError = error.localizedDescription
@@ -49,10 +53,28 @@ extension AppViewModel {
 
     private func applySelectedConfig(_ selected: URL?) -> String? {
         guard let selected else { return nil }
+        guard remoteConfigSubscriptions[selected.lastPathComponent]?.isEnabled != false else {
+            dashboardConfigError = uiLanguage == .zhHans ? "该订阅已停用。" : "This subscription is disabled."
+            return nil
+        }
         let selectedPath = self.syncSelectedConfigSelection(selected)
         self.syncConfigDisplayState()
         guard let selectedPath else { return nil }
-        return self.effectiveConfigURL(for: selected.lastPathComponent)?.path ?? selectedPath
+        let path = self.effectiveConfigURL(for: selected.lastPathComponent)?.path ?? selectedPath
+        do {
+            return try runtimeConfigPathEnsuringSelectionPersistence(URL(fileURLWithPath: path))
+        } catch {
+            dashboardConfigError = error.localizedDescription
+            return nil
+        }
+    }
+
+    private func runtimeConfigPathEnsuringSelectionPersistence(_ config: URL) throws -> String {
+        let data = try Data(contentsOf: config)
+        guard let updated = try ConfigRuleMerger().enablingSelectionPersistence(data) else { return config.path }
+        let runtime = workingDirectoryManager.configDirectoryURL.appendingPathComponent(".clashbar-runtime.yaml")
+        try updated.write(to: runtime, options: .atomic)
+        return runtime.path
     }
 
     func restoreSavedConfigDirectory() {

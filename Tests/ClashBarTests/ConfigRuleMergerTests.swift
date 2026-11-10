@@ -14,9 +14,23 @@ final class ConfigRuleMergerTests: XCTestCase {
         let result = try ConfigRuleMerger().merge(input, changes: changes)
         let yaml = try XCTUnwrap(Yams.compose(yaml: String(decoding: result, as: UTF8.self)))
         XCTAssertEqual(yaml["mode"]?.string, "rule")
+        XCTAssertEqual(yaml["profile"]?["store-selected"]?.scalar?.string, "true")
         XCTAssertEqual(yaml["rules"]?.sequence?.compactMap(\.string), [
             "DOMAIN,new.example,DIRECT", "DOMAIN,a.example,Proxy", "MATCH,Proxy",
         ])
+    }
+
+    func testSelectionPersistencePreservesOtherProfileSettings() throws {
+        let input = Data("profile:\n  store-selected: false\n  store-fake-ip: true\nrules: ['MATCH,DIRECT']\n".utf8)
+        let merged = try ConfigRuleMerger().merge(input, changes: [])
+        let yaml = try XCTUnwrap(Yams.compose(yaml: String(decoding: merged, as: UTF8.self)))
+        XCTAssertEqual(yaml["profile"]?["store-selected"]?.scalar?.string, "true")
+        XCTAssertEqual(yaml["profile"]?["store-fake-ip"]?.scalar?.string, "true")
+        XCTAssertNil(try ConfigRuleMerger().enablingSelectionPersistence(merged))
+        let migrated = try XCTUnwrap(ConfigRuleMerger().enablingSelectionPersistence(input))
+        let migratedYAML = try XCTUnwrap(Yams.compose(yaml: String(decoding: migrated, as: UTF8.self)))
+        XCTAssertEqual(migratedYAML["profile"]?["store-selected"]?.scalar?.string, "true")
+        XCTAssertEqual(migratedYAML["profile"]?["store-fake-ip"]?.scalar?.string, "true")
     }
 
     func testRejectsMissingOriginalInsteadOfSilentlyApplyingWrongRule() {

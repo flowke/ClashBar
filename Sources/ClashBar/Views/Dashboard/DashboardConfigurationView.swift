@@ -420,8 +420,8 @@ struct DashboardConfigurationView: View {
             if names.isEmpty { Text(text("暂无配置", "No configurations")).foregroundStyle(.secondary) }
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 280, maximum: 299), spacing: 16)], alignment: .leading, spacing: 16) {
                 ForEach(names, id: \.self) { name in
-                    let selected = name == appViewModel.selectedConfigName
-                    let canApply = (!selected || !appViewModel.isRuntimeRunning) && !appViewModel.dashboardConfigBusy && !appViewModel.isRemoteTarget && (appViewModel.remoteConfigSubscriptions[name]?.isEnabled ?? true)
+                    let selected = name == appViewModel.selectedConfigName && (appViewModel.remoteConfigSubscriptions[name]?.isEnabled ?? true)
+                    let canApply = (!selected || !appViewModel.isRuntimeRunning) && !appViewModel.dashboardConfigBusy && !appViewModel.isRemoteTarget
                     VStack(alignment: .leading, spacing: 10) {
                         HStack(spacing: 6) {
                             Text(appViewModel.remoteConfigSubscriptions[name]?.displayName ?? name)
@@ -487,7 +487,7 @@ struct DashboardConfigurationView: View {
                                 Button(enabled ? text("停用", "Disable") : text("启用", "Enable")) {
                                     Task {
                                         await cardOperation(name, title: enabled ? text("停用失败", "Disable failed") : text("启用失败", "Enable failed")) {
-                                            await appViewModel.setDashboardSubscriptionEnabled(!enabled, name: name)
+                                            await appViewModel.setDashboardSubscriptionEnabled(!enabled, name: name, changes: changes)
                                         }
                                     }
                                 }.disabled(appViewModel.dashboardConfigBusy || appViewModel.isRemoteTarget)

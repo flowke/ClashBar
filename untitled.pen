@@ -1,0 +1,803 @@
+{
+  "version": "2.22",
+  "children": [
+    {
+      "type": "frame",
+      "id": "Qhh6C",
+      "x": 0,
+      "y": 0,
+      "name": "概览 · 本地核心 / 示例数据",
+      "clip": true,
+      "width": 1240,
+      "height": 820,
+      "fill": "#FFFFFF",
+      "cornerRadius": 14,
+      "layout": "none",
+      "children": [
+        {
+          "type": "frame",
+          "id": "jUwvB",
+          "x": 0,
+          "y": 0,
+          "name": "Sidebar / 概览",
+          "width": 236,
+          "height": 820,
+          "fill": "#F1F1F2",
+          "layout": "none",
+          "children": [
+            {
+              "type": "ellipse",
+              "id": "jlSSo",
+              "x": 20,
+              "y": 20,
+              "name": "Close",
+              "fill": "#FF5F57",
+              "width": 12,
+              "height": 12
+            },
+            {
+              "type": "ellipse",
+              "id": "C3k5U6",
+              "x": 40,
+              "y": 20,
+              "name": "Minimize",
+              "fill": "#FEBC2E",
+              "width": 12,
+              "height": 12
+            },
+            {
+              "type": "ellipse",
+              "id": "lhOr6",
+              "x": 60,
+              "y": 20,
+              "name": "Zoom",
+              "fill": "#28C840",
+              "width": 12,
+              "height": 12
+            },
+            {
+              "type": "text",
+              "id": "dWFeY",
+              "x": 22,
+              "y": 68,
+              "name": "Brand",
+              "fill": "#1E2B38",
+              "content": "ClashBar",
+              "fontFamily": "Noto Sans SC",
+              "fontSize": 22,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "nZSsW",
+              "x": 22,
+              "y": 102,
+              "name": "Subtitle",
+              "fill": "#617184",
+              "content": "内部看板",
+              "fontFamily": "Noto Sans SC",
+              "fontSize": 13,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "f0Mp8",
+              "x": 22,
+              "y": 130,
+              "name": "Navigation heading",
+              "fill": "#7B8794",
+              "content": "工作区",
+              "fontFamily": "Noto Sans SC",
+              "fontSize": 12,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "Zebj2",
+              "x": 10,
+              "y": 156,
+              "name": "Nav / 概览",
+              "width": 216,
+              "height": 40,
+              "fill": "#0A84FF",
+              "cornerRadius": 8,
+              "gap": 12,
+              "padding": [
+                9,
+                14
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "joRV2",
+                  "name": "Overview icon",
+                  "width": 20,
+                  "height": 20,
+                  "icon": "layout-dashboard",
+                  "library": "lucide",
+                  "fill": "#FFFFFF"
+                },
+                {
+                  "type": "text",
+                  "id": "L1zVi",
+                  "name": "Label",
+                  "fill": "#FFFFFF",
+                  "content": "概览",
+                  "fontFamily": "Noto Sans SC",
+                  "fontSize": 14,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "x2Ibr3",
+              "x": 10,
+              "y": 204,
+              "name": "Nav / 配置",
+              "width": 216,
+              "height": 40,
+              "fill": "#E7E8EA",
+              "cornerRadius": 8,
+              "gap": 12,
+              "padding": [
+                9,
+                14
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "ZBRHv",
+                  "name": "Config icon",
+                  "width": 20,
+                  "height": 20,
+                  "icon": "file-cog",
+                  "library": "lucide",
+                  "fill": "#0A84FF"
+                },
+                {
+                  "type": "text",
+                  "id": "JYLTT",
+                  "name": "Label",
+                  "fill": "#263746",
+                  "content": "配置",
+                  "fontFamily": "Noto Sans SC",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "Z2vhH",
+              "x": 22,
+              "y": 680,
+              "name": "Target heading",
+              "fill": "#7B8794",
+              "content": "当前目标",
+              "fontFamily": "Noto Sans SC",
+              "fontSize": 12,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "DPnQS",
+              "x": 0,
+              "y": 710,
+              "name": "Target / 本地核心",
+              "width": 236,
+              "height": 60,
+              "fill": "#E5E6E8",
+              "layout": "none",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "t2XLl",
+                  "x": 12,
+                  "y": 9,
+                  "name": "Target label",
+                  "fill": "#263746",
+                  "content": "本地核心",
+                  "fontFamily": "Noto Sans SC",
+                  "fontSize": 14,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "ellipse",
+                  "id": "pnKqo",
+                  "x": 12,
+                  "y": 39,
+                  "name": "Connected",
+                  "fill": "#22C55E",
+                  "width": 8,
+                  "height": 8
+                },
+                {
+                  "type": "text",
+                  "id": "zt5yq",
+                  "x": 26,
+                  "y": 34,
+                  "name": "Target address",
+                  "fill": "#617184",
+                  "content": "127.0.0.1:9090",
+                  "fontFamily": "Noto Sans SC",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "eyRBY",
+              "x": 22,
+              "y": 786,
+              "name": "Footer version",
+              "fill": "#7B8794",
+              "content": "ClashBar   ·   内部看板",
+              "fontFamily": "Noto Sans SC",
+              "fontSize": 11,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "uDuLI",
+          "x": 236,
+          "y": 0,
+          "name": "Overview content",
+          "width": 1004,
+          "height": 820,
+          "fill": "#FFFFFF",
+          "layout": "none",
+          "children": [
+            {
+              "type": "text",
+              "id": "Ct8o6",
+              "x": 42,
+              "y": 48,
+              "name": "Page title",
+              "fill": "#1E2B38",
+              "content": "概览",
+              "fontFamily": "Noto Sans SC",
+              "fontSize": 28,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "C9GCe",
+              "x": 43,
+              "y": 91,
+              "name": "Page description",
+              "fill": "#617184",
+              "content": "本地核心的运行状态与网络概况",
+              "fontFamily": "Noto Sans SC",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "HvggU",
+              "x": 760,
+              "y": 63,
+              "name": "Design data label",
+              "fill": "#7B8794",
+              "content": "示例数据 · 14:32:08 更新",
+              "fontFamily": "Noto Sans SC",
+              "fontSize": 11,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "plOs3",
+              "x": 42,
+              "y": 140,
+              "name": "Runtime",
+              "width": 930,
+              "height": 156,
+              "fill": "#F7F8F9",
+              "cornerRadius": 14,
+              "layout": "none",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "H34M9e",
+                  "x": 24,
+                  "y": 20,
+                  "name": "Section title",
+                  "fill": "#263746",
+                  "content": "运行状态",
+                  "fontFamily": "Noto Sans SC",
+                  "fontSize": 14,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "O6xaQ",
+                  "x": 24,
+                  "y": 66,
+                  "name": "Core status",
+                  "width": 200,
+                  "height": 66,
+                  "layout": "none",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "S49Mm",
+                      "x": 0,
+                      "y": 0,
+                      "name": "Label",
+                      "fill": "#7B8794",
+                      "content": "核心状态",
+                      "fontFamily": "Noto Sans SC",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "h0oRQu",
+                      "x": 0,
+                      "y": 28,
+                      "name": "Value",
+                      "fill": "#17865B",
+                      "content": "运行中",
+                      "fontFamily": "Noto Sans SC",
+                      "fontSize": 20,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "shbiK",
+                  "x": 252,
+                  "y": 66,
+                  "name": "Core version",
+                  "width": 200,
+                  "height": 66,
+                  "layout": "none",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "l2B1mQ",
+                      "x": 0,
+                      "y": 0,
+                      "name": "Label",
+                      "fill": "#7B8794",
+                      "content": "核心版本",
+                      "fontFamily": "Noto Sans SC",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "b36f6",
+                      "x": 0,
+                      "y": 28,
+                      "name": "Value",
+                      "fill": "#263746",
+                      "content": "Mihomo v1.19.33",
+                      "fontFamily": "Noto Sans SC",
+                      "fontSize": 19,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Eug4j",
+                  "x": 480,
+                  "y": 66,
+                  "name": "Mode",
+                  "width": 200,
+                  "height": 66,
+                  "layout": "none",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "JbRW3",
+                      "x": 0,
+                      "y": 0,
+                      "name": "Label",
+                      "fill": "#7B8794",
+                      "content": "代理模式",
+                      "fontFamily": "Noto Sans SC",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "Mx7nn",
+                      "x": 0,
+                      "y": 28,
+                      "name": "Value",
+                      "fill": "#263746",
+                      "content": "规则",
+                      "fontFamily": "Noto Sans SC",
+                      "fontSize": 20,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "D0AByp",
+                  "x": 708,
+                  "y": 66,
+                  "name": "API health",
+                  "width": 200,
+                  "height": 66,
+                  "layout": "none",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "o5bxK",
+                      "x": 0,
+                      "y": 0,
+                      "name": "Label",
+                      "fill": "#7B8794",
+                      "content": "API 健康状态",
+                      "fontFamily": "Noto Sans SC",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "epkZ2",
+                      "x": 0,
+                      "y": 28,
+                      "name": "Value",
+                      "fill": "#17865B",
+                      "content": "正常",
+                      "fontFamily": "Noto Sans SC",
+                      "fontSize": 20,
+                      "fontWeight": "500"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "YEnco",
+              "x": 42,
+              "y": 316,
+              "name": "Network",
+              "width": 930,
+              "height": 246,
+              "fill": "#F7F8F9",
+              "cornerRadius": 14,
+              "layout": "none",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "pmCfn",
+                  "x": 24,
+                  "y": 20,
+                  "name": "Section title",
+                  "fill": "#263746",
+                  "content": "网络概况",
+                  "fontFamily": "Noto Sans SC",
+                  "fontSize": 14,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "L7THWg",
+                  "x": 24,
+                  "y": 64,
+                  "name": "Download speed",
+                  "width": 270,
+                  "height": 88,
+                  "layout": "none",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "VntTV",
+                      "x": 0,
+                      "y": 0,
+                      "name": "Label",
+                      "fill": "#7B8794",
+                      "content": "实时下载",
+                      "fontFamily": "Noto Sans SC",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "KQULp",
+                      "x": 0,
+                      "y": 26,
+                      "name": "Value",
+                      "fill": "#2B6EA6",
+                      "content": "12.8",
+                      "fontFamily": "Noto Sans SC",
+                      "fontSize": 42
+                    },
+                    {
+                      "type": "text",
+                      "id": "EvZh5",
+                      "x": 106,
+                      "y": 47,
+                      "name": "Unit",
+                      "fill": "#617184",
+                      "content": "MB/s",
+                      "fontFamily": "Noto Sans SC",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "ML1Gq",
+                  "x": 328,
+                  "y": 64,
+                  "name": "Upload speed",
+                  "width": 270,
+                  "height": 88,
+                  "layout": "none",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "VuekU",
+                      "x": 0,
+                      "y": 0,
+                      "name": "Label",
+                      "fill": "#7B8794",
+                      "content": "实时上传",
+                      "fontFamily": "Noto Sans SC",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "maAcl",
+                      "x": 0,
+                      "y": 26,
+                      "name": "Value",
+                      "fill": "#267F7B",
+                      "content": "846",
+                      "fontFamily": "Noto Sans SC",
+                      "fontSize": 42
+                    },
+                    {
+                      "type": "text",
+                      "id": "m4du5",
+                      "x": 94,
+                      "y": 47,
+                      "name": "Unit",
+                      "fill": "#617184",
+                      "content": "KB/s",
+                      "fontFamily": "Noto Sans SC",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "wroz6",
+                  "x": 632,
+                  "y": 64,
+                  "name": "Connections",
+                  "width": 270,
+                  "height": 88,
+                  "layout": "none",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "Dpo1c",
+                      "x": 0,
+                      "y": 0,
+                      "name": "Label",
+                      "fill": "#7B8794",
+                      "content": "当前连接",
+                      "fontFamily": "Noto Sans SC",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "smHoQ",
+                      "x": 0,
+                      "y": 26,
+                      "name": "Value",
+                      "fill": "#263746",
+                      "content": "32",
+                      "fontFamily": "Noto Sans SC",
+                      "fontSize": 42
+                    },
+                    {
+                      "type": "text",
+                      "id": "J93Ek",
+                      "x": 68,
+                      "y": 47,
+                      "name": "Unit",
+                      "fill": "#617184",
+                      "content": "个",
+                      "fontFamily": "Noto Sans SC",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "zYBiB",
+                  "x": 24,
+                  "y": 196,
+                  "name": "Download total",
+                  "fill": "#617184",
+                  "content": "累计下载    6.24 GB",
+                  "fontFamily": "Noto Sans SC",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "j01Q13",
+                  "x": 328,
+                  "y": 196,
+                  "name": "Upload total",
+                  "fill": "#617184",
+                  "content": "累计上传    812 MB",
+                  "fontFamily": "Noto Sans SC",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "Ag2kM",
+              "x": 42,
+              "y": 582,
+              "name": "Resources",
+              "width": 930,
+              "height": 146,
+              "fill": "#F7F8F9",
+              "cornerRadius": 14,
+              "layout": "none",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "o5mPc",
+                  "x": 24,
+                  "y": 20,
+                  "name": "Section title",
+                  "fill": "#263746",
+                  "content": "资源占用",
+                  "fontFamily": "Noto Sans SC",
+                  "fontSize": 14,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "BWFYu",
+                  "x": 24,
+                  "y": 62,
+                  "name": "Core memory",
+                  "width": 390,
+                  "height": 60,
+                  "layout": "none",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "v9iCIR",
+                      "x": 0,
+                      "y": 0,
+                      "name": "Label",
+                      "fill": "#7B8794",
+                      "content": "核心内存",
+                      "fontFamily": "Noto Sans SC",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "e7x3q",
+                      "x": 0,
+                      "y": 23,
+                      "name": "Value",
+                      "fill": "#263746",
+                      "content": "84.6 MB",
+                      "fontFamily": "Noto Sans SC",
+                      "fontSize": 28
+                    },
+                    {
+                      "type": "frame",
+                      "id": "C6ovv",
+                      "x": 142,
+                      "y": 33,
+                      "name": "Usage track",
+                      "width": 210,
+                      "height": 6,
+                      "fill": "#DEE5EC",
+                      "cornerRadius": 3,
+                      "layout": "none"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "TFYWe",
+                      "x": 142,
+                      "y": 33,
+                      "name": "Usage fill",
+                      "width": 126,
+                      "height": 6,
+                      "fill": "#4F8CC9",
+                      "cornerRadius": 3,
+                      "layout": "none"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "hAAW4",
+                  "x": 480,
+                  "y": 62,
+                  "name": "App memory",
+                  "width": 390,
+                  "height": 60,
+                  "layout": "none",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "cd2R8",
+                      "x": 0,
+                      "y": 0,
+                      "name": "Label",
+                      "fill": "#7B8794",
+                      "content": "ClashBar 应用内存",
+                      "fontFamily": "Noto Sans SC",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "N0oJyR",
+                      "x": 0,
+                      "y": 23,
+                      "name": "Value",
+                      "fill": "#263746",
+                      "content": "42.1 MB",
+                      "fontFamily": "Noto Sans SC",
+                      "fontSize": 28
+                    },
+                    {
+                      "type": "frame",
+                      "id": "mmu1Y",
+                      "x": 166,
+                      "y": 33,
+                      "name": "Usage track",
+                      "width": 210,
+                      "height": 6,
+                      "fill": "#DEE5EC",
+                      "cornerRadius": 3,
+                      "layout": "none"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "V71al",
+                      "x": 166,
+                      "y": 33,
+                      "name": "Usage fill",
+                      "width": 102,
+                      "height": 6,
+                      "fill": "#75A8D3",
+                      "cornerRadius": 3,
+                      "layout": "none"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "fileToken": "ec709a44-6723-4ba4-8a4e-6330ff11725f"
+}

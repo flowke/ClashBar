@@ -122,17 +122,44 @@ extension AppViewModel {
         }
     }
 
-    func setDashboardSubscriptionEnabled(_ enabled: Bool, name: String) async {
+    func setDashboardSubscriptionEnabled(_ enabled: Bool, name: String, changes: [CustomRuleChange]) async {
         guard var subscription = remoteConfigSubscriptions[name], subscription.isEnabled != enabled else { return }
-        if !enabled && selectedConfigName == name {
-            guard let fallback = availableConfigFileNames.first(where: {
-                $0 != name && (remoteConfigSubscriptions[$0]?.isEnabled ?? true)
-            }) else {
-                dashboardConfigError = uiLanguage == .zhHans ? "请先选择其他基础配置。" : "Select another base configuration first."
+        if enabled {
+            await selectDashboardConfiguration(name, changes: changes)
+            return
+        }
+        guard !dashboardConfigBusy, !isCoreActionProcessing, !isRemoteTarget else { return }
+        if selectedConfigName == name {
+            if isCoreBootstrapInFlight {
+                dashboardConfigError = uiLanguage == .zhHans ? "内核正在启动，请稍后重试。" : "The core is starting. Try again shortly."
                 return
             }
-            let changes = (try? effectiveConfigTransaction.currentRecord())?.changes ?? []
-            guard await applyDashboardConfiguration(baseName: fallback, changes: changes) else { return }
+            if isProxySyncing {
+                dashboardConfigError = uiLanguage == .zhHans ? "系统代理操作进行中，请稍后重试。" : "A system proxy operation is in progress. Try again shortly."
+                return
+            }
+            if isSystemProxyEnabled { await toggleSystemProxy(false) }
+            guard !isSystemProxyEnabled, !isProxySyncing else {
+                dashboardConfigError = uiLanguage == .zhHans ? "无法关闭系统代理，订阅未停用。" : "Unable to disable the system proxy; the subscription was not disabled."
+                return
+            }
+            guard selectedConfigName == name, !dashboardConfigBusy, !isCoreActionProcessing else {
+                dashboardConfigError = uiLanguage == .zhHans ? "配置状态已改变，请重试。" : "The configuration state changed. Try again."
+                return
+            }
+            if isRuntimeRunning { await stopCore(trigger: .manual) }
+            guard !isRuntimeRunning, !isCoreActionProcessing, selectedConfigName == name else {
+                dashboardConfigError = uiLanguage == .zhHans ? "无法停止内核，订阅未停用。" : "Unable to stop the core; the subscription was not disabled."
+                return
+            }
+            if let recovery = pendingCoreFeatureRecoveryState {
+                pendingCoreFeatureRecoveryState = recovery.tunEnabled
+                    ? CoreFeatureRecoveryState(systemProxyEnabled: false, tunEnabled: true) : nil
+            }
+        }
+        guard remoteConfigSubscriptions[name] == subscription else {
+            dashboardConfigError = uiLanguage == .zhHans ? "订阅状态已改变，请重试。" : "The subscription state changed. Try again."
+            return
         }
         subscription.enabled = enabled
         remoteConfigSubscriptions[name] = subscription
@@ -247,8 +274,16 @@ extension AppViewModel {
 
     func selectDashboardConfiguration(_ name: String, changes: [CustomRuleChange]) async {
         guard !isRemoteTarget, !dashboardConfigBusy, !isCoreActionProcessing else { return }
-        if selectedConfigName != name || dashboardEffectiveRecord?.baseName != name {
-            guard await applyDashboardConfiguration(baseName: name, changes: changes) else { return }
+        let disabled = remoteConfigSubscriptions[name]?.isEnabled == false
+        if disabled || selectedConfigName != name || dashboardEffectiveRecord?.baseName != name {
+            guard await applyDashboardConfiguration(baseName: name, changes: changes, allowDisabled: disabled) else { return }
+        }
+        if disabled, var subscription = remoteConfigSubscriptions[name] {
+            subscription.enabled = true
+            remoteConfigSubscriptions[name] = subscription
+            persistRemoteConfigSubscriptions()
+            restartRemoteConfigBackgroundTasksIfNeeded()
+            refreshRemoteConfigMenuStates()
         }
         if !isRuntimeRunning {
             await startCore(trigger: .manual)

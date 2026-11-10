@@ -62,6 +62,88 @@ private final class PortRetryProtocol: URLProtocol, @unchecked Sendable {
 
 @MainActor
 final class DashboardConfigIntegrationTests: XCTestCase {
+    func testSubscriptionDisablingAndSelectingDisabledCards() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let directory = WorkingDirectoryManager(homeDirectory: root)
+        try directory.bootstrapDirectories()
+        for name in ["First.yaml", "Second.yaml"] {
+            try Data("rules: ['MATCH,DIRECT']".utf8).write(to: directory.configDirectoryURL.appendingPathComponent(name))
+        }
+        try Data("test core".utf8).write(to: directory.managedMihomoBinaryURL)
+        let session = URLSessionFactory.makeEphemeralSession(options: .init(timeoutIntervalForRequest: 15, timeoutIntervalForResource: 30))
+        defer { session.invalidateAndCancel() }
+        let service = ConfigService(configManager: ConfigDirectoryManager(workingDirectoryManager: directory), configImportService: ConfigImportService())
+        service.setConfigDirectory(directory.configDirectoryURL)
+        let core = TestCore()
+        core.binaryURL = directory.managedMihomoBinaryURL
+        let dependencies = AppDependencies(
+            processManager: core, configService: service,
+            systemProxyService: SystemProxyService(), tunPermissionService: TunPermissionService(),
+            launchAtLoginService: AppLaunchService(), workingDirectoryManager: directory,
+            networkReachabilityMonitor: NetworkReachabilityMonitor(), ssidMonitorService: SSIDMonitorService(),
+            remoteMachineStore: RemoteMachineStore(session: session),
+            proxyGroupIconCache: ProxyGroupIconCache(iconDirectory: directory.iconDirectoryURL, session: session),
+            webUIAssetService: WebUIAssetService(workingDirectoryManager: directory, session: session),
+            clashbarLogStore: AppLogStore(logFileURL: directory.logsDirectoryURL.appendingPathComponent("clashbar.log")),
+            mihomoLogStore: AppLogStore(logFileURL: directory.logsDirectoryURL.appendingPathComponent("mihomo.log")))
+        let model = AppViewModel(dependencies: dependencies)
+        defer { model.cancelOwnedTasks() }
+        model.remoteConfigSubscriptions = [
+            "First.yaml": RemoteConfigSubscription(urlString: "https://first.example/config"),
+            "Second.yaml": RemoteConfigSubscription(urlString: "https://second.example/config"),
+        ]
+        let change = CustomRuleChange(operation: .add, original: "", value: "DOMAIN,retained.example,DIRECT")
+        let applied = await model.applyDashboardConfiguration(baseName: "First.yaml", changes: [change])
+        XCTAssertTrue(applied, model.dashboardConfigError ?? "")
+        let effective = try XCTUnwrap(model.effectiveConfigURL(for: "First.yaml"))
+        try Data("profile: {store-selected: false, store-fake-ip: true}\nrules: ['MATCH,DIRECT']".utf8).write(to: effective)
+        let resolvedMigrationPath = await model.resolveSelectedConfigPath()
+        let migratedPath = try XCTUnwrap(resolvedMigrationPath)
+        let migrated = try Data(contentsOf: URL(fileURLWithPath: migratedPath))
+        XCTAssertNil(try ConfigRuleMerger().enablingSelectionPersistence(migrated))
+        XCTAssertTrue(String(decoding: migrated, as: UTF8.self).contains("store-fake-ip: true"))
+        XCTAssertTrue(String(decoding: try Data(contentsOf: effective), as: UTF8.self).contains("store-selected: false"))
+        core.isRunning = true
+
+        await model.setDashboardSubscriptionEnabled(false, name: "Second.yaml", changes: [change])
+        XCTAssertTrue(core.isRunning)
+        XCTAssertEqual(core.stopCount, 0)
+        XCTAssertFalse(model.remoteConfigSubscriptions["Second.yaml"]!.isEnabled)
+
+        model.pendingCoreFeatureRecoveryState = CoreFeatureRecoveryState(systemProxyEnabled: true, tunEnabled: false)
+        await model.setDashboardSubscriptionEnabled(false, name: "First.yaml", changes: [change])
+        XCTAssertFalse(core.isRunning)
+        XCTAssertNil(model.pendingCoreFeatureRecoveryState)
+        XCTAssertEqual(core.stopCount, 1)
+        XCTAssertEqual(model.selectedConfigName, "First.yaml")
+        XCTAssertEqual(model.dashboardEffectiveRecord?.changes, [change])
+        XCTAssertFalse(model.remoteConfigSubscriptions["First.yaml"]!.isEnabled)
+        let disabledPath = await model.resolveSelectedConfigPath()
+        XCTAssertNil(disabledPath)
+
+        core.rejectValidation = true
+        await model.selectDashboardConfiguration("Second.yaml", changes: [change])
+        XCTAssertFalse(model.remoteConfigSubscriptions["Second.yaml"]!.isEnabled)
+        XCTAssertEqual(model.selectedConfigName, "First.yaml")
+        core.rejectValidation = false
+        model.dashboardConfigError = nil
+
+        await model.setDashboardSubscriptionEnabled(true, name: "First.yaml", changes: [change])
+        XCTAssertTrue(model.remoteConfigSubscriptions["First.yaml"]!.isEnabled)
+        XCTAssertTrue(core.isRunning)
+        XCTAssertEqual(core.startCount, 1)
+        XCTAssertEqual(model.selectedConfigName, "First.yaml")
+
+        model.cancelCoreBootstrap()
+        await model.setDashboardSubscriptionEnabled(false, name: "First.yaml", changes: [change])
+        await model.selectDashboardConfiguration("Second.yaml", changes: [change])
+        XCTAssertTrue(model.remoteConfigSubscriptions["Second.yaml"]!.isEnabled)
+        XCTAssertTrue(core.isRunning)
+        XCTAssertEqual(model.selectedConfigName, "Second.yaml")
+        XCTAssertEqual(model.dashboardEffectiveRecord?.changes, [change])
+    }
+
     func testPortRetryRecoversAndEditingCancelsPendingRetry() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: root) }
