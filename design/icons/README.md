@@ -1,0 +1,48 @@
+# ClashBar 图标设计与素材
+
+图标素材和预览统一保存在本仓库的 `design/icons/`。可编辑的 [Pencil 主设计稿](../../ClashBar-Pencil-Migrated.pen) 保留在仓库根目录，图片引用使用仓库内相对路径。
+
+## 当前定稿
+
+| 内容 | 文件 |
+| --- | --- |
+| 应用图标 | [1024px PNG](app-icon-1024.png) · [macOS ICNS](ClashBar.icns) · [Iconset](ClashBar.iconset/) |
+| 面板左上角四态图标 | 关闭为系统黑白模板；运行和 TUN 为 C 翡翠绿；异常为黄色轮廓，保留最新异常表情和感叹号；[实际渲染预览](applied-header-states/) |
+| 菜单栏四态设计 | [G 版导出源文件](monochrome-g/source/) · [透明模板素材](monochrome-g/) |
+| 代码渲染结果 | [浅色运行态](applied-monochrome-g/NSAppearanceNameAqua-icon_only-run.png) · [深色运行态](applied-monochrome-g/NSAppearanceNameDarkAqua-icon_only-run.png) |
+
+当前菜单栏采用 **G 版单色模板**，保留圆润半身猫、放大的五官和眼嘴间距。图形绘制高度为 **18pt**，普通图标槽位为 **24pt**，TUN 槽位为 **28pt**。图形在槽位内居中，合成阶段也限制为 18pt，避免再次放大。四态均由系统根据菜单栏外观适配黑白，使用轮廓、实心、盾牌和异常表情区分状态：
+
+| 状态 | 设计 | 导出素材 |
+| --- | --- | --- |
+| 关闭 | 空心轮廓与原有表情 | [关闭态](monochrome-g/icon-sleep.png) |
+| 运行 | 实心半身猫，眼睛和嘴巴透明镂空 | [运行态](monochrome-g/icon-run.png) |
+| TUN | 实心半身猫，半空心盾牌嵌入脸颊 | [TUN 态](monochrome-g/icon-tun.png) |
+| 异常 | 空心轮廓、异常表情与圆润感叹号，无三角形边框 | [异常态](monochrome-g/icon-warning.png) |
+
+Pencil 的 G 版四态节点分别为 `A5IDi`、`zDtFj`、`Fw7dr`、`rt09c`。源导出中的浅色五官和遮罩在生成模板时转换为真正的透明区域，避免系统模板渲染后糊成实心。应用主图标继续使用蓝色整猫加白色圆角方块。
+
+面板左上角的 40pt 半身猫与菜单栏共用 `menuBarDisplaySnapshot.iconState`，状态变化时自动同步，无须重新打开面板。关闭态使用系统黑白空心模板；运行态使用 [C 翡翠绿](menu-bar-emerald/Lnf10.png) `#169568` 配柔白五官 `#F3FFF9`；TUN 使用 [翡翠绿嵌入式盾牌](menu-bar-emerald/eDYDX.png)；异常态使用黄色 `#FFB020` 的空心轮廓、G 版异常表情与圆润感叹号。异常状态优先于 TUN 和运行状态，内核停止或代理与 TUN 均关闭时显示关闭态。
+
+## 配色探索 · 面板品牌采用 C 翡翠绿
+
+针对 18pt 灰蓝在绿植壁纸上不够清晰的反馈，曾制作六组运行/TUN 配色。菜单栏现改用 G 版单色模板，C 翡翠绿用于面板左上角品牌图标；其他方案保留供比较：
+
+[A–F 配色预览](color-studies-2026-11-11/preview.html) · [完整画板](color-studies-2026-11-11/N9jU3.png) · [颜色与素材说明](color-studies-2026-11-11/README.md)。Pencil 中对应 `ClashBar · 菜单栏配色探索 / A–F` 画板；可对比清透蓝、湖水青、翡翠绿、薄荷绿、珍珠白配墨绿、瓷白配深蓝。
+
+## 历史方案
+
+根目录的 `mb-*.png`、`final-sheet.png`，以及 `upper-body-*`、`pencil-*` 和 `production/` 目录，保留先前的整猫、半身、文字徽章和盾牌探索版本，供对照。`applied-four-states/` 保留调整前的 22pt 代码渲染结果，`menu-bar-balanced/` 与 `applied-balanced-states/` 保留 18pt 灰蓝版本，`menu-bar-emerald/` 与 `applied-emerald-states/` 保留翡翠绿菜单栏版本。
+
+## 后续导出
+
+新素材和预览继续保存到此目录，Pencil 和 HTML 均使用相对路径，避免依赖个人目录或仓库外的文件。
+
+如需从当前代码重新导出菜单栏预览，在仓库根目录执行：
+
+```sh
+swift design/icons/monochrome-g/build-template-assets.swift
+swift design/icons/build-header-assets.swift
+CLASHBAR_ICON_PREVIEW_DIR="$PWD/design/icons/applied-monochrome-g" swift test --filter BrandIconRenderingTests
+CLASHBAR_HEADER_PREVIEW_DIR="$PWD/design/icons/applied-header-states" swift test --filter SystemProxyStateTests.testHeaderIconTracksAllStatesWithoutReopeningInBothThemes
+```

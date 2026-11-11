@@ -1,5 +1,43 @@
 import SwiftUI
 
+/// The centered thumb and dash distinguish a conflict from both on and off.
+struct SystemProxyWarningSwitch: View {
+    @Environment(\.isEnabled) private var isEnabled
+    let isUnknown: Bool
+    let isWorking: Bool
+    let title: String
+    let help: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: self.action) {
+            ZStack {
+                Capsule().fill(Color(nsColor: .systemYellow))
+                Capsule().strokeBorder(Color.black.opacity(0.14), lineWidth: 0.5)
+                Circle()
+                    .fill(.white)
+                    .frame(width: 16, height: 16)
+                    .shadow(color: .black.opacity(0.16), radius: 1, y: 1)
+                if self.isWorking {
+                    ProgressView().controlSize(.mini).scaleEffect(0.65)
+                } else {
+                    Image(systemName: self.isUnknown ? "questionmark" : "minus")
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundStyle(Color.black.opacity(0.72))
+                }
+            }
+            .frame(width: 44, height: 20)
+            .padding(.vertical, 2)
+            .contentShape(Rectangle())
+            .opacity(self.isEnabled ? 1 : 0.5)
+        }
+        .buttonStyle(.plain)
+        .help(self.help)
+        .accessibilityLabel(self.title)
+        .accessibilityValue(self.help)
+    }
+}
+
 // swiftlint:disable:next type_name
 private typealias T = MenuBarLayoutTokens
 
@@ -571,6 +609,7 @@ struct ProxyTabView: TranslatingView {
     }
 
     var systemProxyRowDetailText: String? {
+        if let warning = self.appViewModel.systemProxyWarningText { return warning }
         if let failureHint = self.systemProxyInlineFailureText {
             return failureHint
         }
@@ -615,7 +654,7 @@ struct ProxyTabView: TranslatingView {
     }
 
     var systemProxyRowDetailColor: Color {
-        if self.systemProxyInlineFailureText != nil {
+        if self.systemProxyInlineFailureText != nil || self.appViewModel.systemProxyStatus.needsAttention {
             return nativeWarning.opacity(T.Opacity.solid)
         }
         return nativeSecondaryLabel
@@ -657,21 +696,32 @@ struct ProxyTabView: TranslatingView {
                                     .stroke(self.nativeWarning.opacity(0.34), lineWidth: T.stroke)
                             }
                     }
-                    .help(detailText)
+                    .help(self.appViewModel.systemProxyStatus.needsAttention ? self.appViewModel.systemProxyStatusHelp : detailText)
                     .accessibilityLabel(detailText)
             }
 
             Spacer(minLength: 0)
-            Toggle("", isOn: Binding(
-                get: { self.appViewModel.isSystemProxyEnabled },
-                set: { value in
-                    Task { await self.appViewModel.toggleSystemProxy(value) }
-                }))
+            if self.appViewModel.systemProxyStatus.needsAttention {
+                SystemProxyWarningSwitch(
+                    isUnknown: self.appViewModel.systemProxyStatus == .unknown,
+                    isWorking: self.appViewModel.isProxySyncing,
+                    title: self.tr("ui.system_proxy.restore"),
+                    help: self.appViewModel.systemProxyStatusHelp)
+                { Task { await self.appViewModel.toggleSystemProxy(true) } }
+                .disabled(!self.appViewModel.isSystemProxyToggleEnabled)
+                .frame(width: 50, alignment: .trailing)
+            } else {
+                Toggle(self.tr("ui.quick.system_proxy"), isOn: Binding(
+                    get: { self.appViewModel.isSystemProxyEnabled },
+                    set: { value in
+                        Task { await self.appViewModel.toggleSystemProxy(value) }
+                    }))
                 .labelsHidden()
                 .toggleStyle(.switch)
                 .controlSize(.small)
                 .disabled(!self.appViewModel.isSystemProxyToggleEnabled)
                 .frame(width: 50, alignment: .trailing)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, T.space4)

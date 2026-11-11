@@ -3,6 +3,100 @@ import ProxyHelperShared
 
 @MainActor
 extension AppViewModel {
+    var systemProxyToggleTarget: Bool {
+        self.systemProxyStatus.needsAttention || !self.isSystemProxyEnabled
+    }
+
+    var systemProxyWarningText: String? {
+        switch self.systemProxyStatus {
+        case .overridden: self.tr("ui.system_proxy.overridden")
+        case .unknown: self.tr("ui.system_proxy.unknown")
+        case .disabled, .active: nil
+        }
+    }
+
+    var systemProxyStatusHelp: String {
+        guard self.systemProxyStatus.needsAttention else { return self.tr("ui.quick.system_proxy") }
+        let expected = self.systemProxyExpectedTarget.flatMap {
+            self.buildSystemProxyDisplayString(host: $0.host, ports: $0.ports)
+        } ?? "—"
+        return self.tr("ui.system_proxy.conflict_help", expected,
+                       self.systemProxyActualDisplay ?? self.tr("ui.system_proxy.unavailable"))
+    }
+
+    func rememberSystemProxyTarget(host: String, ports: SystemProxyPorts) {
+        let target = SystemProxyTarget(host: host, ports: ports)
+        self.systemProxyExpectedTarget = target
+        self.encodeToDefaults(target, key: self.systemProxyTargetKey)
+    }
+
+    func startSystemProxyMonitoring() {
+        guard self.systemProxyMonitorTask == nil else { return }
+        self.systemProxyMonitor.start { [weak self] in self?.scheduleSystemProxyStatusRefresh() }
+        self.systemProxyMonitorTask = Task { [weak self] in
+            while !Task.isCancelled {
+                self?.checkSystemProxyConfigurationIfNeeded()
+                do { try await Task.sleep(nanoseconds: 3_000_000_000) } catch { return }
+            }
+        }
+    }
+
+    func stopSystemProxyMonitoring() {
+        self.systemProxyMonitor.stop()
+        self.systemProxyMonitorTask?.cancel()
+        self.systemProxyMonitorTask = nil
+        self.systemProxyDebounceTask?.cancel()
+        self.systemProxyDebounceTask = nil
+    }
+
+    func scheduleSystemProxyStatusRefresh() {
+        self.systemProxyDebounceTask?.cancel()
+        self.systemProxyDebounceTask = Task { [weak self] in
+            do { try await Task.sleep(nanoseconds: 300_000_000) } catch { return }
+            self?.checkSystemProxyConfigurationIfNeeded()
+        }
+    }
+
+    private func checkSystemProxyConfigurationIfNeeded() {
+        guard self.isSystemProxyEnabled, !self.isProxySyncing else { return }
+        self.checkSystemProxyConfiguration()
+    }
+
+    func checkSystemProxyConfiguration() {
+        guard self.isSystemProxyEnabled else { return }
+        let previous = self.systemProxyStatus
+        do {
+            let snapshot = try self.systemProxyService.readSnapshot()
+            var displays = snapshot.activeDisplays
+            if snapshot.hasAutomaticProxy { displays.append(self.tr("ui.system_proxy.automatic")) }
+            let actual = displays.isEmpty ? self.tr("ui.system_proxy.system_disabled") : displays.joined(separator: ", ")
+            if self.systemProxyActualDisplay != actual { self.systemProxyActualDisplay = actual }
+            if self.systemProxyActiveDisplay != snapshot.activeDisplays.first {
+                self.systemProxyActiveDisplay = snapshot.activeDisplays.first
+            }
+            let status: SystemProxyStatus
+            if let target = self.systemProxyExpectedTarget {
+                status = snapshot.matches(target) ? .active : .overridden
+            } else {
+                status = .unknown
+            }
+            if self.systemProxyStatus != status { self.systemProxyStatus = status }
+        } catch {
+            if self.systemProxyActualDisplay != nil { self.systemProxyActualDisplay = nil }
+            if self.systemProxyStatus != .unknown { self.systemProxyStatus = .unknown }
+        }
+        if previous != self.systemProxyStatus, self.systemProxyStatus.needsAttention {
+            self.appendLog(level: "warning", message: self.systemProxyStatusHelp)
+        }
+    }
+
+    /// Re-check immediately before any automatic write, even when the UI still looks healthy.
+    func systemProxyStillMatchesExpectedTarget() -> Bool {
+        guard let target = self.systemProxyExpectedTarget,
+              let snapshot = try? self.systemProxyService.readSnapshot() else { return false }
+        return snapshot.matches(target)
+    }
+
     static let defaultSystemProxyExceptions: [String] = [
         "::1",
         "*.local",
@@ -122,6 +216,8 @@ extension AppViewModel {
         self.systemProxyHelperFailureReason = nil
         self.systemProxyHelperFailureMessage = nil
         if !self.isSystemProxyEnabled {
+            self.systemProxyStatus = .disabled
+            self.systemProxyActualDisplay = nil
             self.systemProxyActiveDisplay = nil
         }
     }
@@ -202,6 +298,7 @@ extension AppViewModel {
     }
 
     func handleApplicationDidBecomeActive() {
+        self.scheduleSystemProxyStatusRefresh()
         self.refreshLaunchAtLoginStatus()
         self.handleSSIDStrategyAppDidBecomeActive()
         guard !self.isRemoteTarget, self.hasSystemProxyOpenIntent else { return }
@@ -266,30 +363,9 @@ extension AppViewModel {
             return
         }
 
-        do {
-            let target = try await resolveSystemProxyTargetFromRuntimeConfig()
-            let isConfigured = try await isSystemProxyConfigured(host: target.host, ports: target.ports)
-            if !isConfigured {
-                try await self.applySystemProxy(enabled: true, host: target.host, ports: target.ports)
-                appendLog(
-                    level: "info",
-                    message: tr("log.system_proxy.startup_repaired", target.host, target.ports.primaryPort ?? 0))
-            }
-            try await self.applyCurrentSystemProxyExceptionsIfNeeded()
-            self.clearSystemProxyOpenFailureHint()
-            self.systemProxyHelperFailureReason = nil
-            self.systemProxyHelperFailureMessage = nil
-            systemProxyActiveDisplay = buildSystemProxyDisplayString(host: target.host, ports: target.ports)
-
-            didCheckSystemProxyConsistencyOnLaunch = true
-            await refreshSystemProxyStatus()
-        } catch {
-            appendLog(
-                level: "error",
-                message: tr("log.system_proxy.startup_repair_failed", self.systemProxyErrorMessage(error)))
-            self.updateSystemProxyOpenFailureHint(for: error)
-            await self.refreshSystemProxyHelperStatus()
-        }
+        // Observe startup discrepancies. Only an explicit user action repairs a conflict.
+        self.checkSystemProxyConfiguration()
+        self.didCheckSystemProxyConsistencyOnLaunch = true
     }
 
     func scheduleSystemProxyStartupPostflight(
@@ -301,8 +377,8 @@ extension AppViewModel {
             return
         }
         let shouldRefreshStatus = refreshStatusBeforeOverlay || refreshStatusAfterBootstrap
-        let shouldRepairConsistency = !didCheckSystemProxyConsistencyOnLaunch
-        guard shouldRefreshStatus || shouldRepairConsistency else { return }
+        let shouldCheckConsistency = !didCheckSystemProxyConsistencyOnLaunch
+        guard shouldRefreshStatus || shouldCheckConsistency else { return }
 
         Task { [weak self] in
             guard let self else { return }
@@ -311,7 +387,7 @@ extension AppViewModel {
                 await self.refreshSystemProxyStatus()
             }
 
-            if shouldRepairConsistency {
+            if shouldCheckConsistency {
                 await self.ensureSystemProxyConsistencyOnFirstLaunchIfNeeded()
                 if shouldRefreshStatus {
                     await self.refreshSystemProxyStatus()
@@ -323,6 +399,7 @@ extension AppViewModel {
     func systemProxyErrorMessage(_ error: Error) -> String {
         guard let serviceError = error as? SystemProxyServiceError else { return error.localizedDescription }
         switch serviceError {
+        case .configurationUnavailable: return tr("ui.system_proxy.unavailable")
         case .invalidHost: return tr("app.system_proxy.error.invalid_host")
         case .invalidPort: return tr("app.system_proxy.error.invalid_port")
         case .helperNotBundled: return tr("app.system_proxy.error.helper_not_bundled")
@@ -341,6 +418,7 @@ extension AppViewModel {
     func systemProxyFailureHintMessage(for error: Error) -> String {
         guard let serviceError = error as? SystemProxyServiceError else { return tr("app.system_proxy.alert.unknown") }
         switch serviceError {
+        case .configurationUnavailable: return tr("ui.system_proxy.unavailable")
         case .invalidHost: return tr("app.system_proxy.alert.invalid_host")
         case .invalidPort: return tr("app.system_proxy.alert.invalid_port")
         case .helperNotBundled: return tr("app.system_proxy.alert.helper_not_bundled")

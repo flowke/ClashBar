@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root { color-scheme: light dark; }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: var(--foreground); font-family: var(--font-sans); }
+    main { display: grid; gap: 24px; }
+    figure { margin: 0; }
+    .comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .comparison figure { display: grid; justify-items: center; gap: 16px; padding: 20px 12px; background: var(--card); border-radius: var(--radius); }
+    .comparison img { display: block; height: 112px; width: auto; }
+    figcaption { font-size: 14px; line-height: 1.5; text-align: center; }
+    .muted { color: var(--muted-foreground); }
+    .states { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; padding: 20px 16px; background: #EEF0F4; color: #25272A; border-radius: var(--radius); }
+    .states figure { display: grid; justify-items: center; gap: 14px; }
+    .states img { display: block; height: 66px; width: auto; max-width: 100%; object-fit: contain; }
+    .states figcaption { font-size: 13px; }
+    .size-title { margin: 0 0 12px; font-size: 14px; font-weight: 600; }
+    .menus { display: grid; gap: 12px; }
+    .menu { display: flex; align-items: center; gap: 16px; padding: 16px; border-radius: var(--radius); overflow: hidden; }
+    .light { background: #E9EBEF; color: #454B57; }
+    .dark { background: #272B32; color: #E8EBF2; }
+    .menu img { display: block; flex: none; height: 22px; width: auto; }
+    .divider { width: 1px; height: 18px; background: currentColor; opacity: .28; flex: none; }
+    .speed { margin-left: 4px; font-size: 11px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .note { margin: 10px 0 0; font-size: 12px; color: var(--muted-foreground); line-height: 1.6; }
+    @media (max-width: 440px) {
+      .comparison img { height: 88px; }
+      .states { gap: 8px; padding: 16px 12px; }
+      .states img { height: 44px; }
+      .states figcaption { font-size: 12px; }
+      .menu { gap: 13px; padding: 14px; }
+      .speed { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <main aria-label="ClashBar 圆润上半身图标修订">
+    <section class="comparison" aria-label="上一版与圆润修订版">
+      <figure>
+        <img src="../upper-body-design/Lnf10.png" alt="上一版：下沿偏直、五官偏低">
+        <figcaption class="muted">上一版 · 裁切半身</figcaption>
+      </figure>
+      <figure>
+        <img src="../upper-body-rounded/Lnf10.png" alt="修订版：连续圆润下沿、五官上移">
+        <figcaption>圆润过渡 · 五官上移</figcaption>
+      </figure>
+    </section>
+    <section class="states" aria-label="浅色菜单栏的三种状态">
+      <figure>
+        <img src="../upper-body-rounded/ikzA7.png" alt="关闭：偏黑空心描边和闭眼微笑">
+        <figcaption>关闭 · 偏黑描边</figcaption>
+      </figure>
+      <figure>
+        <img src="../upper-body-rounded/Lnf10.png" alt="运行：蓝色圆润上半身">
+        <figcaption>运行 · 品牌蓝</figcaption>
+      </figure>
+      <figure>
+        <img src="../upper-body-rounded/eDYDX.png" alt="TUN：蓝色上半身和镂空文字胶囊">
+        <figcaption>TUN · 镂空胶囊</figcaption>
+      </figure>
+    </section>
+    <section aria-label="22pt 原尺寸明暗对比">
+      <p class="size-title">22pt 原尺寸 · 竖线左侧为上一版，右侧为修订版</p>
+      <div class="menus">
+        <div class="menu light" aria-label="浅色菜单栏：灰色关闭态与偏黑关闭态对比">
+          <img src="../upper-body-design/Lnf10.png" alt="上一版运行">
+          <img src="../upper-body-design/ikzA7.png" alt="上一版灰色关闭">
+          <span class="divider" aria-hidden="true"></span>
+          <img src="../upper-body-rounded/Lnf10.png" alt="新运行态">
+          <img src="../upper-body-rounded/ikzA7.png" alt="新偏黑关闭态">
+          <img src="../upper-body-rounded/eDYDX.png" alt="新 TUN 态">
+          <span class="speed">↑ 1.2 MB/s　↓ 8.6 MB/s</span>
+        </div>
+        <div class="menu dark" aria-label="深色菜单栏：灰色关闭态与浅白关闭态对比">
+          <img src="../upper-body-design/Lnf10.png" alt="上一版运行">
+          <img src="../upper-body-design/ikzA7.png" alt="上一版灰色关闭">
+          <span class="divider" aria-hidden="true"></span>
+          <img src="../upper-body-rounded/Lnf10.png" alt="新运行态">
+          <img src="../upper-body-rounded/BX6oO.png" alt="新浅白关闭态">
+          <img src="../upper-body-rounded/eDYDX.png" alt="新 TUN 态">
+          <span class="speed">↑ 1.2 MB/s　↓ 8.6 MB/s</span>
+        </div>
+      </div>
+      <p class="note">关闭态在浅色主题用偏黑描边，在深色主题用浅白描边；运行与 TUN 保留蓝色。</p>
+    </section>
+  </main>
+</body>
+</html>

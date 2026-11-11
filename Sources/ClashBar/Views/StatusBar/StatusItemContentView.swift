@@ -2,8 +2,11 @@ import AppKit
 
 @MainActor
 final class StatusItemContentView {
-    private let iconSize: CGFloat = 24
-    private let brandIconRenderSize: CGFloat = 24
+    private var iconSize: CGFloat {
+        self.currentDisplay?.iconState == .tun ? 28 : 24
+    }
+
+    private let brandIconRenderSize: CGFloat = 18
     private let symbolPointSize: CGFloat = 20
     private let iconTextSpacing: CGFloat = 0
     private let textContainerWidth: CGFloat = 43
@@ -15,6 +18,7 @@ final class StatusItemContentView {
     private var cachedRunBrandStatusIconImage: NSImage?
     private var cachedSleepBrandStatusIconImage: NSImage?
     private var cachedTunBrandStatusIconImage: NSImage?
+    private var cachedWarningBrandStatusIconImage: NSImage?
 
     private(set) var image: NSImage?
 
@@ -48,6 +52,16 @@ final class StatusItemContentView {
         return img
     }
 
+    private var warningBrandStatusIconImage: NSImage? {
+        if let cached = self.cachedWarningBrandStatusIconImage {
+            return cached
+        }
+        guard let img = Self.makeBrandStatusIconImage(source: BrandIcon.warningImage, size: self.brandIconRenderSize)
+        else { return nil }
+        self.cachedWarningBrandStatusIconImage = img
+        return img
+    }
+
     var usesBrandIcon: Bool {
         self.runBrandStatusIconImage != nil || self.sleepBrandStatusIconImage != nil
     }
@@ -58,6 +72,7 @@ final class StatusItemContentView {
             symbolName: "bolt.slash.circle",
             speedLines: nil,
             isRunning: false,
+            isSystemProxyEnabled: false,
             isTunEnabled: false)
         switch display.mode {
         case .iconOnly:
@@ -69,7 +84,7 @@ final class StatusItemContentView {
         }
     }
 
-    func apply(display: MenuBarDisplay) {
+    func apply(display: MenuBarDisplay, appearance: NSAppearance? = nil) {
         self.currentDisplay = display
 
         let iconImage: NSImage? = display.mode == .speedOnly
@@ -80,17 +95,25 @@ final class StatusItemContentView {
         let downLine = display.speedLines?.down ?? ""
         let showsSpeed = display.mode != .iconOnly
 
-        self.image = self.composeImage(
-            iconImage: iconImage,
-            upLine: showsSpeed ? upLine : "",
-            downLine: showsSpeed ? downLine : "",
-            showsIcon: display.mode != .speedOnly,
-            showsSpeed: showsSpeed)
+        let iconTint: NSColor? = if iconImage?.isTemplate == true {
+            .labelColor
+        } else {
+            nil
+        }
+        let drawingAppearance = appearance ?? NSApp.effectiveAppearance
+        drawingAppearance.performAsCurrentDrawingAppearance {
+            self.image = self.composeImage(
+                iconImage: iconImage,
+                iconTint: iconTint,
+                upLine: showsSpeed ? upLine : "",
+                downLine: showsSpeed ? downLine : "",
+                showsIcon: display.mode != .speedOnly,
+                showsSpeed: showsSpeed)
+        }
     }
 
     private func iconImage(for display: MenuBarDisplay) -> NSImage? {
-        if let brandIcon = self.brandStatusIconImage(
-            isRunning: display.isRunning, isTunEnabled: display.isTunEnabled)
+        if let brandIcon = self.brandStatusIconImage(for: display.iconState)
         {
             return brandIcon
         }
@@ -100,11 +123,17 @@ final class StatusItemContentView {
         return image?.withSymbolConfiguration(config)
     }
 
-    private func brandStatusIconImage(isRunning: Bool, isTunEnabled: Bool) -> NSImage? {
-        guard isRunning else { return self.sleepBrandStatusIconImage }
-        return isTunEnabled
-            ? (self.tunBrandStatusIconImage ?? self.runBrandStatusIconImage)
-            : self.runBrandStatusIconImage
+    private func brandStatusIconImage(for state: MenuBarIconState) -> NSImage? {
+        switch state {
+        case .sleep:
+            self.sleepBrandStatusIconImage
+        case .run:
+            self.runBrandStatusIconImage
+        case .tun:
+            self.tunBrandStatusIconImage ?? self.runBrandStatusIconImage
+        case .warning:
+            self.warningBrandStatusIconImage
+        }
     }
 
     private struct SpeedLayout {
@@ -115,6 +144,7 @@ final class StatusItemContentView {
 
     private func composeImage(
         iconImage: NSImage?,
+        iconTint: NSColor?,
         upLine: String,
         downLine: String,
         showsIcon: Bool,
@@ -129,18 +159,20 @@ final class StatusItemContentView {
         for scale in Self.renderScales {
             guard let rep = self.makeRepresentation(
                 iconImage: showsIcon ? iconImage : nil,
+                iconTint: iconTint,
                 speed: speed,
                 pointSize: size,
                 scale: scale)
             else { continue }
             composed.addRepresentation(rep)
         }
-        composed.isTemplate = true
+        composed.isTemplate = iconImage?.isTemplate ?? true
         return composed
     }
 
     private func makeRepresentation(
         iconImage: NSImage?,
+        iconTint: NSColor?,
         speed: SpeedLayout?,
         pointSize: NSSize,
         scale: CGFloat) -> NSBitmapImageRep?
@@ -171,9 +203,9 @@ final class StatusItemContentView {
         if let iconImage {
             let iconRect = CGRect(
                 x: 0,
-                y: floor((pointSize.height - self.iconSize) / 2),
+                y: (pointSize.height - self.brandIconRenderSize) / 2,
                 width: self.iconSize,
-                height: self.iconSize)
+                height: self.brandIconRenderSize)
             let drawRect = Self.aspectFitRect(imageSize: iconImage.size, in: iconRect)
             iconImage.draw(
                 in: drawRect,
@@ -182,6 +214,13 @@ final class StatusItemContentView {
                 fraction: 1.0,
                 respectFlipped: true,
                 hints: nil)
+            if let iconTint {
+                context.cgContext.saveGState()
+                context.cgContext.setBlendMode(.sourceIn)
+                context.cgContext.setFillColor(iconTint.cgColor)
+                context.cgContext.fill(drawRect)
+                context.cgContext.restoreGState()
+            }
         }
 
         if let speed, speed.up.isEmpty == false || speed.down.isEmpty == false {
@@ -198,7 +237,7 @@ final class StatusItemContentView {
         paragraph.lineBreakMode = .byTruncatingHead
         let attributes: [NSAttributedString.Key: Any] = [
             .font: NSFont.monospacedDigitSystemFont(ofSize: MenuBarLayoutTokens.FontSize.statusBar, weight: .semibold),
-            .foregroundColor: NSColor.black,
+            .foregroundColor: NSColor.labelColor,
             .paragraphStyle: paragraph,
         ]
 
@@ -233,7 +272,8 @@ final class StatusItemContentView {
 
     private static func makeBrandStatusIconImage(source: NSImage?, size: CGFloat) -> NSImage? {
         guard let source else { return nil }
-        let targetSize = NSSize(width: size, height: size)
+        guard source.size.width > 0, source.size.height > 0 else { return nil }
+        let targetSize = NSSize(width: size * source.size.width / source.size.height, height: size)
         let rendered = NSImage(size: targetSize)
 
         for scale in Self.renderScales {
@@ -246,7 +286,7 @@ final class StatusItemContentView {
         }
 
         guard rendered.representations.isEmpty == false else { return nil }
-        rendered.isTemplate = true
+        rendered.isTemplate = source.isTemplate
         return rendered
     }
 
@@ -285,9 +325,6 @@ final class StatusItemContentView {
             fraction: 1.0,
             respectFlipped: true,
             hints: nil)
-        context.cgContext.setBlendMode(.sourceIn)
-        context.cgContext.setFillColor(NSColor.black.cgColor)
-        context.cgContext.fill(CGRect(origin: .zero, size: pointSize))
         NSGraphicsContext.restoreGraphicsState()
         return representation
     }

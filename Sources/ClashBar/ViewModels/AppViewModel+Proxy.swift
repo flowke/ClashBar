@@ -40,10 +40,15 @@ extension AppViewModel {
             if enabled {
                 let target = try await resolveSystemProxyTargetFromRuntimeConfig()
                 try await applySystemProxy(enabled: true, host: target.host, ports: target.ports)
+                self.rememberSystemProxyTarget(host: target.host, ports: target.ports)
+                self.isSystemProxyEnabled = true
+                self.systemProxyMayResumeAfterOwnedClear = false
                 try await self.applyCurrentSystemProxyExceptionsIfNeeded()
                 systemProxyActiveDisplay = self.buildSystemProxyDisplayString(host: target.host, ports: target.ports)
             } else {
-                try await applySystemProxy(enabled: false, host: self.controllerHost(), ports: .disabled)
+                if self.systemProxyStillMatchesExpectedTarget() {
+                    try await applySystemProxy(enabled: false, host: self.controllerHost(), ports: .disabled)
+                }
                 systemProxyActiveDisplay = nil
             }
 
@@ -57,6 +62,7 @@ extension AppViewModel {
             self.systemProxyHelperFailureReason = nil
             self.systemProxyHelperFailureMessage = nil
             if enabled {
+                self.checkSystemProxyConfiguration()
                 await self.refreshSystemProxyHelperRuntimeSnapshot()
             } else {
                 self.resetSystemProxyObservedState()
@@ -70,7 +76,7 @@ extension AppViewModel {
             }
             await self.refreshSystemProxyHelperStatus()
             if enabled || self.isSystemProxyEnabled {
-                await refreshSystemProxyStatus()
+                self.checkSystemProxyConfiguration()
             } else {
                 self.resetSystemProxyObservedState()
             }

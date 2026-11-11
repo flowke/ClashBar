@@ -1,5 +1,7 @@
 import Foundation
 
+private final class AppResourceBundleToken: NSObject {}
+
 enum AppResourceBundleLocator {
     private static let moduleBundleName = "ClashBar_ClashBar.bundle"
 
@@ -83,6 +85,13 @@ enum AppResourceBundleLocator {
 
     private static func candidateModuleBundleURLs() -> [URL] {
         var urls: [URL] = []
+
+        // XCTest loads the app code from its test bundle rather than Bundle.main.
+        let codeBundle = Bundle(for: AppResourceBundleToken.self)
+        urls.append(codeBundle.bundleURL.appendingPathComponent(self.moduleBundleName, isDirectory: true))
+        if let resources = codeBundle.resourceURL {
+            urls.append(resources.appendingPathComponent(self.moduleBundleName, isDirectory: true))
+        }
 
         let appBundleURL = Bundle.main.bundleURL
         urls.append(appBundleURL.appendingPathComponent(self.moduleBundleName, isDirectory: true))

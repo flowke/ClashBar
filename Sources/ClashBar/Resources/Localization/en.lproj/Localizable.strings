@@ -110,6 +110,13 @@
 
 "ui.quick.switch_config" = "Switch Config";
 "ui.quick.system_proxy" = "System Proxy";
+"ui.system_proxy.overridden" = "Overridden";
+"ui.system_proxy.unknown" = "Status unknown";
+"ui.system_proxy.restore" = "Restore ClashBar system proxy";
+"ui.system_proxy.automatic" = "Automatic proxy (PAC / WPAD)";
+"ui.system_proxy.system_disabled" = "System proxy is off";
+"ui.system_proxy.unavailable" = "Unable to read system proxy settings";
+"ui.system_proxy.conflict_help" = "ClashBar expects: %@\nCurrent system setting: %@\nClick the yellow switch to restore ClashBar proxy settings.";
 "ui.quick.tun_mode" = "TUN Mode";
 "ui.quick.tun_stack_switch_hint" = "Double-click to switch TUN stack";
 "ui.quick.copy_terminal" = "Copy Terminal Command";

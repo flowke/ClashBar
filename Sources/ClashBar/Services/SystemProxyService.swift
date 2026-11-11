@@ -1,6 +1,143 @@
 import Foundation
+import AppKit
 import ProxyHelperShared
 import Security
+import SystemConfiguration
+
+enum SystemProxyStatus: Equatable {
+    case disabled
+    case active
+    case overridden
+    case unknown
+
+    var needsAttention: Bool { self == .overridden || self == .unknown }
+}
+
+struct SystemProxyTarget: Codable, Equatable, Sendable {
+    let host: String
+    let ports: SystemProxyPorts
+}
+
+/// A read-only snapshot; observing proxy changes never launches the privileged helper.
+struct SystemProxySnapshot: Equatable, Sendable {
+    struct Configuration: Equatable, Sendable {
+        struct Endpoint: Equatable, Sendable {
+            let host: String
+            let port: Int
+
+            var display: String { host.contains(":") ? "[\(host)]:\(port)" : "\(host):\(port)" }
+        }
+
+        let http: Endpoint?
+        let https: Endpoint?
+        let socks: Endpoint?
+        let automatic: Bool
+
+        init(dictionary: [String: Any]) {
+            func endpoint(_ enabled: CFString, _ host: CFString, _ port: CFString) -> Endpoint? {
+                guard (dictionary[enabled as String] as? NSNumber)?.boolValue == true else { return nil }
+                return Endpoint(host: dictionary[host as String] as? String ?? "",
+                                port: (dictionary[port as String] as? NSNumber)?.intValue ?? 0)
+            }
+            self.http = endpoint(kSCPropNetProxiesHTTPEnable, kSCPropNetProxiesHTTPProxy, kSCPropNetProxiesHTTPPort)
+            self.https = endpoint(kSCPropNetProxiesHTTPSEnable, kSCPropNetProxiesHTTPSProxy, kSCPropNetProxiesHTTPSPort)
+            self.socks = endpoint(kSCPropNetProxiesSOCKSEnable, kSCPropNetProxiesSOCKSProxy, kSCPropNetProxiesSOCKSPort)
+            self.automatic = [kSCPropNetProxiesProxyAutoConfigEnable, kSCPropNetProxiesProxyAutoDiscoveryEnable]
+                .contains { (dictionary[$0 as String] as? NSNumber)?.boolValue == true }
+        }
+
+        var isEnabled: Bool { self.automatic || self.http != nil || self.https != nil || self.socks != nil }
+
+        func matches(_ target: SystemProxyTarget) -> Bool {
+            func normalized(_ host: String) -> String {
+                let host = host.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                if host == "localhost" { return "127.0.0.1" }
+                return host == "[::1]" ? "::1" : host
+            }
+            func matches(_ endpoint: Endpoint?, _ port: Int?) -> Bool {
+                guard let port else { return endpoint == nil }
+                guard let endpoint else { return false }
+                return endpoint.port == port && normalized(endpoint.host) == normalized(target.host)
+            }
+            return !self.automatic && matches(self.http, target.ports.httpPort)
+                && matches(self.https, target.ports.httpsPort) && matches(self.socks, target.ports.socksPort)
+        }
+    }
+
+    let configurations: [Configuration]
+
+    var isEnabled: Bool { self.configurations.contains(where: \.isEnabled) }
+    var hasAutomaticProxy: Bool { self.configurations.contains(where: \.automatic) }
+    var activeDisplays: [String] {
+        Array(Set(self.configurations.flatMap { [$0.http, $0.https, $0.socks].compactMap { $0?.display } })).sorted()
+    }
+
+    func matches(_ target: SystemProxyTarget) -> Bool {
+        !self.configurations.isEmpty && self.configurations.allSatisfy { $0.matches(target) }
+    }
+
+    static func read() throws -> SystemProxySnapshot {
+        guard let preferences = SCPreferencesCreate(nil, "ClashBar proxy status" as CFString, nil),
+              let currentSet = SCNetworkSetCopyCurrent(preferences),
+              let services = SCNetworkSetCopyServices(currentSet) as? [SCNetworkService]
+        else { throw SystemProxyServiceError.configurationUnavailable }
+
+        var configurations = services.filter { SCNetworkServiceGetEnabled($0) }.compactMap { service -> Configuration? in
+            guard let proxy = SCNetworkServiceCopyProtocol(service, kSCNetworkProtocolTypeProxies) else { return nil }
+            return Configuration(dictionary: SCNetworkProtocolGetConfiguration(proxy) as? [String: Any] ?? [:])
+        }
+        guard !configurations.isEmpty else { throw SystemProxyServiceError.configurationUnavailable }
+        // Also check the effective configuration, including transient changes by VPNs/tools.
+        if let store = SCDynamicStoreCreate(nil, "ClashBar proxy status" as CFString, nil, nil),
+           ["IPv4", "IPv6"].contains(where: {
+               (SCDynamicStoreCopyValue(store, "State:/Network/Global/\($0)" as CFString) as? [String: Any])?["PrimaryService"] != nil
+           }),
+           let effective = SCDynamicStoreCopyProxies(store) as? [String: Any]
+        {
+            configurations.append(Configuration(dictionary: effective))
+        }
+        return SystemProxySnapshot(configurations: configurations)
+    }
+}
+
+@MainActor
+final class SystemProxyMonitor {
+    private var store: SCDynamicStore?
+    private var wakeObserver: (any NSObjectProtocol)?
+    private var onChange: (() -> Void)?
+
+    func start(onChange: @escaping () -> Void) {
+        self.stop()
+        self.onChange = onChange
+        var context = SCDynamicStoreContext(version: 0, info: Unmanaged.passUnretained(self).toOpaque(),
+                                           retain: nil, release: nil, copyDescription: nil)
+        self.store = SCDynamicStoreCreate(nil, "ClashBar proxy monitor" as CFString, { _, _, info in
+            guard let info else { return }
+            MainActor.assumeIsolated {
+                Unmanaged<SystemProxyMonitor>.fromOpaque(info).takeUnretainedValue().onChange?()
+            }
+        }, &context)
+        if let store {
+            let keys = ["State:/Network/Global/Proxies", "State:/Network/Global/IPv4", "State:/Network/Global/IPv6"]
+            let patterns = ["Setup:/Network/Service/.*/Proxies", "State:/Network/Service/.*/Proxies", "Setup:/Network/Global/.*"]
+            SCDynamicStoreSetNotificationKeys(store, keys as CFArray, patterns as CFArray)
+            SCDynamicStoreSetDispatchQueue(store, .main)
+        }
+        self.wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didWakeNotification, object: nil, queue: .main
+        ) { [weak self] _ in MainActor.assumeIsolated { self?.onChange?() } }
+    }
+
+    func stop() {
+        if let store { SCDynamicStoreSetDispatchQueue(store, nil) }
+        self.store = nil
+        if let wakeObserver { NSWorkspace.shared.notificationCenter.removeObserver(wakeObserver) }
+        self.wakeObserver = nil
+        self.onChange = nil
+    }
+
+    isolated deinit { self.stop() }
+}
 
 enum SystemProxyHelperFailureReason: String, Equatable, Sendable {
     case helperNotRegistered
@@ -25,6 +162,7 @@ struct SystemProxyHelperHealthSnapshot: Equatable, Sendable {
 }
 
 enum SystemProxyServiceError: LocalizedError {
+    case configurationUnavailable
     case invalidHost
     case invalidPort
     case helperNotBundled
@@ -39,6 +177,8 @@ enum SystemProxyServiceError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
+        case .configurationUnavailable:
+            "Unable to read the current macOS proxy configuration."
         case .invalidHost:
             "Invalid proxy host."
         case .invalidPort:
@@ -93,10 +233,25 @@ private final class ContinuationBox<Value: Sendable>: @unchecked Sendable {
     }
 }
 
-struct SystemProxyService {
+protocol SystemProxyServicing: Sendable {
+    func readSnapshot() throws -> SystemProxySnapshot
+    func apply(enabled: Bool, host: String, ports: SystemProxyPorts) async throws
+    func isEnabled() async throws -> Bool
+    func readActiveDisplay() async throws -> String?
+    func readExceptionsList() async throws -> [String]
+    func setExceptionsList(_ exceptions: [String]) async throws
+    func installOrUpdateHelper() async throws
+    func readHelperHealthSnapshot() async -> SystemProxyHelperHealthSnapshot
+    func isConfigured(host: String, ports: SystemProxyPorts) async throws -> Bool
+    func clearBlocking(timeout: TimeInterval)
+}
+
+struct SystemProxyService: SystemProxyServicing {
     private let helperResponseTimeoutNanoseconds: UInt64 = 4_000_000_000
     private let helperLaunchRetryDelayNanoseconds: UInt64 = 250_000_000
     private let helperLaunchRetryAttempts = 4
+
+    func readSnapshot() throws -> SystemProxySnapshot { try SystemProxySnapshot.read() }
 
     func apply(enabled: Bool, host: String, ports: SystemProxyPorts) async throws {
         try self.validateHost(host)
@@ -280,6 +435,8 @@ struct SystemProxyService {
         }
 
         switch serviceError {
+        case .configurationUnavailable:
+            return .unknown
         case .helperNotBundled:
             return .helperNotBundled
         case .helperRequiresInstallToApplications:

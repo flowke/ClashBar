@@ -4,7 +4,7 @@ import Foundation
 struct AppDependencies {
     let processManager: any MihomoControlling
     let configService: ConfigService
-    let systemProxyService: SystemProxyService
+    let systemProxyService: any SystemProxyServicing
     let tunPermissionService: TunPermissionService
     let launchAtLoginService: AppLaunchService
     let workingDirectoryManager: WorkingDirectoryManager

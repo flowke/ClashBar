@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ClashBar 菜单栏图标</title>
+<style>
+  #clashbar-menu-states { color: var(--foreground); font-family: var(--font-sans); display: grid; gap: 20px; }
+  #clashbar-menu-states * { box-sizing: border-box; }
+  #clashbar-menu-states .state-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+  #clashbar-menu-states figure { margin: 0; min-width: 0; }
+  #clashbar-menu-states .stage { height: 104px; display: flex; align-items: center; justify-content: center; border-radius: var(--radius); background: var(--secondary); }
+  #clashbar-menu-states .stage.close { background: #30343b; }
+  #clashbar-menu-states .stage img { width: 84px; height: 66px; object-fit: contain; }
+  #clashbar-menu-states .stage img.tun { width: 96px; }
+  #clashbar-menu-states figcaption { padding-top: 10px; font-size: 13px; text-align: center; }
+  #clashbar-menu-states .muted { color: var(--muted-foreground); font-size: 12px; }
+  #clashbar-menu-states .section-label { margin-bottom: 10px; font-size: 13px; font-weight: 500; }
+  #clashbar-menu-states .samples { display: grid; gap: 10px; }
+  #clashbar-menu-states .menu-sample { display: flex; align-items: center; gap: 20px; padding: 14px 16px; min-height: 50px; border-radius: var(--radius); }
+  #clashbar-menu-states .menu-sample.light { background: #eef0f4; color: #25272a; }
+  #clashbar-menu-states .menu-sample.dark { background: #292d35; color: #f1f2f4; }
+  #clashbar-menu-states .menu-sample .sample-label { width: 46px; flex: 0 0 46px; font-size: 12px; }
+  #clashbar-menu-states .menu-sample img { width: 28px; height: 22px; object-fit: contain; display: block; }
+  #clashbar-menu-states .menu-sample img.tun { width: 32px; }
+  #clashbar-menu-states .state-order { font-size: 12px; color: var(--muted-foreground); margin-top: 10px; }
+  @media (max-width: 460px) {
+    #clashbar-menu-states .state-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    #clashbar-menu-states .menu-sample { gap: 16px; }
+  }
+</style>
+</head>
+<body>
+<div id="clashbar-menu-states">
+  <div class="state-grid" aria-label="菜单栏图标四种状态，放大预览">
+    <figure>
+      <div class="stage close"><img src="../upper-body-shield-inset-spaced/BX6oO.png" alt="白色空心关闭图标"></div>
+      <figcaption>关闭 · 自适应单色</figcaption>
+    </figure>
+    <figure>
+      <div class="stage"><img src="../upper-body-shield-inset-spaced/Lnf10.png" alt="蓝色实心运行图标，眼睛与嘴巴已拉开距离"></div>
+      <figcaption>运行 · 蓝色实心</figcaption>
+    </figure>
+    <figure>
+      <div class="stage"><img class="tun" src="../upper-body-shield-inset-spaced/eDYDX.png" alt="蓝色实心 TUN 图标，右侧脸颊嵌入空心盾牌"></div>
+      <figcaption>TUN · 嵌入盾牌</figcaption>
+    </figure>
+    <figure>
+      <div class="stage"><img src="../upper-body-shield-inset-spaced/Pq2hu.png" alt="黄色空心异常图标"></div>
+      <figcaption>异常 · 黄色轮廓</figcaption>
+    </figure>
+  </div>
+  <section aria-label="两种菜单栏背景下的原尺寸预览">
+    <div class="section-label">22pt 原尺寸 · 关闭态随背景切换</div>
+    <div class="samples">
+      <div class="menu-sample dark">
+        <span class="sample-label">深背景</span>
+        <img src="../upper-body-shield-inset-spaced/BX6oO.png" alt="关闭，白色轮廓">
+        <img src="../upper-body-shield-inset-spaced/Lnf10.png" alt="运行">
+        <img class="tun" src="../upper-body-shield-inset-spaced/eDYDX.png" alt="TUN">
+        <img src="../upper-body-shield-inset-spaced/Pq2hu.png" alt="异常">
+      </div>
+      <div class="menu-sample light">
+        <span class="sample-label">浅背景</span>
+        <img src="../upper-body-shield-inset-spaced/ikzA7.png" alt="关闭，深色轮廓">
+        <img src="../upper-body-shield-inset-spaced/Lnf10.png" alt="运行">
+        <img class="tun" src="../upper-body-shield-inset-spaced/eDYDX.png" alt="TUN">
+        <img src="../upper-body-shield-inset-spaced/Pq2hu.png" alt="异常">
+      </div>
+    </div>
+    <div class="state-order">依次为：关闭、运行、TUN、异常</div>
+  </section>
+</div>
+</body>
+</html>

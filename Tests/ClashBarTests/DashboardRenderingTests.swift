@@ -171,7 +171,7 @@ final class DashboardRenderingTests: XCTestCase {
             }
             let editor = DashboardCustomRulesView(
                 appViewModel: model,
-                request: .constant(DashboardCustomRuleRequest(operation: .add)))
+                request: .constant(DashboardCustomRuleRequest(operation: .add)), isTesting: .constant(false))
                 .frame(width: 800, alignment: .topLeading)
                 .padding(32).background(Color.white).environment(\.colorScheme, .light)
             let editorHost = NSHostingView(rootView: editor)

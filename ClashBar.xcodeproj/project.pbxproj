@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		E357684CDA7F4373A847A4F9 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B9F596C8A1824016B70966F0 /* Assets.xcassets */; };
 		A00000000000000000000001 = {isa = PBXBuildFile; fileRef = B00000000000000000000001; };
 		A00000000000000000000002 = {isa = PBXBuildFile; fileRef = B00000000000000000000002; };
 		A00000000000000000000003 = {isa = PBXBuildFile; fileRef = B00000000000000000000003; };
@@ -16,6 +17,11 @@
 		A00000000000000000000007 = {isa = PBXBuildFile; fileRef = B00000000000000000000007; };
 		A00000000000000000000008 = {isa = PBXBuildFile; fileRef = B00000000000000000000008; };
 		A00000000000000000000009 = {isa = PBXBuildFile; fileRef = B00000000000000000000009; };
+		A00000000000000000000011 = {isa = PBXBuildFile; fileRef = B00000000000000000000011; };
+		A00000000000000000000012 = {isa = PBXBuildFile; fileRef = B00000000000000000000012; };
+		A00000000000000000000013 = {isa = PBXBuildFile; fileRef = B00000000000000000000013; };
+		A00000000000000000000014 = {isa = PBXBuildFile; fileRef = B00000000000000000000014; };
+		A00000000000000000000015 = {isa = PBXBuildFile; fileRef = B00000000000000000000015; };
 		A2B3C4D5E6F7012345678901 /* Yams in Frameworks */ = {isa = PBXBuildFile; productRef = A2B3C4D5E6F7012345678902 /* Yams */; };
 		006B3466EF84C584B217620D /* AppViewModel+ConfigMonitoring.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0099FD00B975856BAC6F83 /* AppViewModel+ConfigMonitoring.swift */; };
 		0AF53C8C1D4E9B3148CB52C2 /* AppViewModel+LocalConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A51AB16BBAE2E03FEBB825E /* AppViewModel+LocalConfig.swift */; };
@@ -156,6 +162,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		B9F596C8A1824016B70966F0 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Assets.xcassets; path = Sources/ClashBar/Resources/Assets.xcassets; sourceTree = "<group>"; };
 		B00000000000000000000001 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/ClashBar/Services/ConfigRuleMerger.swift; sourceTree = "<group>"; };
 		B00000000000000000000002 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/ClashBar/Services/EffectiveConfigTransaction.swift; sourceTree = "<group>"; };
 		B00000000000000000000003 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/ClashBar/Services/AgentRuleService.swift; sourceTree = "<group>"; };
@@ -165,6 +172,11 @@
 		B00000000000000000000007 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/ClashBar/Views/Dashboard/DashboardOverviewView.swift; sourceTree = "<group>"; };
 		B00000000000000000000008 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/ClashBar/Views/Dashboard/DashboardView.swift; sourceTree = "<group>"; };
 		B00000000000000000000009 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sources/ClashBar/ViewModels/AppViewModel+EffectiveConfig.swift"; sourceTree = "<group>"; };
+		B00000000000000000000011 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/ClashBar/Models/ServiceStatus.swift; sourceTree = "<group>"; };
+		B00000000000000000000012 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/ClashBar/Services/ServiceDirectSession.swift; sourceTree = "<group>"; };
+		B00000000000000000000013 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/ClashBar/Services/ServiceStatusChecker.swift; sourceTree = "<group>"; };
+		B00000000000000000000014 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/ClashBar/ViewModels/ServiceStatusViewModel.swift; sourceTree = "<group>"; };
+		B00000000000000000000015 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/ClashBar/Views/Dashboard/DashboardServiceStatusView.swift; sourceTree = "<group>"; };
 		028439954A10F134774363F3 /* RemoteMachine.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RemoteMachine.swift; path = Sources/ClashBar/Models/RemoteMachine.swift; sourceTree = "<group>"; };
 		05BBFC30E3FBF0AAFCF00071 /* RulesViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RulesViewModel.swift; path = Sources/ClashBar/ViewModels/RulesViewModel.swift; sourceTree = "<group>"; };
 		09D39F5DA30559DE1C57A05A /* ProxyProvidersAndGroupsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ProxyProvidersAndGroupsView.swift; path = Sources/ClashBar/Views/MenuBar/ProxyProvidersAndGroupsView.swift; sourceTree = "<group>"; };
@@ -344,6 +356,7 @@
 				D58EDE0266C8F1E8EE727ACF /* ProxyHelper */,
 				F270511BD88E97997ABE903E /* ClashBar */,
 				7CCA2273BE37A1EC6A3A5BAE /* Resources */,
+				B9F596C8A1824016B70966F0 /* Assets.xcassets */,
 				146D8A2F62FB6B941F17C731 /* DevApp */,
 			);
 			sourceTree = "<group>";
@@ -438,6 +451,11 @@
 				B00000000000000000000007,
 				B00000000000000000000008,
 				B00000000000000000000009,
+				B00000000000000000000011,
+				B00000000000000000000012,
+				B00000000000000000000013,
+				B00000000000000000000014,
+				B00000000000000000000015,
 				9610663EEE5F21E98E262DFB /* CoreService.swift */,
 				BE7F8C9A2EFF3CD1D848E305 /* LaunchAtLoginService.swift */,
 				9C4A603AB810298843561A57 /* MihomoAPIService.swift */,
@@ -631,6 +649,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				638EC22D946535A38F9F8928 /* Resources in Resources */,
+				E357684CDA7F4373A847A4F9 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -681,6 +700,11 @@
 				A00000000000000000000007,
 				A00000000000000000000008,
 				A00000000000000000000009,
+				A00000000000000000000011,
+				A00000000000000000000012,
+				A00000000000000000000013,
+				A00000000000000000000014,
+				A00000000000000000000015,
 				605FB24AD261677E174D7A0B /* AppDelegate.swift in Sources */,
 				75B56719D458C6E00B201F3F /* AppDependencies.swift in Sources */,
 				3BEAF2BCF96D3AE0E779B1AB /* ClashBarApp.swift in Sources */,

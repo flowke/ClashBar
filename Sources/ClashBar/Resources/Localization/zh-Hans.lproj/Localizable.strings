@@ -114,6 +114,13 @@
 
 "ui.quick.switch_config" = "切换配置";
 "ui.quick.system_proxy" = "系统代理";
+"ui.system_proxy.overridden" = "已被覆盖";
+"ui.system_proxy.unknown" = "状态未知";
+"ui.system_proxy.restore" = "恢复 ClashBar 系统代理";
+"ui.system_proxy.automatic" = "自动代理（PAC / WPAD）";
+"ui.system_proxy.system_disabled" = "系统代理已关闭";
+"ui.system_proxy.unavailable" = "无法读取系统代理设置";
+"ui.system_proxy.conflict_help" = "ClashBar 预期：%@\n系统当前：%@\n点击黄色开关恢复 ClashBar 的代理设置。";
 "ui.quick.tun_mode" = "TUN 模式";
 "ui.quick.tun_stack_switch_hint" = "双击切换 TUN 协议栈";
 "ui.quick.copy_terminal" = "复制终端命令";

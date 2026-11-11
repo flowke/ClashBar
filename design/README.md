@@ -1,5 +1,7 @@
 # ClashBar 内部看板 · 第一版设计
 
+应用图标和菜单栏图标另见 [图标设计与素材](icons/README.md)。Pencil 主设计稿位于仓库根目录：[ClashBar-Pencil-Migrated.pen](../ClashBar-Pencil-Migrated.pen)。
+
 当前亮色设计：[ClashBar-Dashboard-Light-v1.sketch](ClashBar-Dashboard-Light-v1.sketch)
 
 暗色对照：[ClashBar-Dashboard-v1.sketch](ClashBar-Dashboard-v1.sketch)

@@ -233,14 +233,17 @@ extension AppViewModel {
     }
 
     func shutdownForTermination() {
+        let ownsProxy = self.isSystemProxyEnabled && self.systemProxyStillMatchesExpectedTarget()
+        self.defaults.set(ownsProxy, forKey: self.systemProxyResumeOnLaunchKey)
         self.prepareForTermination()
-        self.systemProxyService.clearBlocking(timeout: 2.0)
+        if ownsProxy { self.systemProxyService.clearBlocking(timeout: 2.0) }
         if processManager.isRunning {
             self.processManager.stopImmediately()
         }
     }
 
     func cancelOwnedTasks() {
+        self.stopSystemProxyMonitoring()
         self.agentRuleSocket?.stop()
         self.agentRuleSocket = nil
         self.shouldResumeCoreAfterNetworkRecovery = false
@@ -508,12 +511,18 @@ extension AppViewModel {
         }
 
         guard self.isSystemProxyEnabled else { return }
+        guard self.systemProxyStillMatchesExpectedTarget() else {
+            self.checkSystemProxyConfiguration()
+            return
+        }
         self.isProxySyncing = true
         defer { self.isProxySyncing = false }
 
         do {
             try await self.applySystemProxy(enabled: false, host: self.controllerHost(), ports: .disabled)
             self.isSystemProxyEnabled = false
+            self.systemProxyMayResumeAfterOwnedClear = true
+            self.systemProxyStatus = .disabled
             self.systemProxyActiveDisplay = nil
             self.clearSystemProxyOpenFailureHint()
             self.appendLog(
@@ -532,6 +541,10 @@ extension AppViewModel {
         let wasSystemProxyEnabled = defaults.bool(forKey: systemProxyEnabledOnQuitKey)
         defaults.removeObject(forKey: systemProxyEnabledOnQuitKey)
         guard wasSystemProxyEnabled else { return }
+        self.systemProxyMayResumeAfterOwnedClear = self.defaults.bool(forKey: self.systemProxyResumeOnLaunchKey)
+        self.defaults.removeObject(forKey: self.systemProxyResumeOnLaunchKey)
+        // Conflicts survive relaunch; a clean shutdown may resume only when no other proxy is enabled.
+        self.isSystemProxyEnabled = !self.systemProxyMayResumeAfterOwnedClear
         guard pendingCoreFeatureRecoveryState == nil else { return }
         pendingCoreFeatureRecoveryState = CoreFeatureRecoveryState(
             systemProxyEnabled: true,
@@ -579,33 +592,32 @@ extension AppViewModel {
         }
 
         if recovery.systemProxyEnabled {
+            self.isSystemProxyEnabled = true
             self.isProxySyncing = true
             defer { self.isProxySyncing = false }
 
             do {
-                let target = try await self.resolveSystemProxyTargetFromRuntimeConfig()
-                let isAlreadyConfigured = try await self.isSystemProxyConfigured(
-                    host: target.host,
-                    ports: target.ports)
-                if !isAlreadyConfigured {
+                let resolved = try await self.resolveSystemProxyTargetFromRuntimeConfig()
+                let target = SystemProxyTarget(host: resolved.host, ports: resolved.ports)
+                self.rememberSystemProxyTarget(host: target.host, ports: target.ports)
+                let snapshot = try self.systemProxyService.readSnapshot()
+                if self.systemProxyMayResumeAfterOwnedClear && !snapshot.isEnabled {
                     try await self.applySystemProxy(enabled: true, host: target.host, ports: target.ports)
                 }
-                self.isSystemProxyEnabled = true
+                self.systemProxyMayResumeAfterOwnedClear = false
                 self.clearSystemProxyOpenFailureHint()
-                self.systemProxyActiveDisplay = self.buildSystemProxyDisplayString(
-                    host: target.host,
-                    ports: target.ports)
+                self.checkSystemProxyConfiguration()
                 remainingSystemProxyRecovery = false
-                self.appendLog(
-                    level: "info",
-                    message: self.tr("log.system_proxy.toggled", self.tr("log.system_proxy.enabled")))
+                if self.systemProxyStatus == .active {
+                    self.appendLog(level: "info", message: self.tr("log.system_proxy.toggled", self.tr("log.system_proxy.enabled")))
+                }
             } catch {
                 self.appendLog(
                     level: "error",
                     message: self.tr("log.system_proxy.toggle_failed", self.systemProxyErrorMessage(error)))
                 self.updateSystemProxyOpenFailureHint(for: error)
                 await self.refreshSystemProxyHelperStatus()
-                await self.refreshSystemProxyStatus()
+                self.checkSystemProxyConfiguration()
             }
         }
 

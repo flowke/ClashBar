@@ -20,6 +20,8 @@ private enum RuleMatchType: String, CaseIterable {
 struct DashboardCustomRulesView: View {
     @ObservedObject var appViewModel: AppViewModel
     @Binding var request: DashboardCustomRuleRequest?
+    var testAllRequest: Int = 0
+    @Binding var isTesting: Bool
     @State private var operation: CustomRuleChange.Operation = .add
     @State private var type: RuleMatchType = .suffix
     @State private var match = ""
@@ -36,6 +38,11 @@ struct DashboardCustomRulesView: View {
     @State private var choosingPolicy = false
     @State private var policies: [String] = ["DIRECT", "REJECT"]
     @State private var localError: String?
+    @State private var testURL = ""
+    @State private var testResults: [UUID: RuleTestResult] = [:]
+    @State private var testingIDs: Set<UUID> = []
+    @State private var activeTestID: UUID?
+    @State private var testTask: Task<Void, Never>?
 
     private let ink = Color(red: 0.13, green: 0.20, blue: 0.25)
     private let muted = Color(red: 0.32, green: 0.42, blue: 0.49)
@@ -71,8 +78,13 @@ struct DashboardCustomRulesView: View {
             operation = newRequest.operation
             localError = nil
         }
-        .onChange(of: appViewModel.selectedConfigName) { _ in closeEditor(); loadOptions() }
-        .onChange(of: appViewModel.isRemoteTarget) { _ in closeEditor(); loadOptions() }
+        .onChange(of: appViewModel.selectedConfigName) { _ in cancelTests(); closeEditor(); loadOptions() }
+        .onChange(of: appViewModel.isRemoteTarget) { _ in cancelTests(); closeEditor(); loadOptions() }
+        .onChange(of: changes) { _ in cancelTests() }
+        .onChange(of: appViewModel.isRuntimeRunning) { _ in cancelTests() }
+        .onChange(of: appViewModel.dashboardConfigBusy) { busy in if busy { cancelTests() } }
+        .onChange(of: testAllRequest) { _ in startTests(changes.filter(canTest)) }
+        .onDisappear { cancelTests() }
         .onExitCommand { if request != nil { closeEditor() } }
     }
 
@@ -132,6 +144,11 @@ struct DashboardCustomRulesView: View {
                     fieldLabel(text("匹配内容", "Match value"))
                     TextField(type == .ip4 ? "192.0.2.0/24" : type == .ip6 ? "2001:db8::/32" : "example.com", text: $match)
                         .textFieldStyle(.roundedBorder)
+                        .onSubmit {
+                            if type == .domain, testURL.isEmpty, RuleTester.validURL("https://\(match)")?.host == match {
+                                testURL = "https://\(match)"
+                            }
+                        }
                     fieldLabel(text("处理方式", "Policy"))
                     Button { choosingPolicy = true } label: { menuLabel(policyLabel(policy)) }
                         .buttonStyle(.plain).popover(isPresented: $choosingPolicy) {
@@ -151,6 +168,16 @@ struct DashboardCustomRulesView: View {
                 .textSelection(.enabled).lineLimit(2)
 
             if operation != .delete {
+                fieldLabel(text("测试地址（可选）", "Test URL (optional)"))
+                HStack {
+                    TextField("https://example.com", text: $testURL).textFieldStyle(.roundedBorder)
+                    if !advanced && type == .domain && testURL.isEmpty {
+                        Button(text("使用匹配域名", "Use domain")) { testURL = "https://\(match)" }
+                            .buttonStyle(RuleLinkStyle()).disabled(RuleTester.validURL("https://\(match)")?.host != match)
+                    }
+                }
+                Text(text("输入完整 HTTP 或 HTTPS 地址，用于测试已生效的规则。", "Enter a full HTTP or HTTPS URL to test the applied rule."))
+                    .font(.system(size: 10)).foregroundStyle(muted)
                 Button(advanced ? text("退出高级模式", "Exit advanced mode") : text("高级模式：编辑原始规则", "Advanced: edit raw rule")) {
                     if advanced {
                         let parts = raw.split(separator: ",", omittingEmptySubsequences: false).map(String.init)
@@ -204,7 +231,9 @@ struct DashboardCustomRulesView: View {
                 Text(text("暂无自定义规则", "No custom rules yet")).font(.system(size: 12)).foregroundStyle(muted)
                     .frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 20)
             }
-            ForEach(Array(changes.enumerated()), id: \.offset) { index, change in ruleRow(change, index: index) }
+            ForEach(changes) { change in
+                if let index = changes.firstIndex(where: { $0.id == change.id }) { ruleRow(change, index: index) }
+            }
             Text(text("规则会先经过校验，再合并到当前基础配置。", "Rules are validated before merging into the base configuration."))
                 .font(.system(size: 10)).foregroundStyle(muted)
         }.padding(16).frame(maxWidth: .infinity, alignment: .topLeading)
@@ -224,14 +253,81 @@ struct DashboardCustomRulesView: View {
                 Text(change.operation == .delete ? text("从基础配置移除", "Removed from base") : change.value)
                     .font(.system(size: 10)).foregroundStyle(muted).lineLimit(2).textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                if change.operation != .delete {
+                    Button(text("测试", "Test")) { startTests([change]) }
+                        .buttonStyle(RuleLinkStyle())
+                        .disabled(disabled || !appViewModel.isRuntimeRunning || appViewModel.dashboardEffectiveRecord?.baseName != appViewModel.selectedConfigName || !canTest(change) || !testingIDs.isEmpty)
+                }
                 Button(text("编辑", "Edit")) { edit(change, index: index) }.buttonStyle(RuleLinkStyle()).disabled(disabled)
                 Button(change.operation == .delete ? text("撤销删除", "Undo") : text("删除", "Remove")) { remove(index: index) }
                     .buttonStyle(RuleLinkStyle()).disabled(disabled)
+            }
+            if change.operation != .delete {
+                Text(change.testURL.map { "\(text("测试地址", "Test URL")): \($0)" } ?? text("未配置测试地址", "No test URL configured"))
+                    .font(.system(size: 10)).foregroundStyle(muted).textSelection(.enabled)
+                if !RuleTester.supports(change) {
+                    Text(text("此规则类型暂不支持测试", "Testing is not supported for this rule type"))
+                        .font(.system(size: 10)).foregroundStyle(muted)
+                } else if testingIDs.contains(change.id) {
+                    Text(activeTestID == change.id ? text("测试中…", "Testing…") : text("等待测试", "Waiting to test"))
+                        .font(.system(size: 11)).foregroundStyle(blue)
+                } else if let result = testResults[change.id] {
+                    resultView(result)
+                }
             }
         }.padding(.horizontal, 14).padding(.vertical, 10)
             .frame(maxWidth: .infinity, minHeight: 64, alignment: .topLeading)
             .background(Color.white, in: RoundedRectangle(cornerRadius: 9))
             .overlay(RoundedRectangle(cornerRadius: 9).stroke(Color(red: 0.86, green: 0.89, blue: 0.91), lineWidth: 1))
+    }
+
+    private func resultView(_ result: RuleTestResult) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 16) {
+                Text(result.match == .matched ? text("命中规则及策略一致", "Rule and policy match") : result.match == .other ? text("命中其他规则或策略", "Different rule or policy") : text("无法确认命中", "Match unknown"))
+                    .foregroundStyle(result.match == .matched ? Color(red: 0.11, green: 0.48, blue: 0.32) : Color(red: 0.65, green: 0.37, blue: 0.08))
+                Text(result.requestError == nil ? "\(text("请求完成", "Request completed")) · HTTP \(result.statusCode.map(String.init) ?? "—")" : result.requestError == "Request timed out" ? text("请求超时", "Request timed out") : text("请求失败", "Request failed"))
+                    .foregroundStyle(muted)
+            }
+            Text("\(text("命中规则", "Matched rule")): \(result.rule ?? text("无法确认", "Unknown"))")
+            Text("\(text("线路", "Route")): \(result.chain.map { Array($0.reversed()).joined(separator: " → ") } ?? text("无法确认", "Unknown"))")
+            if let error = result.requestError { Text(error).textSelection(.enabled) }
+        }.font(.system(size: 10)).foregroundStyle(muted).fixedSize(horizontal: false, vertical: true)
+    }
+
+    private func canTest(_ change: CustomRuleChange) -> Bool {
+        RuleTester.supports(change) && change.testURL.flatMap(RuleTester.validURL) != nil
+    }
+
+    private func startTests(_ candidates: [CustomRuleChange]) {
+        guard !disabled, appViewModel.isRuntimeRunning, appViewModel.dashboardEffectiveRecord?.baseName == appViewModel.selectedConfigName,
+              testingIDs.isEmpty, !candidates.isEmpty else { return }
+        guard let client = try? appViewModel.clientOrThrow() else { return }
+        testingIDs = Set(candidates.map(\.id))
+        isTesting = true
+        for change in candidates { testResults.removeValue(forKey: change.id) }
+        testTask = Task {
+            for change in candidates {
+                guard !Task.isCancelled else { return }
+                activeTestID = change.id
+                do {
+                    let result = try await RuleTester.run(change: change, client: client)
+                    guard !Task.isCancelled else { return }
+                    testResults[change.id] = result
+                } catch {
+                    guard !Task.isCancelled else { return }
+                    testResults[change.id] = RuleTestResult(match: .unknown, rule: nil, chain: nil, statusCode: nil, requestError: error.localizedDescription)
+                }
+                testingIDs.remove(change.id)
+            }
+            activeTestID = nil
+            isTesting = false
+            testTask = nil
+        }
+    }
+
+    private func cancelTests() {
+        testTask?.cancel(); testTask = nil; testingIDs = []; activeTestID = nil; isTesting = false; testResults = [:]
     }
 
     private func fieldLabel(_ label: String) -> some View {
@@ -310,11 +406,11 @@ struct DashboardCustomRulesView: View {
         } catch { baseRules = []; localError = error.localizedDescription }
     }
     private func reset() {
-        editingIndex = nil; editingOriginal = nil; match = ""; original = ""; raw = ""; type = .suffix; policy = "DIRECT"; advanced = false
+        editingIndex = nil; editingOriginal = nil; match = ""; original = ""; raw = ""; testURL = ""; type = .suffix; policy = "DIRECT"; advanced = false
         localError = nil; appViewModel.dashboardConfigError = nil
     }
     private func edit(_ change: CustomRuleChange, index: Int) {
-        reset(); editingIndex = index; editingOriginal = change; operation = change.operation; original = change.original
+        reset(); editingIndex = index; editingOriginal = change; operation = change.operation; original = change.original; testURL = change.testURL ?? ""
         let parts = change.value.split(separator: ",", omittingEmptySubsequences: false).map(String.init)
         if parts.count == 3, let parsed = RuleMatchType(rawValue: parts[0]) {
             type = parsed; match = parts[1]; policy = parts[2]
@@ -331,6 +427,10 @@ struct DashboardCustomRulesView: View {
         localError = nil
         guard operation == .add || !original.isEmpty else { localError = text("请选择基础规则。", "Select a base rule."); return }
         let nextValue = advanced ? raw.trimmingCharacters(in: .whitespacesAndNewlines) : generated
+        let urlValue = testURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard operation == .delete || urlValue.isEmpty || RuleTester.validURL(urlValue) != nil else {
+            localError = text("请输入完整的 HTTP 或 HTTPS 地址。", "Enter a complete HTTP or HTTPS URL."); return
+        }
         guard operation == .delete || (advanced ? !nextValue.isEmpty : !match.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !match.contains(",")) else {
             localError = text("请输入有效的匹配内容。", "Enter a valid match value."); return
         }
@@ -339,7 +439,7 @@ struct DashboardCustomRulesView: View {
             localError = text("规则列表已变更，请重新编辑。", "The rule list changed. Edit the rule again.")
             return
         }
-        let change = CustomRuleChange(id: editingIndex.map { next[$0].id } ?? UUID(), operation: operation, original: operation == .add ? "" : original, value: operation == .delete ? "" : nextValue)
+        let change = CustomRuleChange(id: editingIndex.map { next[$0].id } ?? UUID(), operation: operation, original: operation == .add ? "" : original, value: operation == .delete ? "" : nextValue, testURL: operation == .delete || urlValue.isEmpty ? nil : urlValue)
         if let index = editingIndex { next[index] = change } else { next.append(change) }
         Task { if await appViewModel.applyDashboardConfiguration(baseName: appViewModel.selectedConfigName, changes: next) { closeEditor(); loadOptions() } }
     }

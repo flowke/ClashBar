@@ -87,6 +87,7 @@ extension AppViewModel {
         self.updateDataAcquisitionPolicy()
 
         guard presented else { return }
+        self.scheduleSystemProxyStatusRefresh()
         self.refreshManagedCoreMetadata()
         self.flushPendingTrafficSnapshotIfNeeded(immediately: true)
         self.scheduleRefreshForActivatedTab(activeMenuTab)
@@ -560,22 +561,8 @@ extension AppViewModel {
             return
         }
 
-        do {
-            let enabled = try await readSystemProxyEnabledState()
-            isSystemProxyEnabled = enabled
-            if enabled {
-                systemProxyActiveDisplay = try await readSystemProxyActiveDisplay()
-            } else {
-                systemProxyActiveDisplay = nil
-            }
-            await self.refreshSystemProxyExceptionsFromSystemIfPossible()
-            await self.refreshSystemProxyHelperRuntimeSnapshot()
-            self.systemProxyHelperFailureReason = nil
-            self.systemProxyHelperFailureMessage = nil
-        } catch {
-            appendLog(level: "error", message: tr("log.system_proxy.read_failed", systemProxyErrorMessage(error)))
-            await self.refreshSystemProxyHelperStatus()
-        }
+        guard !self.isProxySyncing else { return }
+        self.checkSystemProxyConfiguration()
     }
 
     private func applyStreamPolicy(_ policy: DataAcquisitionPolicy) {

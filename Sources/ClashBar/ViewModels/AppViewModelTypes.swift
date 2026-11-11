@@ -180,12 +180,46 @@ struct MenuBarSpeedLines: Equatable {
     static let zero = MenuBarSpeedLines(up: "0K↑", down: "0K↓")
 }
 
+enum MenuBarIconState: Equatable {
+    case sleep
+    case run
+    case tun
+    case warning
+}
+
 struct MenuBarDisplay: Equatable {
     let mode: StatusBarDisplayMode
     let symbolName: String?
     let speedLines: MenuBarSpeedLines?
     let isRunning: Bool
+    let isSystemProxyEnabled: Bool
     let isTunEnabled: Bool
+    let hasWarning: Bool
+
+    init(
+        mode: StatusBarDisplayMode,
+        symbolName: String?,
+        speedLines: MenuBarSpeedLines?,
+        isRunning: Bool,
+        isSystemProxyEnabled: Bool,
+        isTunEnabled: Bool,
+        hasWarning: Bool = false)
+    {
+        self.mode = mode
+        self.symbolName = symbolName
+        self.speedLines = speedLines
+        self.isRunning = isRunning
+        self.isSystemProxyEnabled = isSystemProxyEnabled
+        self.isTunEnabled = isTunEnabled
+        self.hasWarning = hasWarning
+    }
+
+    var iconState: MenuBarIconState {
+        if self.hasWarning { return .warning }
+        guard self.isRunning else { return .sleep }
+        if self.isTunEnabled { return .tun }
+        return self.isSystemProxyEnabled ? .run : .sleep
+    }
 }
 
 struct StatusItemBanner: Equatable, Identifiable {
@@ -305,7 +339,7 @@ extension EditableSettingsSnapshot {
     }
 }
 
-struct SystemProxyPorts: Equatable {
+struct SystemProxyPorts: Codable, Equatable, Sendable {
     let httpPort: Int?
     let httpsPort: Int?
     let socksPort: Int?

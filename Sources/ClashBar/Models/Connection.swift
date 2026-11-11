@@ -114,19 +114,22 @@ struct ConnectionMetadata: Codable, Equatable {
     let sourceIP: String?
     let destinationIP: String?
     let host: String?
+    let sourcePort: Int?
 
     private enum CodingKeys: String, CodingKey {
         case network
         case sourceIP
         case destinationIP
         case host
+        case sourcePort
     }
 
-    init(network: String?, sourceIP: String?, destinationIP: String?, host: String?) {
+    init(network: String?, sourceIP: String?, destinationIP: String?, host: String?, sourcePort: Int? = nil) {
         self.network = network
         self.sourceIP = sourceIP
         self.destinationIP = destinationIP
         self.host = host
+        self.sourcePort = sourcePort
     }
 
     init(from decoder: Decoder) throws {
@@ -143,6 +146,7 @@ struct ConnectionMetadata: Codable, Equatable {
                 keys: ["destination_ip", "destination", "remoteIP", "remoteAddress"])
         self.host = try container.decodeIfPresent(String.self, forKey: .host).trimmedNonEmpty
             ?? ConnectionAnyCodingKey.decodeString(in: dynamic, keys: ["destinationHost", "remoteHost", "addr"])
+        self.sourcePort = ConnectionAnyCodingKey.decodeString(in: dynamic, keys: ["sourcePort", "source_port"]).flatMap(Int.init)
     }
 }
 

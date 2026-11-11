@@ -31,12 +31,14 @@ struct MenuBarHeaderView: TranslatingView {
                     guard let url = URL(string: "https://github.com/Sitoi/ClashBar") else { return }
                     self.openURL(url)
                 } label: {
-                    if let brandImage = BrandIcon.image {
+                    if let brandImage = BrandIcon.headerImage(for: self.appViewModel.menuBarDisplaySnapshot.iconState) {
                         Image(nsImage: brandImage)
+                            .renderingMode(brandImage.isTemplate ? .template : .original)
                             .resizable()
                             .interpolation(.high)
                             .scaledToFit()
                             .frame(width: self.headerLogoSize, height: self.headerLogoSize)
+                            .foregroundStyle(.primary)
                     } else {
                         Image(systemName: "paperplane.fill")
                             .renderingMode(.template)
@@ -254,20 +256,28 @@ struct MenuBarHeaderView: TranslatingView {
     }
 
     var headerConnectionStatusTint: Color {
+        if self.appViewModel.systemProxyStatus.needsAttention, self.appViewModel.isRuntimeRunning,
+           self.appViewModel.apiStatus == .healthy {
+            return Color(nsColor: .systemYellow)
+        }
         return self.statusColor
     }
 
     var headerConnectionHelpText: String {
-        self.tr(
+        let endpoint = self.tr(
             "ui.machine.proxy_endpoint_help",
             self.appViewModel.proxyEndpointDisplay,
             self.appViewModel.externalControllerDisplay)
+        return self.appViewModel.systemProxyStatus.needsAttention
+            ? "\(endpoint)\n\(self.appViewModel.systemProxyStatusHelp)" : endpoint
     }
 
     var headerConnectionAccessibilityLabel: String {
-        self.tr(
+        let endpoint = self.tr(
             "ui.machine.proxy_endpoint_accessibility",
             self.appViewModel.proxyEndpointDisplay,
             self.appViewModel.externalControllerDisplay)
+        return self.appViewModel.systemProxyStatus.needsAttention
+            ? "\(endpoint), \(self.appViewModel.systemProxyStatusHelp)" : endpoint
     }
 }

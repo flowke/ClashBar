@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ClashBar 代码渲染预览</title>
+<style>
+  #code-icon-preview { display: grid; gap: 16px; color: var(--foreground); font-family: var(--font-sans); }
+  #code-icon-preview * { box-sizing: border-box; }
+  #code-icon-preview .caption { color: var(--muted-foreground); font-size: 12px; }
+  #code-icon-preview .strip { padding: 16px; border-radius: var(--radius); display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+  #code-icon-preview .light { background: #eef0f4; color: #25272a; }
+  #code-icon-preview .dark { background: #292d35; color: #f1f2f4; }
+  #code-icon-preview figure { display: flex; flex-direction: column; align-items: center; gap: 12px; margin: 0; }
+  #code-icon-preview img { height: 24px; width: 28px; object-fit: contain; display: block; }
+  #code-icon-preview img.tun { width: 32px; }
+  #code-icon-preview figcaption { font-size: 12px; }
+</style>
+</head>
+<body>
+<div id="code-icon-preview">
+  <div class="caption">代码实际渲染 · 24pt 原尺寸</div>
+  <div class="strip dark" aria-label="深色外观下的四种图标状态">
+    <figure><img src="../applied-four-states/NSAppearanceNameDarkAqua-icon_only-sleep.png" alt="白色关闭轮廓"><figcaption>关闭</figcaption></figure>
+    <figure><img src="../applied-four-states/NSAppearanceNameDarkAqua-icon_only-run.png" alt="蓝色运行图标"><figcaption>运行</figcaption></figure>
+    <figure><img class="tun" src="../applied-four-states/NSAppearanceNameDarkAqua-icon_only-tun.png" alt="蓝色盾牌 TUN 图标"><figcaption>TUN</figcaption></figure>
+    <figure><img src="../applied-four-states/NSAppearanceNameDarkAqua-icon_only-warning.png" alt="黄色异常轮廓"><figcaption>异常</figcaption></figure>
+  </div>
+  <div class="strip light" aria-label="浅色外观下的四种图标状态">
+    <figure><img src="../applied-four-states/NSAppearanceNameAqua-icon_only-sleep.png" alt="深色关闭轮廓"><figcaption>关闭</figcaption></figure>
+    <figure><img src="../applied-four-states/NSAppearanceNameAqua-icon_only-run.png" alt="蓝色运行图标"><figcaption>运行</figcaption></figure>
+    <figure><img class="tun" src="../applied-four-states/NSAppearanceNameAqua-icon_only-tun.png" alt="蓝色盾牌 TUN 图标"><figcaption>TUN</figcaption></figure>
+    <figure><img src="../applied-four-states/NSAppearanceNameAqua-icon_only-warning.png" alt="黄色异常轮廓"><figcaption>异常</figcaption></figure>
+  </div>
+</div>
+</body>
+</html>

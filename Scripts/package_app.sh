@@ -29,43 +29,7 @@ if [ -n "$TARGET_ARCH" ]; then
   BUILD_ARGS+=(--arch "$TARGET_ARCH")
 fi
 swift build "${BUILD_ARGS[@]}"
-
-if [ -n "$TARGET_ARCH" ]; then
-  BIN_CANDIDATE="$ROOT/.build/${TARGET_ARCH}-apple-macosx/release/ClashBar"
-  RESOURCE_BUNDLE_CANDIDATE="$ROOT/.build/${TARGET_ARCH}-apple-macosx/release/ClashBar_ClashBar.bundle"
-  HELPER_BIN_CANDIDATE="$ROOT/.build/${TARGET_ARCH}-apple-macosx/release/ClashBarProxyHelper"
-  BIN_PATTERN="*/${TARGET_ARCH}-apple-macosx/release/ClashBar"
-  RESOURCE_BUNDLE_PATTERN="*/${TARGET_ARCH}-apple-macosx/release/ClashBar_ClashBar.bundle"
-  HELPER_PATTERN="*/${TARGET_ARCH}-apple-macosx/release/ClashBarProxyHelper"
-else
-  BIN_CANDIDATE="$ROOT/.build/release/ClashBar"
-  RESOURCE_BUNDLE_CANDIDATE="$ROOT/.build/release/ClashBar_ClashBar.bundle"
-  HELPER_BIN_CANDIDATE="$ROOT/.build/release/ClashBarProxyHelper"
-  BIN_PATTERN="*/release/ClashBar"
-  RESOURCE_BUNDLE_PATTERN="*/release/ClashBar_ClashBar.bundle"
-  HELPER_PATTERN="*/release/ClashBarProxyHelper"
-fi
-
-resolve_build_artifact() {
-  local candidate="$1"
-  local artifact_type="$2"
-  local release_pattern="$3"
-
-  if [ "$artifact_type" = "file" ] && [ -f "$candidate" ]; then
-    echo "$candidate"
-    return
-  fi
-  if [ "$artifact_type" = "dir" ] && [ -d "$candidate" ]; then
-    echo "$candidate"
-    return
-  fi
-
-  local find_type="f"
-  if [ "$artifact_type" = "dir" ]; then
-    find_type="d"
-  fi
-  find "$ROOT/.build" -path "$release_pattern" -type "$find_type" | head -n 1 || true
-}
+BUILD_OUTPUT_DIR="$(swift build "${BUILD_ARGS[@]}" --show-bin-path)"
 
 artifact_size_bytes() {
   stat -f%z "$1"
@@ -126,6 +90,8 @@ resolve_mihomo_install_path() {
   local bundle_dir="$APP/Contents/Resources/ClashBar_ClashBar.bundle"
   local resources_dir="$APP/Contents/Resources"
   local candidates=(
+    "$bundle_dir/Contents/Resources/$filename"
+    "$bundle_dir/Contents/Resources/bin/$filename"
     "$bundle_dir/$filename"
     "$bundle_dir/bin/$filename"
     "$bundle_dir/Resources/bin/$filename"
@@ -163,6 +129,8 @@ remove_bundled_mihomo_candidates() {
     fi
   done < <(printf '%s\n' \
     "$(resolve_mihomo_install_path "$filename")" \
+    "$APP/Contents/Resources/ClashBar_ClashBar.bundle/Contents/Resources/$filename" \
+    "$APP/Contents/Resources/ClashBar_ClashBar.bundle/Contents/Resources/bin/$filename" \
     "$APP/Contents/Resources/ClashBar_ClashBar.bundle/bin/$filename" \
     "$APP/Contents/Resources/ClashBar_ClashBar.bundle/Resources/bin/$filename" \
     "$APP/Contents/Resources/bin/$filename" \
@@ -170,9 +138,9 @@ remove_bundled_mihomo_candidates() {
     "$APP/Contents/Resources/$filename" | awk '!seen[$0]++')
 }
 
-BIN="$(resolve_build_artifact "$BIN_CANDIDATE" file "$BIN_PATTERN")"
-RESOURCE_BUNDLE="$(resolve_build_artifact "$RESOURCE_BUNDLE_CANDIDATE" dir "$RESOURCE_BUNDLE_PATTERN")"
-HELPER_BIN="$(resolve_build_artifact "$HELPER_BIN_CANDIDATE" file "$HELPER_PATTERN")"
+BIN="$BUILD_OUTPUT_DIR/ClashBar"
+RESOURCE_BUNDLE="$BUILD_OUTPUT_DIR/ClashBar_ClashBar.bundle"
+HELPER_BIN="$BUILD_OUTPUT_DIR/ClashBarProxyHelper"
 
 if [ ! -f "$BIN" ]; then
   echo "Build output not found: $BIN" >&2

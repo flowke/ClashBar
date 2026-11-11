@@ -97,6 +97,7 @@ struct CustomRuleChange: Codable, Equatable, Identifiable {
     var operation: Operation
     var original: String
     var value: String
+    var testURL: String? = nil
 }
 
 enum ConfigRuleMergeError: LocalizedError {

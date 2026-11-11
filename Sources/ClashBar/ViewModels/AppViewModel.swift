@@ -52,6 +52,8 @@ final class AppViewModel: ObservableObject {
     }
 
     let connectionsStore = ConnectionsStore()
+    lazy var serviceStatusStore = ServiceStatusViewModel(
+        storageURL: self.workingDirectoryManager.stateDirectoryURL.appendingPathComponent("service-status.json"))
 
     @Published var currentMode: CoreMode = .rule
     @Published var logLevel: String = "info"
@@ -176,7 +178,16 @@ final class AppViewModel: ObservableObject {
         set { self.proxyStore.isRuleProvidersRefreshing = newValue }
     }
 
-    @Published var isSystemProxyEnabled: Bool = false
+    /// The user's intent survives external changes to macOS proxy settings.
+    @Published var isSystemProxyEnabled: Bool = false {
+        didSet { self.refreshMenuBarDisplaySnapshotIfNeeded() }
+    }
+    @Published var systemProxyStatus: SystemProxyStatus = .disabled {
+        didSet { self.refreshMenuBarDisplaySnapshotIfNeeded() }
+    }
+    @Published var systemProxyActualDisplay: String?
+    var systemProxyExpectedTarget: SystemProxyTarget?
+    var systemProxyMayResumeAfterOwnedClear = false
     @Published var systemProxyEnableIntentInFlight: Bool = false
     @Published var systemProxyHelperFailureReason: SystemProxyHelperFailureReason?
     @Published var systemProxyHelperFailureMessage: String?
@@ -250,6 +261,7 @@ final class AppViewModel: ObservableObject {
         symbolName: "bolt.slash.circle",
         speedLines: nil,
         isRunning: false,
+        isSystemProxyEnabled: false,
         isTunEnabled: false)
 
     @Published var settingsAllowLan: Bool = false
@@ -288,7 +300,7 @@ final class AppViewModel: ObservableObject {
         }
         guard self.processManager.isRunning || normalized == "running" else { return .stopped }
         switch self.apiStatus {
-        case .healthy: return .runningHealthy
+        case .healthy: return self.systemProxyStatus.needsAttention ? .runningDegraded : .runningHealthy
         case .failed: return .failed
         case .degraded, .unknown: return .runningDegraded
         }
@@ -382,12 +394,19 @@ final class AppViewModel: ObservableObject {
 
     private var computedMenuBarDisplay: MenuBarDisplay {
         let mode = self.statusBarDisplayMode
+        let hasWarning = switch self.runtimeVisualStatus {
+        case .failed: true
+        case .runningDegraded: self.apiStatus == .degraded || self.systemProxyStatus.needsAttention
+        default: false
+        }
         return MenuBarDisplay(
             mode: mode,
             symbolName: mode == .speedOnly ? nil : self.menuBarSymbolName,
             speedLines: mode == .iconOnly ? nil : self.menuBarSpeedLines,
             isRunning: self.isRuntimeRunning,
-            isTunEnabled: self.isTunEnabled)
+            isSystemProxyEnabled: self.isSystemProxyEnabled,
+            isTunEnabled: self.isTunEnabled,
+            hasWarning: hasWarning)
     }
 
     func compactMenuBarRate(_ bytesPerSecond: Int64) -> String {
@@ -433,7 +452,8 @@ final class AppViewModel: ObservableObject {
     }
 
     var isSystemProxyToggleEnabled: Bool {
-        !self.isProxySyncing && (self.isSystemProxyEnabled || self.canEnableSystemProxy)
+        if self.systemProxyStatus.needsAttention { return !self.isProxySyncing && self.canEnableSystemProxy }
+        return !self.isProxySyncing && (self.isSystemProxyEnabled || self.canEnableSystemProxy)
     }
 
     var autoStartCoreEnabled: Bool {
@@ -465,7 +485,7 @@ final class AppViewModel: ObservableObject {
 
     let processManager: any MihomoControlling
     let configService: ConfigService
-    let systemProxyService: SystemProxyService
+    let systemProxyService: any SystemProxyServicing
     let tunPermissionService: TunPermissionService
     let launchAtLoginService: AppLaunchService
     let workingDirectoryManager: WorkingDirectoryManager
@@ -478,6 +498,9 @@ final class AppViewModel: ObservableObject {
 
     var mediumFrequencyTask: Task<Void, Never>?
     var lowFrequencyTask: Task<Void, Never>?
+    let systemProxyMonitor = SystemProxyMonitor()
+    var systemProxyMonitorTask: Task<Void, Never>?
+    var systemProxyDebounceTask: Task<Void, Never>?
     let streamCoordinator = StreamCoordinator()
     var proxyPortsAutoSaveTask: Task<Void, Never>?
     var proxyPortRetryTask: Task<Void, Never>?
@@ -530,6 +553,8 @@ final class AppViewModel: ObservableObject {
     let lastSuccessfulConfigPathKey = "clashbar.last.success.config.path"
     let editableSettingsSnapshotKey = "clashbar.settings.editable.snapshot.v1"
     let systemProxyEnabledOnQuitKey = "clashbar.system_proxy.enabled_on_quit"
+    let systemProxyTargetKey = "clashbar.system_proxy.expected_target.v1"
+    let systemProxyResumeOnLaunchKey = "clashbar.system_proxy.resume_after_owned_clear"
     let systemProxyExceptionsKey = "clashbar.system_proxy.exceptions.v1"
     let tunStackKey = "clashbar.tun.stack"
     let ssidStrategyRulesKey = "clashbar.ssid.strategy.rules.v1"

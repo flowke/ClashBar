@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root { color-scheme: light dark; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: var(--font-sans); color: var(--foreground); }
+    main { display: grid; gap: 22px; }
+    figure { margin: 0; }
+    .comparison { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .comparison figure { display: grid; justify-items: center; gap: 16px; padding: 22px 16px 18px; background: var(--card); border-radius: var(--radius); }
+    .comparison img { display: block; height: 88px; width: auto; max-width: 100%; object-fit: contain; }
+    figcaption { font-size: 14px; line-height: 1.5; text-align: center; }
+    .muted { color: var(--muted-foreground); }
+    .states { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding: 20px 16px; background: var(--secondary); border-radius: var(--radius); }
+    .states figure { display: grid; justify-items: center; align-content: start; gap: 14px; }
+    .states img { display: block; height: 66px; width: auto; max-width: 100%; object-fit: contain; }
+    .states figcaption { font-size: 13px; }
+    .caption { margin: 0 0 12px; font-size: 14px; font-weight: 600; }
+    .menus { display: grid; gap: 10px; }
+    .menu { display: flex; align-items: center; gap: 18px; padding: 15px 18px; border-radius: var(--radius); }
+    .menu-light { background: color-mix(in srgb, var(--foreground) 5%, white); color: color-mix(in srgb, var(--foreground) 20%, black); }
+    .menu-dark { background: color-mix(in srgb, var(--foreground) 12%, black); color: color-mix(in srgb, var(--foreground) 10%, white); }
+    .menu img { display: block; flex: none; height: 22px; width: auto; }
+    .divider { height: 18px; width: 1px; background: currentColor; opacity: .25; }
+    .menu-label { min-width: 28px; font-size: 11px; opacity: .75; }
+    .speed { margin-left: auto; font-size: 11px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .note { margin: 11px 0 0; font-size: 12px; line-height: 1.6; color: var(--muted-foreground); }
+    @media (max-width: 440px) {
+      .comparison { gap: 10px; }
+      .comparison figure { padding: 18px 12px 14px; }
+      .comparison img { height: 68px; }
+      .states { gap: 8px; padding: 18px 10px; }
+      .states img { height: 48px; }
+      .states figcaption { font-size: 12px; }
+      .menu { gap: 15px; padding: 15px 14px; }
+      .speed { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <main aria-label="ClashBar 菜单栏盾牌版设计">
+    <section class="comparison" aria-label="TUN 文字与盾牌对比">
+      <figure>
+        <img src="../upper-body-rounded/eDYDX.png" alt="原方案：圆润蓝猫右侧为 TUN 文字胶囊">
+        <figcaption class="muted">原方案 · TUN 文字</figcaption>
+      </figure>
+      <figure>
+        <img src="../upper-body-shield/eDYDX.png" alt="新方案：相同蓝猫右侧为品牌蓝半实心盾牌">
+        <figcaption>新方案 · 半实心盾牌</figcaption>
+      </figure>
+    </section>
+    <section class="states" aria-label="三种菜单栏图标状态">
+      <figure>
+        <img src="../upper-body-shield/ikzA7.png" alt="关闭状态：偏黑色空心猫轮廓">
+        <figcaption>关闭 · 空心描边</figcaption>
+      </figure>
+      <figure>
+        <img src="../upper-body-shield/Lnf10.png" alt="运行状态：品牌蓝圆润猫上半身">
+        <figcaption>运行 · 品牌蓝</figcaption>
+      </figure>
+      <figure>
+        <img src="../upper-body-shield/eDYDX.png" alt="TUN 状态：品牌蓝圆润猫上半身和半实心盾牌">
+        <figcaption>TUN · 蓝色盾牌</figcaption>
+      </figure>
+    </section>
+    <section aria-label="22pt 原尺寸浅色与深色菜单栏预览">
+      <p class="caption">22pt 原尺寸</p>
+      <div class="menus">
+        <div class="menu menu-light">
+          <span class="menu-label">浅色</span>
+          <img src="../upper-body-shield/ikzA7.png" alt="浅色菜单栏的关闭态">
+          <img src="../upper-body-shield/Lnf10.png" alt="浅色菜单栏的运行态">
+          <img src="../upper-body-shield/eDYDX.png" alt="浅色菜单栏的盾牌 TUN 态">
+          <span class="divider" aria-hidden="true"></span>
+          <span class="speed">↑ 1.2 MB/s　↓ 8.6 MB/s</span>
+        </div>
+        <div class="menu menu-dark">
+          <span class="menu-label">深色</span>
+          <img src="../upper-body-shield/BX6oO.png" alt="深色菜单栏的浅白空心关闭态">
+          <img src="../upper-body-shield/Lnf10.png" alt="深色菜单栏的运行态">
+          <img src="../upper-body-shield/eDYDX.png" alt="深色菜单栏的盾牌 TUN 态">
+          <span class="divider" aria-hidden="true"></span>
+          <span class="speed">↑ 1.2 MB/s　↓ 8.6 MB/s</span>
+        </div>
+      </div>
+      <p class="note">盾牌与猫使用同一品牌蓝；保留已确认的猫形与表情。当前为设计预览。</p>
+    </section>
+  </main>
+</body>
+</html>

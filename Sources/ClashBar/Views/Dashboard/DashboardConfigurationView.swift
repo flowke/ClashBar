@@ -128,6 +128,8 @@ struct DashboardConfigurationView: View {
     @ObservedObject var appViewModel: AppViewModel
     @State private var tab = 0
     @State private var customRuleRequest: DashboardCustomRuleRequest?
+    @State private var testAllRequest = 0
+    @State private var testingCustomRules = false
     @State private var editingName: String?
     @State private var editingValue = ""
     @State private var editingURL = ""
@@ -179,6 +181,15 @@ struct DashboardConfigurationView: View {
                 if tab == 1 {
                     Spacer(minLength: 12)
                     Button {
+                        testAllRequest += 1
+                    } label: {
+                        Label(text("测试全部", "Test all"), systemImage: "play")
+                    }
+                    .buttonStyle(DashboardSectionButtonStyle())
+                    .disabled(testingCustomRules || appViewModel.dashboardConfigBusy || appViewModel.isRemoteTarget || !appViewModel.isRuntimeRunning ||
+                              appViewModel.dashboardEffectiveRecord?.baseName != appViewModel.selectedConfigName ||
+                              !changes.contains { RuleTester.supports($0) && $0.testURL.flatMap(RuleTester.validURL) != nil })
+                    Button {
                         customRuleRequest = nil
                         customRuleMenuPresented.toggle()
                     } label: {
@@ -205,7 +216,7 @@ struct DashboardConfigurationView: View {
             }
             switch tab {
             case 0: effectiveView
-            case 1: DashboardCustomRulesView(appViewModel: appViewModel, request: $customRuleRequest)
+            case 1: DashboardCustomRulesView(appViewModel: appViewModel, request: $customRuleRequest, testAllRequest: testAllRequest, isTesting: $testingCustomRules)
             default: sourcesView
             }
         }

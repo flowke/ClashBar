@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ClashBar 菜单栏图标 · 18pt 灰蓝版</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 32px 24px; background: #f4f5f7; color: #253140; font: 14px/1.6 system-ui, sans-serif; }
+    main { max-width: 780px; margin: auto; }
+    h1 { margin: 0 0 10px; font-size: 24px; }
+    h2 { margin: 32px 0 12px; font-size: 18px; }
+    p { margin: 8px 0 18px; }
+    .appearances { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+    .panel { padding: 20px; border-radius: 12px; background: #e6e9ed; }
+    .panel.dark { background: #272b32; color: #e7eef5; }
+    .label { font-size: 12px; margin: 0 0 10px; }
+    .menu { display: flex; height: 24px; align-items: center; gap: 18px; margin: 0 0 20px; }
+    .menu img { display: block; width: 24px; height: 24px; object-fit: contain; }
+    .menu .tun { width: 28px; }
+    .menu.before img { width: 28px; }
+    .menu.before .tun { width: 32px; }
+    .states { display: flex; flex-wrap: wrap; gap: 28px; }
+    figure { margin: 0; width: 130px; }
+    figure img { display: block; height: 88px; width: 128px; object-fit: contain; margin: 0 0 12px; }
+    figcaption { font-size: 13px; }
+    a { color: #365f8c; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>菜单栏图标：缩小一点，配色柔和一点</h1>
+    <p>图形高度由 22pt 调整为 18pt，居中绘制。运行和 TUN 使用灰蓝 #547FAA，五官使用蓝白 #E7EEF5。</p>
+    <h2>代码渲染 · 实际尺寸</h2>
+    <p>按关闭、运行、TUN、异常排列。以浏览器 100% 缩放查看尺寸；关闭态为系统模板，下方展示浅色和深色外观。</p>
+    <div class="appearances">
+      <section class="panel" aria-label="浅色菜单栏">
+        <p class="label">调整前 · 22pt</p>
+        <div class="menu before">
+          <img src="../applied-four-states/NSAppearanceNameAqua-icon_only-sleep.png" alt="原关闭态">
+          <img src="../applied-four-states/NSAppearanceNameAqua-icon_only-run.png" alt="原运行态">
+          <img class="tun" src="../applied-four-states/NSAppearanceNameAqua-icon_only-tun.png" alt="原 TUN 态">
+          <img src="../applied-four-states/NSAppearanceNameAqua-icon_only-warning.png" alt="原异常态">
+        </div>
+        <p class="label">修订版 · 18pt</p>
+        <div class="menu">
+          <img src="../applied-balanced-states/NSAppearanceNameAqua-icon_only-sleep.png" alt="关闭态">
+          <img src="../applied-balanced-states/NSAppearanceNameAqua-icon_only-run.png" alt="灰蓝运行态">
+          <img class="tun" src="../applied-balanced-states/NSAppearanceNameAqua-icon_only-tun.png" alt="灰蓝 TUN 态">
+          <img src="../applied-balanced-states/NSAppearanceNameAqua-icon_only-warning.png" alt="黄色异常态">
+        </div>
+      </section>
+      <section class="panel dark" aria-label="深色菜单栏">
+        <p class="label">调整前 · 22pt</p>
+        <div class="menu before">
+          <img src="../applied-four-states/NSAppearanceNameDarkAqua-icon_only-sleep.png" alt="原关闭态">
+          <img src="../applied-four-states/NSAppearanceNameDarkAqua-icon_only-run.png" alt="原运行态">
+          <img class="tun" src="../applied-four-states/NSAppearanceNameDarkAqua-icon_only-tun.png" alt="原 TUN 态">
+          <img src="../applied-four-states/NSAppearanceNameDarkAqua-icon_only-warning.png" alt="原异常态">
+        </div>
+        <p class="label">修订版 · 18pt</p>
+        <div class="menu">
+          <img src="../applied-balanced-states/NSAppearanceNameDarkAqua-icon_only-sleep.png" alt="关闭态">
+          <img src="../applied-balanced-states/NSAppearanceNameDarkAqua-icon_only-run.png" alt="灰蓝运行态">
+          <img class="tun" src="../applied-balanced-states/NSAppearanceNameDarkAqua-icon_only-tun.png" alt="灰蓝 TUN 态">
+          <img src="../applied-balanced-states/NSAppearanceNameDarkAqua-icon_only-warning.png" alt="黄色异常态">
+        </div>
+      </section>
+    </div>
+    <h2>放大查看 · 当前定稿</h2>
+    <div class="states">
+      <figure><img src="ikzA7.png" alt="空心关闭态"><figcaption>关闭 · 系统单色模板</figcaption></figure>
+      <figure><img src="Lnf10.png" alt="灰蓝运行态"><figcaption>运行 · 柔和灰蓝</figcaption></figure>
+      <figure><img src="eDYDX.png" alt="嵌入盾牌的 TUN 态"><figcaption>TUN · 嵌入式盾牌</figcaption></figure>
+      <figure><img src="Pq2hu.png" alt="黄色异常态"><figcaption>异常 · 黄色轮廓</figcaption></figure>
+    </div>
+    <p><a href="jfGlP.png">完整 Pencil 画板</a> · <a href="../README.md">图标素材索引</a></p>
+  </main>
+</body>
+</html>

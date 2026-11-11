@@ -15,7 +15,7 @@ final class ClashBarAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelega
             "NSWindowRestorationSupported": false,
         ])
 
-        if let image = BrandIcon.image {
+        if let image = BrandIcon.appImage {
             NSApp.applicationIconImage = image
         }
         NSApp.setActivationPolicy(.accessory)

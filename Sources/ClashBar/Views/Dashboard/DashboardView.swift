@@ -33,16 +33,19 @@ struct DashboardView: View {
         self.sidebarState = sidebarState
         self._selection = State(initialValue: initialPage)
         self.initialConfigurationTab = initialConfigurationTab
+        appViewModel.serviceStatusStore.observe(app: appViewModel)
     }
 
     enum Page: CaseIterable {
         case overview
         case configuration
+        case serviceStatus
 
         func title(language: AppLanguage) -> String {
             switch self {
             case .overview: language == .zhHans ? "概览" : "Overview"
             case .configuration: language == .zhHans ? "配置" : "Configuration"
+            case .serviceStatus: language == .zhHans ? "服务状态" : "Service Status"
             }
         }
 
@@ -50,6 +53,7 @@ struct DashboardView: View {
             switch self {
             case .overview: "square.grid.2x2"
             case .configuration: "doc.text"
+            case .serviceStatus: "waveform.path.ecg"
             }
         }
     }
@@ -68,11 +72,19 @@ struct DashboardView: View {
                             .foregroundStyle(Color(red: 0.32, green: 0.40, blue: 0.46))
                             .padding(.top, -14)
                     }
+                    if self.selection == .serviceStatus {
+                        Text(self.appViewModel.uiLanguage == .zhHans ? "对比当前线路与直连访问，查看实际节点与连通情况" : "Compare the current route with a direct connection and inspect the actual route")
+                            .font(.system(size: 12))
+                            .foregroundStyle(Color(red: 0.32, green: 0.40, blue: 0.46))
+                            .padding(.top, -14)
+                    }
                     switch self.selection ?? .overview {
                     case .overview:
                         DashboardOverviewView(appViewModel: self.appViewModel)
                     case .configuration:
                         DashboardConfigurationView(appViewModel: self.appViewModel, initialTab: self.initialConfigurationTab)
+                    case .serviceStatus:
+                        DashboardServiceStatusView(appViewModel: self.appViewModel, model: self.appViewModel.serviceStatusStore)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)

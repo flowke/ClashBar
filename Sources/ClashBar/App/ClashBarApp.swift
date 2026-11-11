@@ -49,9 +49,10 @@ private struct AppCommands: Commands {
         CommandMenu(self.tr("ui.menu.quick")) {
             Button(self.tr("ui.quick.system_proxy")) {
                 Task {
-                    let target = !self.session.isSystemProxyEnabled
+                    let target = self.session.systemProxyToggleTarget
                     await self.session.toggleSystemProxy(target)
                     guard self.session.isSystemProxyEnabled == target else { return }
+                    guard !target || self.session.systemProxyStatus == .active else { return }
                     self.showBanner(
                         symbol: "network",
                         title: self.tr("ui.quick.system_proxy"),

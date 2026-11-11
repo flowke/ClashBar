@@ -332,9 +332,16 @@ extension AppViewModel {
 
         do {
             let target = try await resolveSystemProxyTargetFromRuntimeConfig()
+            let stillOwnsProxy = self.systemProxyStillMatchesExpectedTarget()
+            self.rememberSystemProxyTarget(host: target.host, ports: target.ports)
+            guard stillOwnsProxy else {
+                self.checkSystemProxyConfiguration()
+                return
+            }
             try await applySystemProxy(enabled: true, host: target.host, ports: target.ports)
             try await self.applyCurrentSystemProxyExceptionsIfNeeded()
-            systemProxyActiveDisplay = buildSystemProxyDisplayString(host: target.host, ports: target.ports)
+            self.checkSystemProxyConfiguration()
+            guard self.systemProxyStatus == .active else { return }
             appendLog(level: "info", message: tr("log.system_proxy.port_synced", target.ports.primaryPort ?? 0))
 
             if let previousPorts, previousPorts != target.ports {

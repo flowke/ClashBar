@@ -62,6 +62,8 @@ private final class SystemProxyConfigurator {
         try withMutableProxyProtocols { protocols in
             for proxyProtocol in protocols {
                 var config = self.configuration(for: proxyProtocol)
+                config[kSCPropNetProxiesProxyAutoConfigEnable as String] = 0
+                config[kSCPropNetProxiesProxyAutoDiscoveryEnable as String] = 0
                 let portValues = [ports.httpPort, ports.httpsPort, ports.socksPort]
                 for (spec, portValue) in zip(Self.proxyEntrySpecs, portValues) {
                     self.configureProxyEntry(

@@ -101,6 +101,8 @@ extension AppViewModel {
     }
 
     private func performDeferredInitialization() {
+        self.systemProxyExpectedTarget = self.decodeFromDefaults(SystemProxyTarget.self, key: self.systemProxyTargetKey)
+        self.startSystemProxyMonitoring()
         restoreSavedConfigDirectory()
         restoreLastSuccessfulConfigIfAvailable()
         self.remoteConfigSubscriptions = loadPersistedRemoteConfigSubscriptions()

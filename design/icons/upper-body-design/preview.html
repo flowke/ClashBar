@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root { color-scheme: light dark; }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: var(--foreground); font-family: var(--font-sans); }
+    main { display: grid; gap: 24px; }
+    figure { margin: 0; }
+    .comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .comparison figure { display: grid; justify-items: center; gap: 16px; padding: 20px 12px; background: var(--card); border-radius: var(--radius); }
+    .comparison img { display: block; height: 112px; width: auto; }
+    figcaption { font-size: 14px; line-height: 1.4; }
+    .muted { color: var(--muted-foreground); }
+    .states { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .states figure { display: grid; justify-items: center; gap: 14px; }
+    .states img { display: block; height: 66px; width: auto; max-width: 100%; object-fit: contain; }
+    .states figcaption { text-align: center; font-size: 13px; }
+    .size-title { margin: 0 0 12px; font-size: 14px; font-weight: 600; }
+    .menus { display: grid; gap: 12px; }
+    .menu { display: flex; align-items: center; gap: 18px; padding: 16px; border-radius: var(--radius); overflow: hidden; }
+    .light { background: #E9EBEF; color: #454B57; }
+    .dark { background: #272B32; color: #E8EBF2; }
+    .menu img { flex: none; height: 22px; width: auto; }
+    .menu .old { width: 22px; height: 22px; }
+    .divider { width: 1px; height: 18px; background: currentColor; opacity: .28; flex: none; }
+    .speed { margin-left: 4px; font-size: 11px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .note { margin: 10px 0 0; font-size: 12px; color: var(--muted-foreground); line-height: 1.6; }
+    @media (max-width: 440px) {
+      .comparison img { height: 88px; }
+      .states { gap: 8px; }
+      .states img { height: 48px; }
+      .menu { gap: 14px; padding: 14px; }
+      .speed { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <main aria-label="ClashBar 菜单栏上半身设计对比">
+    <section class="comparison" aria-label="整猫与上半身对比">
+      <figure>
+        <img src="../mb-run-full.png" alt="当前的整猫图标">
+        <figcaption class="muted">当前 · 整猫</figcaption>
+      </figure>
+      <figure>
+        <img src="../upper-body-design/Lnf10.png" alt="保留原有猫耳与坏笑的上半身方案">
+        <figcaption>方案 · 上半身</figcaption>
+      </figure>
+    </section>
+    <section class="states" aria-label="关闭、运行与 TUN 三种状态">
+      <figure>
+        <img src="../upper-body-design/ikzA7.png" alt="中性灰空心的关闭状态">
+        <figcaption>关闭 · 中性空心</figcaption>
+      </figure>
+      <figure>
+        <img src="../upper-body-design/Lnf10.png" alt="品牌蓝实心的运行状态">
+        <figcaption>运行 · 品牌蓝</figcaption>
+      </figure>
+      <figure>
+        <img src="../upper-body-design/eDYDX.png" alt="蓝色上半身搭配右下方镂空 TUN 胶囊">
+        <figcaption>TUN · 镂空胶囊</figcaption>
+      </figure>
+    </section>
+    <section aria-label="22pt 菜单栏尺寸对比">
+      <p class="size-title">22pt 原尺寸 · 左侧现版，右侧新三态</p>
+      <div class="menus">
+        <div class="menu light" aria-label="浅色菜单栏">
+          <img class="old" src="../mb-run-full.png" alt="现版">
+          <span class="divider" aria-hidden="true"></span>
+          <img src="../upper-body-design/Lnf10.png" alt="新运行态">
+          <img src="../upper-body-design/ikzA7.png" alt="新关闭态">
+          <img src="../upper-body-design/eDYDX.png" alt="新 TUN 态">
+          <span class="speed">↑ 1.2 MB/s　↓ 8.6 MB/s</span>
+        </div>
+        <div class="menu dark" aria-label="深色菜单栏">
+          <img class="old" src="../mb-run-full.png" alt="现版">
+          <span class="divider" aria-hidden="true"></span>
+          <img src="../upper-body-design/Lnf10.png" alt="新运行态">
+          <img src="../upper-body-design/ikzA7.png" alt="新关闭态">
+          <img src="../upper-body-design/eDYDX.png" alt="新 TUN 态">
+          <span class="speed">↑ 1.2 MB/s　↓ 8.6 MB/s</span>
+        </div>
+      </div>
+      <p class="note">上半身：28 × 22pt；TUN：44 × 22pt。TUN 横向多留空间，让文字和五官都能看清。</p>
+    </section>
+  </main>
+</body>
+</html>

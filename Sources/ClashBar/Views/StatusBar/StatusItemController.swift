@@ -225,6 +225,7 @@ final class StatusItemController: NSObject {
     private var lastRenderedKey: MenuBarDisplay?
     private var globalEventMonitor: Any?
     private var screenParametersObserver: Any?
+    private var statusItemAppearanceObservation: NSKeyValueObservation?
     private var lockedPanelOriginX: CGFloat?
     private var popoverHostingController: NSHostingController<StatusItemPopoverRootView>?
     private var bannerHostingController: NSHostingController<StatusItemBannerRootView>?
@@ -280,6 +281,8 @@ final class StatusItemController: NSObject {
     }
 
     func shutdown() {
+        self.statusItemAppearanceObservation?.invalidate()
+        self.statusItemAppearanceObservation = nil
         self.refreshWorkItem?.cancel()
         self.pendingDisplay = nil
         self.pendingRenderKey = nil
@@ -417,6 +420,13 @@ final class StatusItemController: NSObject {
         button.target = self
         button.action = #selector(self.togglePopover(_:))
         button.sendAction(on: [.leftMouseUp])
+        self.statusItemAppearanceObservation = button.observe(\.effectiveAppearance) { [weak self] _, _ in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.lastRenderedKey = nil
+                self.refreshDisplayNow()
+            }
+        }
     }
 
     private func bindSession() {
@@ -487,7 +497,7 @@ final class StatusItemController: NSObject {
     private func refreshDisplay(_ display: MenuBarDisplay, renderKey: MenuBarDisplay) {
         guard renderKey != self.lastRenderedKey else { return }
 
-        self.statusContentView.apply(display: display)
+        self.statusContentView.apply(display: display, appearance: self.statusItem.button?.effectiveAppearance)
         self.statusItem.button?.image = self.statusContentView.image
         let requiredWidth = self.statusContentView.requiredWidth
         if abs(self.statusItem.length - requiredWidth) > 0.5 {
@@ -544,7 +554,9 @@ final class StatusItemController: NSObject {
             symbolName: nil,
             speedLines: display.speedLines,
             isRunning: display.isRunning,
-            isTunEnabled: display.isTunEnabled)
+            isSystemProxyEnabled: display.isSystemProxyEnabled,
+            isTunEnabled: display.isTunEnabled,
+            hasWarning: display.hasWarning)
     }
 
     private func startGlobalMonitor() {
