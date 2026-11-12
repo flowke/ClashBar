@@ -6,10 +6,8 @@ enum AppReleaseServiceError: Error {
 }
 
 enum AppReleaseService {
-    private static let latestReleaseURL = URL(string: "https://api.github.com/repos/Sitoi/ClashBar/releases/latest")!
-
     static func fetchLatestRelease(currentVersion: String) async throws -> AppReleaseInfo {
-        var request = URLRequest(url: Self.latestReleaseURL)
+        var request = URLRequest(url: AppRepository.latestReleaseAPIURL)
         request.timeoutInterval = 8
         request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
         request.setValue("2022-11-28", forHTTPHeaderField: "X-GitHub-Api-Version")

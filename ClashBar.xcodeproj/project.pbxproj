@@ -71,6 +71,7 @@
 		638EC22D946535A38F9F8928 /* Resources in Resources */ = {isa = PBXBuildFile; fileRef = 7CCA2273BE37A1EC6A3A5BAE /* Resources */; };
 		63A6753B8BCA27495F67B7E1 /* ConnectionsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0A521AECA50299858E18D6 /* ConnectionsStore.swift */; };
 		6A404D07B895170D5FCC5D74 /* AppReleaseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7B57AB8A155811C3EA82961 /* AppReleaseService.swift */; };
+		2AC0B60C11724A4D9E103F01 /* AppRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AC0B60C11724A4D9E103F02 /* AppRepository.swift */; };
 		6AF1229E49C39DE400711D28 /* TrafficStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2CEB0DB097DBB31E7EC3B7C /* TrafficStore.swift */; };
 		6B4CFDB3F9A0D6C5E9325D97 /* AppViewModel+Lifecycle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93B525E2D089C89E5689958B /* AppViewModel+Lifecycle.swift */; };
 		6C8CA20480FE414A1377F863 /* ProxyHelperProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9230F3D2C50E81F13404A21 /* ProxyHelperProtocol.swift */; };
@@ -254,6 +255,7 @@
 		B4B5413CC903BC2A11DBB127 /* SSIDMonitorService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SSIDMonitorService.swift; path = Sources/ClashBar/Services/SSIDMonitorService.swift; sourceTree = "<group>"; };
 		B643C055C3AC1253B7C401AC /* ServiceManagement.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ServiceManagement.framework; path = ../../../../../System/Library/Frameworks/ServiceManagement.framework; sourceTree = "<group>"; };
 		B7B57AB8A155811C3EA82961 /* AppReleaseService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AppReleaseService.swift; path = Sources/ClashBar/Services/AppReleaseService.swift; sourceTree = "<group>"; };
+		2AC0B60C11724A4D9E103F02 /* AppRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AppRepository.swift; path = Sources/ClashBar/Services/AppRepository.swift; sourceTree = "<group>"; };
 		BB82420B3C30AF01A00EEC77 /* AppViewModel+Polling.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = "AppViewModel+Polling.swift"; path = "Sources/ClashBar/ViewModels/AppViewModel+Polling.swift"; sourceTree = "<group>"; };
 		BC6904575F55A1C1209C90DE /* PopoverLayoutModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PopoverLayoutModel.swift; path = Sources/ClashBar/ViewModels/PopoverLayoutModel.swift; sourceTree = "<group>"; };
 		BE7F8C9A2EFF3CD1D848E305 /* LaunchAtLoginService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = LaunchAtLoginService.swift; path = Sources/ClashBar/Services/LaunchAtLoginService.swift; sourceTree = "<group>"; };
@@ -440,6 +442,7 @@
 				EDCBAB4912FAC9DC4E44FC49 /* SSIDStrategyRule.swift */,
 				8D9AA6AC534A3D82F9A92959 /* AppLogStore.swift */,
 				B7B57AB8A155811C3EA82961 /* AppReleaseService.swift */,
+				2AC0B60C11724A4D9E103F02 /* AppRepository.swift */,
 				64967CE03358995D32231C0F /* ConfigDirectoryMonitor.swift */,
 				379A040DB36229649F3AF2D1 /* ConfigService.swift */,
 				B00000000000000000000001,
@@ -738,6 +741,7 @@
 				71B5D17969E27E16931AF0C1 /* SSIDStrategyRule.swift in Sources */,
 				DE128514B7C9D7A5C1E28657 /* AppLogStore.swift in Sources */,
 				6A404D07B895170D5FCC5D74 /* AppReleaseService.swift in Sources */,
+				2AC0B60C11724A4D9E103F01 /* AppRepository.swift in Sources */,
 				800F97D36B4BF06602971156 /* ConfigDirectoryMonitor.swift in Sources */,
 				46491C23A7B7516A74FC9970 /* ConfigService.swift in Sources */,
 				A502F656A3E87FE5D94F8B3B /* CoreService.swift in Sources */,

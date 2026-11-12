@@ -28,8 +28,7 @@ struct MenuBarHeaderView: TranslatingView {
         HStack(alignment: .center, spacing: T.space8) {
             HStack(alignment: .top, spacing: T.space8) {
                 Button {
-                    guard let url = URL(string: "https://github.com/Sitoi/ClashBar") else { return }
-                    self.openURL(url)
+                    self.openURL(AppRepository.homepageURL)
                 } label: {
                     if let brandImage = BrandIcon.headerImage(for: self.appViewModel.menuBarDisplaySnapshot.iconState) {
                         Image(nsImage: brandImage)

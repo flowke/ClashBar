@@ -287,7 +287,7 @@ extension AppViewModel {
     }
 
     var appReleaseIndexURL: URL? {
-        URL(string: "https://github.com/Sitoi/ClashBar/releases")
+        AppRepository.releasesURL
     }
 
     func refreshLatestAppRelease() async {

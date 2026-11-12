@@ -93,22 +93,30 @@ final class BrandIconRenderingTests: XCTestCase {
     }
 
     func testSolidStatesKeepTransparentEyesMouthAndShield() throws {
-        for image in [BrandIcon.runImage, BrandIcon.tunImage] {
+        for (image, masterWidth) in [(BrandIcon.runImage, 112), (BrandIcon.tunImage, 128)] {
             let source = try XCTUnwrap(image)
             let bitmap = try XCTUnwrap(NSBitmapImageRep(data: try XCTUnwrap(source.tiffRepresentation)))
             for point in [(35, 46), (77, 46), (52, 65)] {
-                let column = point.0 * bitmap.pixelsWide / 112
+                let column = point.0 * bitmap.pixelsWide / masterWidth
                 let row = point.1 * bitmap.pixelsHigh / 88
                 XCTAssertLessThan(try XCTUnwrap(bitmap.colorAt(x: column, y: row)).alphaComponent, 0.05)
             }
-            XCTAssertGreaterThan(try XCTUnwrap(bitmap.colorAt(x: 55 * bitmap.pixelsWide / 112, y: 30 * bitmap.pixelsHigh / 88)).alphaComponent, 0.95)
+            XCTAssertGreaterThan(try XCTUnwrap(bitmap.colorAt(x: 55 * bitmap.pixelsWide / masterWidth, y: 30 * bitmap.pixelsHigh / 88)).alphaComponent, 0.95)
         }
         let tun = try XCTUnwrap(BrandIcon.tunImage)
         let bitmap = try XCTUnwrap(NSBitmapImageRep(data: try XCTUnwrap(tun.tiffRepresentation)))
-        let leftHalf = try XCTUnwrap(bitmap.colorAt(x: 87 * bitmap.pixelsWide / 112, y: 66 * bitmap.pixelsHigh / 88))
-        let rightHalf = try XCTUnwrap(bitmap.colorAt(x: 96 * bitmap.pixelsWide / 112, y: 66 * bitmap.pixelsHigh / 88))
+        let leftHalf = try XCTUnwrap(bitmap.colorAt(x: 87 * bitmap.pixelsWide / 128, y: 66 * bitmap.pixelsHigh / 88))
+        let rightHalf = try XCTUnwrap(bitmap.colorAt(x: 96 * bitmap.pixelsWide / 128, y: 66 * bitmap.pixelsHigh / 88))
         XCTAssertLessThan(leftHalf.alphaComponent, 0.05)
         XCTAssertGreaterThan(rightHalf.alphaComponent, 0.95)
+    }
+
+    func testPanelSleepArtworkIsIndependentOfMenuBarTemplate() throws {
+        let panel = try XCTUnwrap(BrandIcon.headerImage(for: .sleep))
+        let menuBar = try XCTUnwrap(BrandIcon.sleepImage)
+        XCTAssertFalse(panel === menuBar)
+        XCTAssertNotEqual(panel.tiffRepresentation, menuBar.tiffRepresentation)
+        XCTAssertTrue(panel.isTemplate)
     }
 
     func testIconInkFitsEighteenPointsAndStaysVerticallyCentered() throws {
@@ -117,24 +125,25 @@ final class BrandIconRenderingTests: XCTestCase {
         for display in [self.display(proxy: false), self.display(), self.display(tun: true), self.display(hasWarning: true)] {
             renderer.apply(display: display)
             let image = try XCTUnwrap(renderer.image)
-            let bitmap = try self.bitmap(image)
-            let scale = CGFloat(bitmap.pixelsHigh) / image.size.height
-            var occupiedRows: [Int] = []
-            for row in 0..<bitmap.pixelsHigh {
-                for column in 0..<bitmap.pixelsWide {
-                    if try XCTUnwrap(bitmap.colorAt(x: column, y: row)).alphaComponent > 0.1 {
-                        occupiedRows.append(row)
-                        break
+            for bitmap in image.representations.compactMap({ $0 as? NSBitmapImageRep }) {
+                let scale = CGFloat(bitmap.pixelsHigh) / image.size.height
+                var occupiedRows: [Int] = []
+                for row in 0..<bitmap.pixelsHigh {
+                    for column in 0..<bitmap.pixelsWide {
+                        if try XCTUnwrap(bitmap.colorAt(x: column, y: row)).alphaComponent > 0.1 {
+                            occupiedRows.append(row)
+                            break
+                        }
                     }
                 }
+                let firstRow = try XCTUnwrap(occupiedRows.first)
+                let lastRow = try XCTUnwrap(occupiedRows.last)
+                let height = CGFloat(lastRow - firstRow + 1) / scale
+                XCTAssertGreaterThan(height, 15)
+                XCTAssertLessThanOrEqual(height, 18 + 1 / scale)
+                let center = CGFloat(firstRow + lastRow + 1) / (2 * scale)
+                XCTAssertEqual(center, image.size.height / 2, accuracy: 1)
             }
-            let firstRow = try XCTUnwrap(occupiedRows.first)
-            let lastRow = try XCTUnwrap(occupiedRows.last)
-            let height = CGFloat(lastRow - firstRow + 1) / scale
-            XCTAssertGreaterThan(height, 15)
-            XCTAssertLessThanOrEqual(height, 18 + 1 / scale)
-            let center = CGFloat(firstRow + lastRow + 1) / (2 * scale)
-            XCTAssertEqual(center, image.size.height / 2, accuracy: 1)
         }
     }
 
