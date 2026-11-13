@@ -4,7 +4,7 @@ import AppKit
 enum BrandIcon {
     static let image: NSImage? = loadIcon(named: "BrandLogo", fallbackFileName: "logo.png")
     static let appImage: NSImage? = loadIcon(named: "BrandAppIcon", fallbackFileName: "app-icon.png")
-    // Panel artwork is independent of the menu bar's monochrome templates.
+    // Sleep and warning panel variants use G artwork with panel-specific rendering.
     private static let headerSleepImage: NSImage? = loadIcon(named: "BrandHeaderSleep", fallbackFileName: "logo-header-sleep.png", isTemplate: true)
     private static let headerRunImage: NSImage? = loadIcon(named: "BrandHeader", fallbackFileName: "logo-header.png")
     private static let headerTunImage: NSImage? = loadIcon(named: "BrandHeaderTun", fallbackFileName: "logo-header-tun.png")

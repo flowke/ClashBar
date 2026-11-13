@@ -14,6 +14,7 @@ struct DashboardServiceStatusView: View {
     private let ink = Color(red: 0.13, green: 0.20, blue: 0.25)
     private let muted = Color(red: 0.32, green: 0.42, blue: 0.49)
     private let border = Color(red: 0.85, green: 0.89, blue: 0.91)
+    private let rowHeight: CGFloat = 88
 
     init(appViewModel: AppViewModel, model: ServiceStatusViewModel, initiallyAdding: Bool = false) {
         self.appViewModel = appViewModel
@@ -48,7 +49,7 @@ struct DashboardServiceStatusView: View {
                 }
                 .scrollIndicators(geometry.size.width < 760 ? .visible : .hidden)
             }
-            .frame(height: 49 + CGFloat(model.services.count) * 126 + (isAdding ? (addError == nil ? 118 : 146) : 0) + 48)
+            .frame(height: 49 + CGFloat(model.services.count) * (rowHeight + 1) + (isAdding ? (addError == nil ? 118 : 146) : 0) + 48)
             .background(.white, in: RoundedRectangle(cornerRadius: 12))
             .clipShape(RoundedRectangle(cornerRadius: 12))
             .overlay(RoundedRectangle(cornerRadius: 12).stroke(border, lineWidth: 1))
@@ -160,7 +161,7 @@ struct DashboardServiceStatusView: View {
                         .frame(width: directWidth, alignment: .leading)
                     operation(service).frame(width: 60)
                 }
-                .padding(.horizontal, 20).frame(height: 125)
+                .padding(.horizontal, 20).frame(height: rowHeight)
                 .accessibilityElement(children: .contain).accessibilityLabel(service.name)
             }
             separator

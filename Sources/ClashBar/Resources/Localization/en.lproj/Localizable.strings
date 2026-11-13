@@ -107,6 +107,11 @@
 "ui.webui.checking" = "Checking...";
 "ui.webui.available" = "Ready";
 "ui.webui.failed" = "Unavailable";
+"ui.webui.update_available" = "Update available";
+"ui.webui.check_complete_current" = "Check complete. You're up to date.";
+"ui.webui.check_complete_update" = "Check complete. Version %@ is available.";
+"ui.webui.check_complete_install" = "Check complete. Version %@ is ready to install.";
+"ui.webui.operation_failed" = "Operation failed: %@";
 
 "ui.quick.switch_config" = "Switch Config";
 "ui.quick.system_proxy" = "System Proxy";

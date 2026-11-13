@@ -355,6 +355,15 @@ struct SystemTabView: TranslatingView {
         let isChecking = status.state == .checking
         let isUpdating = status.state == .updating
         let hasUpdate = status.state == .updateAvailable
+        let isUpToDate = status.state == .available && status.currentVersion == status.latestVersion
+        let stateTitle: String = switch status.state {
+        case .checking: self.tr("ui.webui.checking")
+        case .updating: self.tr("ui.webui.updating")
+        case .updateAvailable: self.tr("ui.webui.update_available")
+        case .unavailable: self.tr("ui.webui.not_installed")
+        case .failed: self.tr("ui.webui.failed")
+        case .available: self.tr("ui.webui.available")
+        }
         let current = status.currentVersion ?? self.tr("ui.webui.not_installed")
         let latest = status.latestVersion ?? self.tr("ui.common.unknown")
         let checked = status.lastCheckedAt.map {
@@ -366,8 +375,7 @@ struct SystemTabView: TranslatingView {
                 self.settingsRowLabel(symbol: kind.symbolName, title: self.tr(kind.titleKey))
                     .layoutPriority(1)
                 Spacer(minLength: 0)
-                Text(hasUpdate ? self.tr("ui.webui.update") : status.state == .failed
-                    ? self.tr("ui.webui.failed") : self.tr("ui.webui.available"))
+                Text(stateTitle)
                     .font(.app(size: T.FontSize.caption, weight: .semibold))
                     .foregroundStyle(hasUpdate ? nativeWarning : status.state == .failed
                         ? nativeCritical : nativeSecondaryLabel)
@@ -381,10 +389,15 @@ struct SystemTabView: TranslatingView {
                 Button {
                     Task { await self.appViewModel.checkForWebUIUpdates(kind) }
                 } label: {
-                    Label(
-                        isChecking ? self.tr("ui.webui.checking") : self.tr("ui.webui.check"),
-                        systemImage: isChecking ? "arrow.triangle.2.circlepath" : "magnifyingglass")
-                        .frame(maxWidth: .infinity, alignment: .center)
+                    HStack(spacing: T.space4) {
+                        if isChecking {
+                            ProgressView().controlSize(.mini)
+                        } else {
+                            Image(systemName: "magnifyingglass")
+                        }
+                        Text(isChecking ? self.tr("ui.webui.checking") : self.tr("ui.webui.check"))
+                    }
+                    .frame(maxWidth: .infinity, alignment: .center)
                 }
                 .appBorderedButtonStyle()
                 .controlSize(.small)
@@ -409,9 +422,24 @@ struct SystemTabView: TranslatingView {
             }
 
             if let error = status.errorMessage?.trimmedNonEmpty {
-                Text(error)
+                Label(self.tr("ui.webui.operation_failed", error), systemImage: "exclamationmark.triangle")
                     .font(.app(size: T.FontSize.caption, weight: .regular))
                     .foregroundStyle(nativeCritical.opacity(T.Opacity.solid))
+                    .fixedSize(horizontal: false, vertical: true)
+            } else if !isChecking, !isUpdating, status.lastCheckedAt != nil,
+                      let latestVersion = status.latestVersion {
+                Label(
+                    isUpToDate
+                        ? self.tr("ui.webui.check_complete_current")
+                        : self.tr(
+                            status.state == .unavailable
+                                ? "ui.webui.check_complete_install" : "ui.webui.check_complete_update",
+                            latestVersion),
+                    systemImage: isUpToDate
+                        ? "checkmark.circle" : "arrow.down.circle")
+                    .font(.app(size: T.FontSize.caption, weight: .regular))
+                    .foregroundStyle(isUpToDate
+                        ? nativePositive.opacity(T.Opacity.solid) : nativeSecondaryLabel)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }

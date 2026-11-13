@@ -16,12 +16,24 @@ extension AppViewModel {
 
     func checkForWebUIUpdates(_ kind: WebUIKind) async {
         self.refreshWebUIStatuses()
+        guard var status = self.webUIStatuses[kind],
+              status.state != .checking, status.state != .updating
+        else { return }
+        status.state = .checking
+        status.errorMessage = nil
+        self.webUIStatuses[kind] = status
         await self.webUIAssetService.checkForUpdates(kind)
         self.refreshWebUIStatuses()
     }
 
     func updateWebUI(_ kind: WebUIKind) async {
         self.refreshWebUIStatuses()
+        guard var status = self.webUIStatuses[kind],
+              status.state != .checking, status.state != .updating
+        else { return }
+        status.state = .updating
+        status.errorMessage = nil
+        self.webUIStatuses[kind] = status
         await self.webUIAssetService.update(kind)
         self.refreshWebUIStatuses()
     }

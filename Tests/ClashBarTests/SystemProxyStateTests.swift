@@ -247,6 +247,23 @@ final class SystemProxyStateTests: XCTestCase {
         XCTAssertEqual(fixture.service.writes, [false, false])
     }
 
+    func testResetSystemProxyObservedStatePreservesHelperHealth() throws {
+        let fixture = try ProxyStateFixture()
+        defer { fixture.cleanup() }
+        fixture.model.systemProxyHelperInstalled = true
+        fixture.model.systemProxyHelperProcessRunning = true
+        fixture.model.systemProxyHelperInstalledVersion = ProxyHelperConstants.helperVersion
+        fixture.model.systemProxyHelperExpectedVersion = ProxyHelperConstants.helperVersion
+        fixture.model.isSystemProxyEnabled = false
+
+        fixture.model.resetSystemProxyObservedState()
+
+        XCTAssertTrue(fixture.model.systemProxyHelperInstalled == true)
+        XCTAssertTrue(fixture.model.systemProxyHelperProcessRunning == true)
+        XCTAssertEqual(fixture.model.systemProxyHelperInstalledVersion, ProxyHelperConstants.helperVersion)
+        XCTAssertEqual(fixture.model.systemProxyHelperExpectedVersion, ProxyHelperConstants.helperVersion)
+    }
+
     func testStopAndQuitLeaveExternalProxyUntouched() async throws {
         let fixture = try ProxyStateFixture()
         defer { fixture.cleanup() }

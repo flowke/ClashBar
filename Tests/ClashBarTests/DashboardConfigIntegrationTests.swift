@@ -280,6 +280,95 @@ final class DashboardConfigIntegrationTests: XCTestCase {
         XCTAssertTrue(model.needsMihomoCoreInstallation)
     }
 
+    func testReopeningBeforeDashboardKeepsMenuBarOnlyMode() {
+        let application = NSApplication.shared
+        let originalPolicy = application.activationPolicy()
+        let delegate = ClashBarAppDelegate()
+        defer {
+            delegate.appViewModel.cancelOwnedTasks()
+            application.setActivationPolicy(originalPolicy)
+        }
+        application.setActivationPolicy(.accessory)
+
+        for hasVisibleWindows in [false, true] {
+            XCTAssertFalse(delegate.applicationShouldHandleReopen(application, hasVisibleWindows: hasVisibleWindows))
+            XCTAssertEqual(application.activationPolicy(), .accessory)
+            XCTAssertFalse(application.windows.contains { $0 is DashboardWindow && $0.delegate === delegate })
+        }
+    }
+
+    func testDashboardKeepsDockIconAndReusesWindowAfterClose() throws {
+        let application = NSApplication.shared
+        let originalPolicy = application.activationPolicy()
+        let delegate = ClashBarAppDelegate()
+        defer {
+            for window in application.windows where window.delegate === delegate { window.close() }
+            delegate.appViewModel.cancelOwnedTasks()
+            application.setActivationPolicy(originalPolicy)
+        }
+        application.setActivationPolicy(.accessory)
+
+        delegate.showDashboard()
+
+        let window = try XCTUnwrap(application.windows.first { $0 is DashboardWindow && $0.delegate === delegate })
+        let contentController = try XCTUnwrap(window.contentViewController)
+        let frame = window.frame
+        XCTAssertEqual(application.activationPolicy(), .regular)
+        XCTAssertTrue(window.isVisible)
+        XCTAssertTrue(delegate.appViewModel.isDashboardPresented)
+        delegate.suppressWindowIfNeeded(window)
+        XCTAssertTrue(window.isVisible)
+
+        window.close()
+
+        XCTAssertFalse(window.isVisible)
+        XCTAssertFalse(delegate.appViewModel.isDashboardPresented)
+        XCTAssertEqual(application.activationPolicy(), .regular)
+        XCTAssertFalse(delegate.applicationShouldHandleReopen(application, hasVisibleWindows: false))
+        XCTAssertTrue(window.isVisible)
+        XCTAssertTrue(delegate.appViewModel.isDashboardPresented)
+        XCTAssertTrue(window.contentViewController === contentController)
+        XCTAssertEqual(window.frame, frame)
+
+        window.orderOut(nil)
+        XCTAssertFalse(delegate.applicationShouldHandleReopen(application, hasVisibleWindows: true))
+        XCTAssertTrue(window.isVisible)
+        XCTAssertEqual(application.activationPolicy(), .regular)
+        XCTAssertEqual(application.windows.filter { $0 is DashboardWindow && $0.delegate === delegate }.count, 1)
+    }
+
+    func testDockReopenRestoresMiniaturizedDashboard() async throws {
+        let application = NSApplication.shared
+        let originalPolicy = application.activationPolicy()
+        let delegate = ClashBarAppDelegate()
+        defer {
+            for window in application.windows where window.delegate === delegate { window.close() }
+            delegate.appViewModel.cancelOwnedTasks()
+            application.setActivationPolicy(originalPolicy)
+        }
+        application.setActivationPolicy(.accessory)
+        delegate.showDashboard()
+        let window = try XCTUnwrap(application.windows.first { $0 is DashboardWindow && $0.delegate === delegate })
+
+        window.miniaturize(nil)
+        for _ in 0..<100 where !window.isMiniaturized || delegate.appViewModel.isDashboardPresented {
+            try await Task.sleep(nanoseconds: 20_000_000)
+        }
+        XCTAssertTrue(window.isMiniaturized)
+        XCTAssertFalse(delegate.appViewModel.isDashboardPresented)
+        XCTAssertEqual(application.activationPolicy(), .regular)
+
+        XCTAssertFalse(delegate.applicationShouldHandleReopen(application, hasVisibleWindows: false))
+        for _ in 0..<100 where window.isMiniaturized {
+            try await Task.sleep(nanoseconds: 20_000_000)
+        }
+        XCTAssertFalse(window.isMiniaturized)
+        XCTAssertTrue(window.isVisible)
+        XCTAssertTrue(delegate.appViewModel.isDashboardPresented)
+        XCTAssertEqual(application.activationPolicy(), .regular)
+        XCTAssertEqual(application.windows.filter { $0 is DashboardWindow && $0.delegate === delegate }.count, 1)
+    }
+
     func testManagedAlertSurvivesWindowSuppression() {
         _ = NSApplication.shared
         let delegate = ClashBarAppDelegate()

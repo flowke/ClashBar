@@ -7,7 +7,7 @@
 | 内容 | 文件 |
 | --- | --- |
 | 应用图标 | [已确认大五官 1024px PNG](app-icon-large-face-1024.png) · [macOS ICNS](ClashBar.icns) · [Iconset](ClashBar.iconset/) |
-| 面板左上角四态图标 | 关闭为系统黑白模板；运行和 TUN 为 C 翡翠绿；异常为黄色轮廓，保留最新异常表情和感叹号；[实际渲染预览](applied-header-states/) |
+| 面板左上角四态图标 | 关闭为 G 版加粗系统黑白模板；运行和 TUN 为 C 翡翠绿；异常为无感叹号的黄色担忧表情；[实际渲染预览](applied-header-states/) |
 | 菜单栏四态设计 | 当前 `.pen` 中 `ou3yE` 的原生几何 · [透明模板素材](monochrome-g/) |
 | 代码渲染结果 | [浅色运行态](applied-monochrome-g/NSAppearanceNameAqua-icon_only-run.png) · [深色运行态](applied-monochrome-g/NSAppearanceNameDarkAqua-icon_only-run.png) |
 
@@ -24,9 +24,9 @@ Pencil 的 G 版四态节点分别为 `A5IDi`、`zDtFj`、`Fw7dr`、`rt09c`。�
 
 应用主图标使用已确认的蓝色整猫加白色圆角方块：眼睛 1.75 倍、嘴 1.8 倍并下移 65px。`BrandAppIcon`、`AppIcon.appiconset` 与 `.icns` 均由 `app-icon-large-face-1024.png` 生成；`AppDelegate` 通过独立的 `BrandIcon.appImage` 设置 `applicationIconImage`。旧 `app-icon-1024.png` 仅为历史素材。
 
-面板关闭态使用独立的 `BrandHeaderSleep`，保留本次替换前的资源，避免菜单栏加粗影响 40pt 面板图标。`BrandLogo`、翡翠绿运行/TUN 和黄色异常面板资源在本次替换中保持原样。
+面板关闭态使用独立的 `BrandHeaderSleep` 资源，但图形与 G 版加粗线框保持同步；异常态由无感叹号的 G 版担忧表情着黄色生成。这样面板 40pt 图标和菜单栏状态不会再出现线条或表情版本差异。
 
-面板左上角的 40pt 半身猫与菜单栏共用 `menuBarDisplaySnapshot.iconState`，状态变化时自动同步，无须重新打开面板。关闭态使用系统黑白空心模板；运行态使用 [C 翡翠绿](menu-bar-emerald/Lnf10.png) `#169568` 配柔白五官 `#F3FFF9`；TUN 使用 [翡翠绿嵌入式盾牌](menu-bar-emerald/eDYDX.png)；异常态使用黄色 `#FFB020` 的空心轮廓、G 版异常表情与圆润感叹号。异常状态优先于 TUN 和运行状态，内核停止或代理与 TUN 均关闭时显示关闭态。
+面板左上角的 40pt 半身猫与菜单栏共用 `menuBarDisplaySnapshot.iconState`，状态变化时自动同步，无须重新打开面板。关闭态使用 G 版加粗黑白空心模板；运行态使用 [C 翡翠绿](menu-bar-emerald/Lnf10.png) `#169568` 配柔白五官 `#F3FFF9`；TUN 使用 [翡翠绿嵌入式盾牌](menu-bar-emerald/eDYDX.png)；异常态使用黄色 `#FFB020` 的空心轮廓及 G 版圆眼担忧表情，不带感叹号。异常状态优先于 TUN 和运行状态，内核停止或代理与 TUN 均关闭时显示关闭态。
 
 ## 配色探索 · 面板品牌采用 C 翡翠绿
 
@@ -47,9 +47,10 @@ Pencil 的 G 版四态节点分别为 `A5IDi`、`zDtFj`、`Fw7dr`、`rt09c`。�
 ```sh
 bash design/icons/build-app-icon-assets.sh
 swift design/icons/monochrome-g/build-template-assets.swift
+swift design/icons/build-header-assets.swift
 PREPARE_MIHOMO_BINARY=0 Scripts/preprocess.sh
 CLASHBAR_ICON_PREVIEW_DIR="$PWD/design/icons/applied-monochrome-g" swift test --filter BrandIconRenderingTests
 CLASHBAR_HEADER_PREVIEW_DIR="$PWD/design/icons/applied-header-states" swift test --filter SystemProxyStateTests.testHeaderIconTracksAllStatesWithoutReopeningInBothThemes
 ```
 
-`build-header-assets.swift` 是先前面板方案的生成脚本，会重写黄色异常资源；本次菜单栏替换不运行它。
+`build-header-assets.swift` 会从当前菜单栏母图同步面板关闭态、翡翠绿运行/TUN 资源，并生成无感叹号的黄色异常资源。

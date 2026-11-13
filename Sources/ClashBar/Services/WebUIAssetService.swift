@@ -195,6 +195,7 @@ final class WebUIAssetService {
 
     func checkForUpdates(_ kind: WebUIKind) async {
         var status = self.statuses[kind] ?? .unavailable(for: kind)
+        guard status.state != .checking, status.state != .updating else { return }
         status.state = .checking
         status.errorMessage = nil
         self.statuses[kind] = status
@@ -240,6 +241,7 @@ final class WebUIAssetService {
 
     func update(_ kind: WebUIKind) async {
         var status = self.statuses[kind] ?? .unavailable(for: kind)
+        guard status.state != .checking, status.state != .updating else { return }
         status.state = .updating
         status.errorMessage = nil
         self.statuses[kind] = status

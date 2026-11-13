@@ -12,6 +12,11 @@ let designDirectory = URL(fileURLWithPath: #filePath).deletingLastPathComponent(
 let repositoryDirectory = designDirectory.deletingLastPathComponent().deletingLastPathComponent()
 let resourceDirectory = repositoryDirectory.appendingPathComponent("Sources/ClashBar/Resources/Assets.xcassets")
 
+let sleepSourceURL = designDirectory.appendingPathComponent("monochrome-g/icon-sleep.png")
+let sleepOutputURL = resourceDirectory.appendingPathComponent("BrandHeaderSleep.imageset/logo-header-sleep.png")
+try Data(contentsOf: sleepSourceURL).write(to: sleepOutputURL, options: .atomic)
+print("Prepared BrandHeaderSleep: latest G outline artwork")
+
 for (source, asset, fileName) in [
     ("menu-bar-emerald/Lnf10.png", "BrandHeader", "logo-header.png"),
     ("menu-bar-emerald/eDYDX.png", "BrandHeaderTun", "logo-header-tun.png"),
@@ -22,10 +27,10 @@ for (source, asset, fileName) in [
     print("Prepared \(asset): original emerald artwork")
 }
 
-let warningURL = designDirectory.appendingPathComponent("monochrome-g/icon-warning.png")
-guard let warningSource = CGImageSourceCreateWithURL(warningURL as CFURL, nil),
+let warningSourceURL = designDirectory.appendingPathComponent("monochrome-g/icon-warning.png")
+guard let warningSource = CGImageSourceCreateWithURL(warningSourceURL as CFURL, nil),
       let warningImage = CGImageSourceCreateImageAtIndex(warningSource, 0, nil)
-else { throw HeaderAssetError.invalidImage(warningURL) }
+else { throw HeaderAssetError.invalidImage(warningSourceURL) }
 
 guard let context = CGContext(
     data: nil,
@@ -53,4 +58,4 @@ guard let tintedWarning = context.makeImage(),
 else { throw HeaderAssetError.cannotWrite(outputURL) }
 CGImageDestinationAddImage(destination, tintedWarning, nil)
 guard CGImageDestinationFinalize(destination) else { throw HeaderAssetError.cannotWrite(outputURL) }
-print("Prepared BrandHeaderWarning: yellow outline with the final G expression and exclamation mark")
+print("Prepared BrandHeaderWarning: yellow outline with the final G expression and no badge")

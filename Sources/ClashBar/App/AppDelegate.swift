@@ -41,7 +41,11 @@ final class ClashBarAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelega
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        self.statusItemController?.presentPopover()
+        if self.dashboardWindow != nil {
+            self.showDashboard()
+        } else {
+            self.statusItemController?.presentPopover()
+        }
         return false
     }
 
@@ -98,6 +102,8 @@ final class ClashBarAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelega
             window.center()
             self.dashboardWindow = window
         }
+        // Keep the Dock icon until termination, even after the dashboard closes.
+        NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         if self.dashboardWindow?.isMiniaturized == true {
             self.dashboardWindow?.deminiaturize(nil)

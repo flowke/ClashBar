@@ -209,12 +209,6 @@ extension AppViewModel {
     }
 
     func resetSystemProxyObservedState() {
-        self.systemProxyHelperInstalled = nil
-        self.systemProxyHelperProcessRunning = nil
-        self.systemProxyHelperInstalledVersion = nil
-        self.systemProxyHelperExpectedVersion = ProxyHelperConstants.helperVersion
-        self.systemProxyHelperFailureReason = nil
-        self.systemProxyHelperFailureMessage = nil
         if !self.isSystemProxyEnabled {
             self.systemProxyStatus = .disabled
             self.systemProxyActualDisplay = nil

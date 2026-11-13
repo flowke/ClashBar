@@ -104,16 +104,27 @@ final class ServiceDirectSession: @unchecked Sendable {
     static func configuration(network: Network, port: Int) throws -> Data {
         // JSON is a YAML subset; serialization prevents values being interpreted
         // as YAML syntax. No provider, proxy group, persisted cache or TUN exists.
-        try JSONSerialization.data(withJSONObject: [
+        let scopedNameservers = network.dnsServers.map {
+            Self.scopedNameserver($0, interface: network.interface)
+        }
+        return try JSONSerialization.data(withJSONObject: [
             "mixed-port": port, "bind-address": "127.0.0.1", "allow-lan": false,
             "mode": "direct", "log-level": "info", "ipv6": true,
             "interface-name": network.interface, "external-controller": "",
             "profile": ["store-selected": false, "store-fake-ip": false],
             "tun": ["enable": false], "rules": ["MATCH,DIRECT"],
             "dns": ["enable": true, "listen": "", "enhanced-mode": "normal", "use-hosts": false,
-                    "nameserver": network.dnsServers.map { "\($0)#\(network.interface)" },
-                    "direct-nameserver": network.dnsServers.map { "\($0)#\(network.interface)" }],
+                    "nameserver": scopedNameservers,
+                    "direct-nameserver": scopedNameservers],
         ], options: [.sortedKeys])
+    }
+
+    static func scopedNameserver(_ address: String, interface: String) -> String {
+        let value = address.trimmingCharacters(in: .whitespacesAndNewlines)
+        if value.hasPrefix("[") && value.contains("]") {
+            return "\(value)#\(interface)"
+        }
+        return value.contains(":") ? "[\(value)]#\(interface)" : "\(value)#\(interface)"
     }
 
     static func start(binary: URL, network: Network? = nil) async throws -> ServiceDirectSession {

@@ -111,6 +111,11 @@
 "ui.webui.checking" = "检查中...";
 "ui.webui.available" = "可用";
 "ui.webui.failed" = "不可用";
+"ui.webui.update_available" = "有新版本";
+"ui.webui.check_complete_current" = "检查完成，已是最新版本";
+"ui.webui.check_complete_update" = "检查完成，发现新版本 %@";
+"ui.webui.check_complete_install" = "检查完成，可安装版本 %@";
+"ui.webui.operation_failed" = "操作失败：%@";
 
 "ui.quick.switch_config" = "切换配置";
 "ui.quick.system_proxy" = "系统代理";

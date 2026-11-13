@@ -63,6 +63,14 @@ final class ServiceStatusTests: XCTestCase {
         let dns = try XCTUnwrap(config["dns"] as? [String: Any])
         XCTAssertEqual(dns["direct-nameserver"] as? [String], ["192.168.1.1#en0"])
         XCTAssertEqual(config["external-controller"] as? String, "")
+
+        let ipv6Network = ServiceDirectSession.Network(interface: "en1", dnsServers: ["2001:4860:4860::8888"])
+        let ipv6Config = try XCTUnwrap(JSONSerialization.jsonObject(
+            with: ServiceDirectSession.configuration(network: ipv6Network, port: 12345)) as? [String: Any])
+        let ipv6DNS = try XCTUnwrap(ipv6Config["dns"] as? [String: Any])
+        XCTAssertEqual(ipv6DNS["nameserver"] as? [String], ["[2001:4860:4860::8888]#en1"])
+        XCTAssertEqual(ipv6DNS["direct-nameserver"] as? [String], ["[2001:4860:4860::8888]#en1"])
+
         XCTAssertFalse(ServiceDirectSession.Network.isUsableDNS("127.0.0.1"))
         XCTAssertFalse(ServiceDirectSession.Network.isUsableDNS("198.18.0.1"))
         XCTAssertFalse(ServiceDirectSession.Network.isUsableDNS("169.254.1.1"))

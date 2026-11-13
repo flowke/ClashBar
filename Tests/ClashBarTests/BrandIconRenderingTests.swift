@@ -111,12 +111,29 @@ final class BrandIconRenderingTests: XCTestCase {
         XCTAssertGreaterThan(rightHalf.alphaComponent, 0.95)
     }
 
-    func testPanelSleepArtworkIsIndependentOfMenuBarTemplate() throws {
+    func testPanelSleepUsesLatestMenuBarTemplateArtwork() throws {
         let panel = try XCTUnwrap(BrandIcon.headerImage(for: .sleep))
         let menuBar = try XCTUnwrap(BrandIcon.sleepImage)
         XCTAssertFalse(panel === menuBar)
-        XCTAssertNotEqual(panel.tiffRepresentation, menuBar.tiffRepresentation)
+        XCTAssertEqual(panel.tiffRepresentation, menuBar.tiffRepresentation)
         XCTAssertTrue(panel.isTemplate)
+    }
+
+    func testPanelWarningUsesBadgeFreeMenuBarArtwork() throws {
+        let panel = try XCTUnwrap(BrandIcon.headerImage(for: .warning))
+        let menuBar = try XCTUnwrap(BrandIcon.warningImage)
+        let panelBitmap = try XCTUnwrap(NSBitmapImageRep(data: try XCTUnwrap(panel.tiffRepresentation)))
+        let menuBarBitmap = try XCTUnwrap(NSBitmapImageRep(data: try XCTUnwrap(menuBar.tiffRepresentation)))
+
+        XCTAssertEqual(panelBitmap.pixelsWide, menuBarBitmap.pixelsWide)
+        XCTAssertEqual(panelBitmap.pixelsHigh, menuBarBitmap.pixelsHigh)
+        for row in 0..<panelBitmap.pixelsHigh {
+            for column in 0..<panelBitmap.pixelsWide {
+                let panelAlpha = try XCTUnwrap(panelBitmap.colorAt(x: column, y: row)).alphaComponent
+                let menuBarAlpha = try XCTUnwrap(menuBarBitmap.colorAt(x: column, y: row)).alphaComponent
+                XCTAssertEqual(panelAlpha, menuBarAlpha, accuracy: 1 / 255)
+            }
+        }
     }
 
     func testIconInkFitsEighteenPointsAndStaysVerticallyCentered() throws {
