@@ -208,18 +208,19 @@ extension AppViewModel {
     }
 
     func loadPersistedRemoteConfigSubscriptions() -> [String: RemoteConfigSubscription] {
+        let metadataURL = self.workingDirectoryManager.remoteSubscriptionsURL
+        if let data = try? Data(contentsOf: metadataURL),
+           let subscriptions = try? JSONDecoder().decode([String: RemoteConfigSubscription].self, from: data)
+        {
+            return self.validRemoteConfigSubscriptions(subscriptions)
+        }
+
         if let subscriptions = self.decodeFromDefaults(
             [String: RemoteConfigSubscription].self,
             key: remoteConfigSubscriptionsKey)
         {
-            var result: [String: RemoteConfigSubscription] = [:]
-            for (fileName, sub) in subscriptions {
-                guard let normalizedName = normalizedConfigFileName(fileName), normalizedName == fileName else {
-                    continue
-                }
-                guard URL(string: sub.urlString).map({ isSupportedRemoteConfigURL($0) }) == true else { continue }
-                result[normalizedName] = sub
-            }
+            let result = self.validRemoteConfigSubscriptions(subscriptions)
+            self.writeRemoteConfigSubscriptionsFile(result)
             return result
         }
 
@@ -234,22 +235,46 @@ extension AppViewModel {
                 autoUpdateIntervalHours: RemoteConfigSubscription.defaultAutoUpdateIntervalHours,
                 lastUpdateCheckAt: nil)
         }
+        self.writeRemoteConfigSubscriptionsFile(migrated)
         self.encodeToDefaults(migrated, key: remoteConfigSubscriptionsKey)
         defaults.removeObject(forKey: remoteConfigSourcesKey)
         return migrated
     }
 
     func persistRemoteConfigSubscriptions() {
+        self.writeRemoteConfigSubscriptionsFile(remoteConfigSubscriptions)
         self.encodeToDefaults(remoteConfigSubscriptions, key: remoteConfigSubscriptionsKey)
     }
 
     func pruneRemoteConfigSubscriptionsIfNeeded() {
-        let availableNames = Set(availableConfigFileNames)
-        let filtered = remoteConfigSubscriptions.filter { availableNames.contains($0.key) }
-        guard filtered.count != remoteConfigSubscriptions.count else { return }
-        remoteConfigSubscriptions = filtered
-        self.persistRemoteConfigSubscriptions()
-        self.restartRemoteConfigBackgroundTasksIfNeeded()
+        // Keep subscription metadata when a downloaded YAML is temporarily missing.
+        // The user can reinstall or restore the config file without losing its source URL.
+    }
+
+    private func validRemoteConfigSubscriptions(
+        _ subscriptions: [String: RemoteConfigSubscription]) -> [String: RemoteConfigSubscription]
+    {
+        subscriptions.reduce(into: [String: RemoteConfigSubscription]()) { result, entry in
+            let (fileName, subscription) = entry
+            guard let normalizedName = normalizedConfigFileName(fileName), normalizedName == fileName,
+                  URL(string: subscription.urlString).map({ isSupportedRemoteConfigURL($0) }) == true
+            else {
+                return
+            }
+            result[normalizedName] = subscription
+        }
+    }
+
+    private func writeRemoteConfigSubscriptionsFile(_ subscriptions: [String: RemoteConfigSubscription]) {
+        do {
+            try FileManager.default.createDirectory(
+                at: self.workingDirectoryManager.stateDirectoryURL,
+                withIntermediateDirectories: true)
+            let data = try JSONEncoder().encode(subscriptions)
+            try data.write(to: self.workingDirectoryManager.remoteSubscriptionsURL, options: .atomic)
+        } catch {
+            self.appendLog(level: "error", message: "Unable to persist remote subscription metadata: \(error.localizedDescription)")
+        }
     }
 
     func loadPersistedRemoteConfigSources() -> [String: String] {

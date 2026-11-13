@@ -119,8 +119,8 @@ brew uninstall --zap --cask clashbar
 | 🪵 Logs        | 级别过滤、关键词检索                            |
 | ⚙️ System      | 语言、状态栏、端口、`allow-lan` / `ipv6` 等     |
 
-📁 运行时数据目录：`~/Library/Application Support/clashbar`  
-🧩 内置内核会复制到：`~/Library/Application Support/clashbar/core/mihomo`
+📁 运行时数据目录：`~/config/clashbar`
+🧩 内置内核会复制到：`~/config/clashbar/core/mihomo`
 
 ## 🛠️ 开发构建
 

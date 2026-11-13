@@ -49,7 +49,7 @@ brew uninstall --zap --cask clashbar
 
 运行时统一使用：
 
-`~/Library/Application Support/clashbar/core/mihomo`
+`~/config/clashbar/core/mihomo`
 
 文件名必须为 `mihomo`，并具有可执行权限。仅从可信来源获取与芯片架构匹配的二进制。
 
@@ -64,7 +64,7 @@ brew uninstall --zap --cask clashbar
 部分体积更小的构建**不内置** mihomo。此时需自行准备可执行文件：
 
 1. 在 ClashBar 中停止内核（若已在运行）。
-2. 将 `mihomo` 放到 `~/Library/Application Support/clashbar/core/mihomo`。
+2. 将 `mihomo` 放到 `~/config/clashbar/core/mihomo`。
 3. 在设置中使用「打开内核目录」核对路径，再启动或重启内核。
 
 更换自定义内核的步骤、缓存清理与 TUN 授权说明见下文「切换内核」。
@@ -95,7 +95,7 @@ brew uninstall --zap --cask clashbar
 
 1. 在 ClashBar 中 **停止** 内核，确保进程已退出。
 2. 准备目标可执行文件，命名为 `mihomo`，覆盖  
-   `~/Library/Application Support/clashbar/core/mihomo`。
+   `~/config/clashbar/core/mihomo`。
 3. 返回应用，执行 **启动** 或 **重启**。
 
 若切换后出现缓存兼容问题，可清理后重试：

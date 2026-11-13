@@ -21,6 +21,7 @@ final class RemoteMachineStore: ObservableObject {
 
     private let defaults: UserDefaults
     private let session: URLSession
+    private let storageURL: URL?
 
     @Published var machines: [RemoteMachine] = []
     @Published var activeTargetID: UUID?
@@ -44,10 +45,11 @@ final class RemoteMachineStore: ObservableObject {
         return .remote(machine)
     }
 
-    init(session: URLSession, defaults: UserDefaults = .standard) {
+    init(session: URLSession, defaults: UserDefaults = .standard, storageURL: URL? = nil) {
         self.defaults = defaults
         self.session = session
-        self.machines = Self.loadMachines(from: defaults)
+        self.storageURL = storageURL
+        self.machines = Self.loadMachines(from: defaults, storageURL: storageURL)
         self.activeTargetID = Self.loadActiveTargetID(from: defaults)
     }
 
@@ -169,6 +171,15 @@ final class RemoteMachineStore: ObservableObject {
     private func persist() {
         guard let data = try? JSONEncoder().encode(self.machines) else { return }
         self.defaults.set(data, forKey: Self.storageKey)
+        guard let storageURL else { return }
+        do {
+            try FileManager.default.createDirectory(
+                at: storageURL.deletingLastPathComponent(),
+                withIntermediateDirectories: true)
+            try data.write(to: storageURL, options: .atomic)
+        } catch {
+            NSLog("Unable to persist remote machines: %@", error.localizedDescription)
+        }
     }
 
     private func persistActiveTarget() {
@@ -179,11 +190,27 @@ final class RemoteMachineStore: ObservableObject {
         }
     }
 
-    private static func loadMachines(from defaults: UserDefaults) -> [RemoteMachine] {
+    private static func loadMachines(from defaults: UserDefaults, storageURL: URL?) -> [RemoteMachine] {
+        if let storageURL,
+           let data = try? Data(contentsOf: storageURL),
+           let machines = try? JSONDecoder().decode([RemoteMachine].self, from: data)
+        {
+            return machines
+        }
         guard let data = defaults.data(forKey: storageKey),
               let machines = try? JSONDecoder().decode([RemoteMachine].self, from: data)
         else {
             return []
+        }
+        if let storageURL {
+            do {
+                try FileManager.default.createDirectory(
+                    at: storageURL.deletingLastPathComponent(),
+                    withIntermediateDirectories: true)
+                try data.write(to: storageURL, options: .atomic)
+            } catch {
+                NSLog("Unable to migrate remote machines: %@", error.localizedDescription)
+            }
         }
         return machines
     }

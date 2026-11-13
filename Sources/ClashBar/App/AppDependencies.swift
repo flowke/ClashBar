@@ -45,7 +45,11 @@ struct AppDependencies {
             workingDirectoryManager: workingDirectoryManager,
             networkReachabilityMonitor: NetworkReachabilityMonitor(),
             ssidMonitorService: SSIDMonitorService(),
-            remoteMachineStore: RemoteMachineStore(session: sharedSession),
+            remoteMachineStore: RemoteMachineStore(
+                session: sharedSession,
+                storageURL: workingDirectoryManager.stateDirectoryURL.appendingPathComponent(
+                    "remote-machines.json",
+                    isDirectory: false)),
             proxyGroupIconCache: ProxyGroupIconCache(
                 iconDirectory: workingDirectoryManager.iconDirectoryURL,
                 session: sharedSession),

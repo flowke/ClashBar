@@ -9,6 +9,10 @@ struct WorkingDirectoryManager {
     }
 
     var rootDirectoryURL: URL {
+        self.homeDirectory.appendingPathComponent("config/clashbar", isDirectory: true)
+    }
+
+    var legacyRootDirectoryURL: URL {
         self.homeDirectory.appendingPathComponent("Library/Application Support/clashbar", isDirectory: true)
     }
 
@@ -24,6 +28,10 @@ struct WorkingDirectoryManager {
         self.rootDirectoryURL.appendingPathComponent("state", isDirectory: true)
     }
 
+    var remoteSubscriptionsURL: URL {
+        self.stateDirectoryURL.appendingPathComponent("subscriptions.json", isDirectory: false)
+    }
+
     var iconDirectoryURL: URL {
         self.rootDirectoryURL.appendingPathComponent("icon", isDirectory: true)
     }
@@ -37,12 +45,41 @@ struct WorkingDirectoryManager {
     }
 
     func bootstrapDirectories(fileManager: FileManager = .default) throws {
+        try self.migrateLegacyDirectoryIfNeeded(fileManager: fileManager)
         try self.createDirectoryIfNeeded(self.rootDirectoryURL, fileManager: fileManager)
         try self.createDirectoryIfNeeded(self.configDirectoryURL, fileManager: fileManager)
         try self.createDirectoryIfNeeded(self.logsDirectoryURL, fileManager: fileManager)
         try self.createDirectoryIfNeeded(self.stateDirectoryURL, fileManager: fileManager)
         try self.createDirectoryIfNeeded(self.iconDirectoryURL, fileManager: fileManager)
         try self.createDirectoryIfNeeded(self.coreDirectoryURL, fileManager: fileManager)
+    }
+
+    private func migrateLegacyDirectoryIfNeeded(fileManager: FileManager) throws {
+        guard fileManager.fileExists(atPath: self.legacyRootDirectoryURL.path) else { return }
+        try fileManager.createDirectory(
+            at: self.rootDirectoryURL,
+            withIntermediateDirectories: true)
+        try self.mergeDirectory(
+            from: self.legacyRootDirectoryURL,
+            to: self.rootDirectoryURL,
+            fileManager: fileManager)
+    }
+
+    private func mergeDirectory(from source: URL, to destination: URL, fileManager: FileManager) throws {
+        try fileManager.createDirectory(at: destination, withIntermediateDirectories: true)
+        for sourceItem in try fileManager.contentsOfDirectory(
+            at: source,
+            includingPropertiesForKeys: [.isDirectoryKey],
+            options: [])
+        {
+            let destinationItem = destination.appendingPathComponent(sourceItem.lastPathComponent)
+            let values = try sourceItem.resourceValues(forKeys: [.isDirectoryKey])
+            if values.isDirectory == true {
+                try self.mergeDirectory(from: sourceItem, to: destinationItem, fileManager: fileManager)
+            } else if !fileManager.fileExists(atPath: destinationItem.path) {
+                try fileManager.copyItem(at: sourceItem, to: destinationItem)
+            }
+        }
     }
 
     func normalizeAndValidateWithinRoot(_ url: URL, mustBeDirectory: Bool? = nil) throws -> URL {
