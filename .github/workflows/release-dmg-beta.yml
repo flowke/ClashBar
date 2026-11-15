@@ -17,6 +17,7 @@ jobs:
       version: ${{ steps.meta.outputs.version }}
       build_number: ${{ steps.meta.outputs.build_number }}
       source_ref: ${{ steps.meta.outputs.source_ref }}
+      mihomo_version: ${{ steps.meta.outputs.mihomo_version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -48,6 +49,9 @@ jobs:
           echo "version=${build_label}" >> "$GITHUB_OUTPUT"
           echo "build_number=${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
           echo "source_ref=${source_ref}" >> "$GITHUB_OUTPUT"
+          mihomo_version="$(curl -fsSL https://github.com/MetaCubeX/mihomo/releases/latest/download/version.txt | tr -d '\r\n')"
+          [[ "$mihomo_version" == v* ]] || mihomo_version="v${mihomo_version}"
+          echo "mihomo_version=${mihomo_version}" >> "$GITHUB_OUTPUT"
 
   build-dmg:
     needs: prepare-beta
@@ -62,14 +66,6 @@ jobs:
           - target_arch: arm64
             dmg_suffix: apple-silicon-no-core
             artifact_name: dmg-arm64-no-core
-            bundle_mihomo_binary: '0'
-          - target_arch: x86_64
-            dmg_suffix: intel
-            artifact_name: dmg-x86_64
-            bundle_mihomo_binary: '1'
-          - target_arch: x86_64
-            dmg_suffix: intel-no-core
-            artifact_name: dmg-x86_64-no-core
             bundle_mihomo_binary: '0'
     runs-on: macos-15
     permissions:
@@ -101,6 +97,7 @@ jobs:
         run: |
           APP_VERSION="${{ needs.prepare-beta.outputs.version }}" \
           BUILD_NUMBER="${{ needs.prepare-beta.outputs.build_number }}" \
+          MIHOMO_VERSION="${{ needs.prepare-beta.outputs.mihomo_version }}" \
           PREPARE_MIHOMO_BINARY="${{ matrix.bundle_mihomo_binary }}" \
           BUNDLE_MIHOMO_BINARY="${{ matrix.bundle_mihomo_binary }}" \
           TARGET_ARCH="${{ matrix.target_arch }}" \
@@ -112,6 +109,18 @@ jobs:
           APP_VERSION="${{ needs.prepare-beta.outputs.version }}" \
           DMG_SUFFIX="${{ matrix.dmg_suffix }}" \
           ./Scripts/build.sh dmg
+
+      - name: Verify release artifact
+        shell: bash
+        run: |
+          core_mode="no-core"
+          if [[ "${{ matrix.bundle_mihomo_binary }}" == "1" ]]; then
+            core_mode="with-core"
+          fi
+          ./Scripts/verify_release_artifact.sh \
+            "dist/ClashBar-${{ needs.prepare-beta.outputs.version }}-${{ matrix.dmg_suffix }}.dmg" \
+            "${{ needs.prepare-beta.outputs.version }}" \
+            "$core_mode"
 
       - name: Upload dmg artifact
         uses: actions/upload-artifact@v4
@@ -145,6 +154,7 @@ jobs:
         env:
           GITHUB_REPOSITORY: ${{ github.repository }}
           SOURCE_BRANCH: beta
+          MIHOMO_VERSION: ${{ needs.prepare-beta.outputs.mihomo_version }}
         run: |
           chmod +x Scripts/generate_beta_release_notes.sh
           Scripts/generate_beta_release_notes.sh \

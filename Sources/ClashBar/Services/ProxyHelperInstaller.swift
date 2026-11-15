@@ -36,8 +36,21 @@ enum ProxyHelperInstaller {
         self.resolveHelperSource() != nil
     }
 
+    static func developmentHelperSourceAvailable() -> Bool {
+        self.resolveDevelopmentHelperSource() != nil
+    }
+
     static func helperBinaryURL() -> URL? {
         self.resolveHelperSource()?.binaryURL
+    }
+
+    static func helperBinaryURL(
+        bundleURL: URL,
+        executableURL: URL?) -> URL?
+    {
+        self.resolveHelperSource(
+            bundleURL: bundleURL,
+            executableURL: executableURL)?.binaryURL
     }
 
     static func installBundledHelper() async throws {
@@ -76,8 +89,10 @@ enum ProxyHelperInstaller {
         }.value
     }
 
-    private static func resolveHelperSource() -> HelperSource? {
-        let bundleURL = Bundle.main.bundleURL
+    private static func resolveHelperSource(
+        bundleURL: URL = Bundle.main.bundleURL,
+        executableURL: URL? = Bundle.main.executableURL) -> HelperSource?
+    {
         let bundledBinaryURL = bundleURL.appendingPathComponent(ProxyHelperConstants.helperBundleProgram)
         let bundledPlistURL = bundleURL.appendingPathComponent(ProxyHelperConstants.helperBundlePlist)
         if FileManager.default.isExecutableFile(atPath: bundledBinaryURL.path),
@@ -86,35 +101,35 @@ enum ProxyHelperInstaller {
             return HelperSource(binaryURL: bundledBinaryURL, plistURL: bundledPlistURL)
         }
 
-#if DEBUG
-        let executableDirectory = Bundle.main.executableURL?.deletingLastPathComponent()
-        let bundleDirectory = bundleURL.deletingLastPathComponent()
-        let workingDirectory = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
-        let projectRoots = [
-            workingDirectory,
-            workingDirectory.deletingLastPathComponent(),
-            workingDirectory.deletingLastPathComponent().deletingLastPathComponent(),
-        ]
-        var developmentCandidates = [bundleDirectory.appendingPathComponent("ClashBarProxyHelper")]
-        if let executableDirectory {
-            developmentCandidates.append(executableDirectory.appendingPathComponent("ClashBarProxyHelper"))
-        }
-        developmentCandidates += projectRoots.flatMap { root in
-            [
-                root.appendingPathComponent(".build/out/Products/Debug/ClashBarProxyHelper"),
-                root.appendingPathComponent(".build/arm64-apple-macosx/debug/ClashBarProxyHelper"),
-                root.appendingPathComponent(".build/debug/ClashBarProxyHelper"),
-            ]
+        guard bundleURL.pathExtension != "app" else { return nil }
+        return self.resolveDevelopmentHelperSource(
+            bundleURL: bundleURL,
+            executableURL: executableURL)
+    }
+
+    private static func resolveDevelopmentHelperSource(
+        bundleURL: URL = Bundle.main.bundleURL,
+        executableURL: URL? = Bundle.main.executableURL) -> HelperSource?
+    {
+        if bundleURL.pathExtension == "app" {
+            let productsDirectory = bundleURL.deletingLastPathComponent()
+            guard ["Debug", "Release"].contains(productsDirectory.lastPathComponent),
+                  productsDirectory.deletingLastPathComponent().lastPathComponent == "Products"
+            else { return nil }
+            let binaryURL = bundleURL.appendingPathComponent(ProxyHelperConstants.helperBundleProgram)
+            let plistURL = bundleURL.appendingPathComponent(ProxyHelperConstants.helperBundlePlist)
+            guard FileManager.default.isExecutableFile(atPath: binaryURL.path),
+                  FileManager.default.fileExists(atPath: plistURL.path)
+            else { return nil }
+            return HelperSource(binaryURL: binaryURL, plistURL: plistURL)
         }
 
-        if let binaryURL = developmentCandidates.compactMap({ $0 }).first(where: {
-            FileManager.default.isExecutableFile(atPath: $0.path)
-        }) {
-            return HelperSource(binaryURL: binaryURL, plistURL: nil)
-        }
-#endif
-
-        return nil
+        guard let executableDirectory = executableURL?.deletingLastPathComponent(),
+              ["debug", "release"].contains(executableDirectory.lastPathComponent.lowercased())
+        else { return nil }
+        let binaryURL = executableDirectory.appendingPathComponent("ClashBarProxyHelper")
+        guard FileManager.default.isExecutableFile(atPath: binaryURL.path) else { return nil }
+        return HelperSource(binaryURL: binaryURL, plistURL: nil)
     }
 
     private static func writeDevelopmentHelperPlist(to url: URL) throws {

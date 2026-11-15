@@ -38,6 +38,8 @@
 "ui.action.core_unavailable" = "Core unavailable";
 "ui.action.quit" = "Quit";
 "ui.action.test_latency" = "Test Latency";
+"ui.action.refresh_remote_config" = "Refresh current remote configuration";
+"ui.proxy.remaining_quota" = "%@ left";
 "ui.action.show_hidden_proxy_groups" = "Show hidden proxy groups";
 "ui.action.hide_hidden_proxy_groups" = "Hide hidden proxy groups";
 "ui.action.sort_nodes_by_latency" = "Sort Nodes by Latency";

@@ -119,12 +119,16 @@ brew uninstall --zap --cask clashbar
 | 🪵 Logs        | 级别过滤、关键词检索                            |
 | ⚙️ System      | 语言、状态栏、端口、`allow-lan` / `ipv6` 等     |
 
-📁 运行时数据目录：`~/config/clashbar`
-🧩 内置内核会复制到：`~/config/clashbar/core/mihomo`
+📁 运行时数据目录：`~/.config/clashbar`
+🧩 内置内核会复制到：`~/.config/clashbar/core/mihomo`
+
+升级到使用 `~/.config` 的版本时，ClashBar 会自动将旧目录 `~/config/clashbar`（以及更早的 `~/Library/Application Support/clashbar`）中尚未存在于新目录的文件合并过去，不会覆盖新目录中已有文件。
 
 ## 🛠️ 开发构建
 
 日常 Xcode 调试请打开 `ClashBar.xcodeproj`，选择 `ClashBar` Scheme 后运行。该 Scheme 会直接构建并启动固定的 `ClashBar Dev.app`，因此 Xcode 可以在再次点击 Run 时正确停止并替换上一次运行的实例。它与 SwiftPM 的源码保持一致，但不再依赖运行时临时创建开发 App bundle。
+
+直接打开 `Package.swift` 时，仓库共享的 `ClashBar` Scheme 也会同时构建主程序和 `ClashBarProxyHelper`，支持 Debug 和 Release。Helper 与主程序生成在相同的构建目录；清理构建目录后再次 Run 会重新生成 Helper，无需单独构建或切换 Scheme。设置页的“安装 / 更新 Helper”仍负责更新系统中已安装的版本，运行项目不会自动请求管理员权限。
 
 ```sh
 # 依赖：Xcode / Swift 6.2+、macOS 13+

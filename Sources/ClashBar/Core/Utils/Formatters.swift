@@ -113,6 +113,11 @@ enum ValueFormatter {
         return self.compactNoSpace(value: Double(normalized) / 1024, unit: "KB")
     }
 
+    static func bytesGBNoSpace(_ value: Int64) -> String {
+        let normalized = max(0, value)
+        return self.detailedNoSpace(value: Double(normalized) / (1024 * 1024 * 1024), unit: "GB")
+    }
+
     static func bytesOrDash(_ value: Int64?) -> String {
         guard let value else { return "--" }
         return self.bytesCompact(value)
@@ -191,6 +196,17 @@ enum ValueFormatter {
             return "\(Int(value.rounded()))\(unit)"
         }
         return String(format: "%.1f%@", value, unit)
+    }
+
+    private static func detailedNoSpace(value: Double, unit: String) -> String {
+        var text = String(format: "%.2f", value)
+        while text.last == "0" {
+            text.removeLast()
+        }
+        if text.last == "." {
+            text.removeLast()
+        }
+        return "\(text)\(unit)"
     }
 
     private static func roundedBytesText(_ value: Int64, divisor: Double, unit: String) -> String {

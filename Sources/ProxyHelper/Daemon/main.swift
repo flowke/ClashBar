@@ -30,6 +30,9 @@ private enum ProxyHelperError: LocalizedError {
 }
 
 private final class SystemProxyConfigurator {
+    private let backupDirectory = URL(fileURLWithPath: "/Library/Application Support/com.clashbar.helper", isDirectory: true)
+    private var backupURL: URL { self.backupDirectory.appendingPathComponent("system-proxy-backup.plist") }
+
     private struct ProxyEntrySpec {
         let enableKey: String
         let hostKey: String
@@ -59,8 +62,21 @@ private final class SystemProxyConfigurator {
             socksPort: socksPort,
             requiresEnabledProxy: true)
 
-        try withMutableProxyProtocols { protocols in
-            for proxyProtocol in protocols {
+        try self.withMutableProxyServices { services, _ in
+            var current: [String: [String: Any]] = [:]
+            for service in services {
+                guard let identifier = SCNetworkServiceGetServiceID(service) as String?,
+                      let proxyProtocol = SCNetworkServiceCopyProtocol(service, kSCNetworkProtocolTypeProxies) else { continue }
+                current[identifier] = self.configuration(for: proxyProtocol)
+            }
+            let backup = try SystemProxyBackup.prepare(
+                previous: self.readBackup(),
+                current: current,
+                target: .init(host: host, httpPort: ports.httpPort, httpsPort: ports.httpsPort, socksPort: ports.socksPort))
+            try self.writeBackup(backup)
+
+            for service in services {
+                guard let proxyProtocol = SCNetworkServiceCopyProtocol(service, kSCNetworkProtocolTypeProxies) else { continue }
                 var config = self.configuration(for: proxyProtocol)
                 config[kSCPropNetProxiesProxyAutoConfigEnable as String] = 0
                 config[kSCPropNetProxiesProxyAutoDiscoveryEnable as String] = 0
@@ -81,18 +97,51 @@ private final class SystemProxyConfigurator {
     }
 
     func clearSystemProxy() throws {
-        try self.withMutableProxyProtocols { protocols in
-            for proxyProtocol in protocols {
-                var config = self.configuration(for: proxyProtocol)
-                for spec in Self.proxyEntrySpecs {
-                    self.configureProxyEntry(config: &config, spec: spec, host: "", port: 0)
+        var restoredBackup = false
+        try self.withMutableProxyServices(includeAllServices: true, afterCommit: {
+            if restoredBackup {
+                try FileManager.default.removeItem(at: self.backupURL)
+            }
+        }) { services, currentServiceIDs in
+            if let backup = try self.readBackup() {
+                for service in services {
+                    guard let identifier = SCNetworkServiceGetServiceID(service) as String?,
+                          let proxyProtocol = SCNetworkServiceCopyProtocol(service, kSCNetworkProtocolTypeProxies),
+                          let restored = try backup.restoredConfiguration(
+                              identifier: identifier, current: self.configuration(for: proxyProtocol)) else { continue }
+                    guard SCNetworkProtocolSetConfiguration(proxyProtocol, restored as CFDictionary) else {
+                        throw self.systemConfigurationError(action: "Restore proxy configuration")
+                    }
                 }
-
-                guard SCNetworkProtocolSetConfiguration(proxyProtocol, config as CFDictionary) else {
-                    throw self.systemConfigurationError(action: "Clear proxy configuration")
+                restoredBackup = true
+            } else {
+                for service in services where SCNetworkServiceGetEnabled(service) {
+                    guard let identifier = SCNetworkServiceGetServiceID(service) as String?,
+                          currentServiceIDs.contains(identifier),
+                          let proxyProtocol = SCNetworkServiceCopyProtocol(service, kSCNetworkProtocolTypeProxies) else { continue }
+                    var config = self.configuration(for: proxyProtocol)
+                    for spec in Self.proxyEntrySpecs {
+                        self.configureProxyEntry(config: &config, spec: spec, host: "", port: 0)
+                    }
+                    guard SCNetworkProtocolSetConfiguration(proxyProtocol, config as CFDictionary) else {
+                        throw self.systemConfigurationError(action: "Clear proxy configuration")
+                    }
                 }
             }
         }
+    }
+
+    private func readBackup() throws -> SystemProxyBackup? {
+        guard FileManager.default.fileExists(atPath: self.backupURL.path) else { return nil }
+        return try PropertyListDecoder().decode(SystemProxyBackup.self, from: Data(contentsOf: self.backupURL))
+    }
+
+    private func writeBackup(_ backup: SystemProxyBackup) throws {
+        try FileManager.default.createDirectory(
+            at: self.backupDirectory, withIntermediateDirectories: true,
+            attributes: [.posixPermissions: 0o700])
+        let data = try PropertyListEncoder().encode(backup)
+        try data.write(to: self.backupURL, options: .atomic)
     }
 
     func isSystemProxyEnabled() throws -> Bool {
@@ -246,6 +295,17 @@ private final class SystemProxyConfigurator {
     }
 
     private func withMutableProxyProtocols(_ update: ([SCNetworkProtocol]) throws -> Void) throws {
+        try self.withMutableProxyServices { services, _ in
+            let protocols = services.compactMap { SCNetworkServiceCopyProtocol($0, kSCNetworkProtocolTypeProxies) }
+            try update(protocols)
+        }
+    }
+
+    private func withMutableProxyServices(
+        includeAllServices: Bool = false,
+        afterCommit: () throws -> Void = {},
+        _ update: ([SCNetworkService], Set<String>) throws -> Void) throws
+    {
         let preferences = try makePreferences()
 
         guard SCPreferencesLock(preferences, true) else {
@@ -253,8 +313,19 @@ private final class SystemProxyConfigurator {
         }
         defer { SCPreferencesUnlock(preferences) }
 
-        let protocols = try proxyProtocols(from: preferences)
-        try update(protocols)
+        guard let currentSet = SCNetworkSetCopyCurrent(preferences),
+              let currentServices = SCNetworkSetCopyServices(currentSet) as? [SCNetworkService] else {
+            throw ProxyHelperError.missingCurrentSet
+        }
+        let currentServiceIDs = Set(currentServices.compactMap { SCNetworkServiceGetServiceID($0) as String? })
+        let services: [SCNetworkService]
+        if includeAllServices {
+            services = (SCNetworkServiceCopyAll(preferences) as? [SCNetworkService]) ?? []
+        } else {
+            services = currentServices.filter { SCNetworkServiceGetEnabled($0) && SCNetworkServiceCopyProtocol($0, kSCNetworkProtocolTypeProxies) != nil }
+        }
+        guard !services.isEmpty else { throw ProxyHelperError.noEnabledNetworkServices }
+        try update(services, currentServiceIDs)
 
         guard SCPreferencesCommitChanges(preferences) else {
             throw self.systemConfigurationError(action: "Commit proxy preferences")
@@ -262,6 +333,7 @@ private final class SystemProxyConfigurator {
         guard SCPreferencesApplyChanges(preferences) else {
             throw self.systemConfigurationError(action: "Apply proxy preferences")
         }
+        try afterCommit()
     }
 
     private func makePreferences() throws -> SCPreferences {

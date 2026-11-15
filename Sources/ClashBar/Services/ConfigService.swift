@@ -9,11 +9,19 @@ struct WorkingDirectoryManager {
     }
 
     var rootDirectoryURL: URL {
+        self.homeDirectory.appendingPathComponent(".config/clashbar", isDirectory: true)
+    }
+
+    var previousRootDirectoryURL: URL {
         self.homeDirectory.appendingPathComponent("config/clashbar", isDirectory: true)
     }
 
     var legacyRootDirectoryURL: URL {
         self.homeDirectory.appendingPathComponent("Library/Application Support/clashbar", isDirectory: true)
+    }
+
+    var legacyRootDirectoryURLs: [URL] {
+        [self.previousRootDirectoryURL, self.legacyRootDirectoryURL]
     }
 
     var configDirectoryURL: URL {
@@ -45,7 +53,7 @@ struct WorkingDirectoryManager {
     }
 
     func bootstrapDirectories(fileManager: FileManager = .default) throws {
-        try self.migrateLegacyDirectoryIfNeeded(fileManager: fileManager)
+        try self.migrateLegacyDirectoriesIfNeeded(fileManager: fileManager)
         try self.createDirectoryIfNeeded(self.rootDirectoryURL, fileManager: fileManager)
         try self.createDirectoryIfNeeded(self.configDirectoryURL, fileManager: fileManager)
         try self.createDirectoryIfNeeded(self.logsDirectoryURL, fileManager: fileManager)
@@ -54,15 +62,32 @@ struct WorkingDirectoryManager {
         try self.createDirectoryIfNeeded(self.coreDirectoryURL, fileManager: fileManager)
     }
 
-    private func migrateLegacyDirectoryIfNeeded(fileManager: FileManager) throws {
-        guard fileManager.fileExists(atPath: self.legacyRootDirectoryURL.path) else { return }
+    func currentURL(forPersistedURL url: URL) -> URL {
+        let standardized = url.standardizedFileURL
+        for legacyRoot in self.legacyRootDirectoryURLs {
+            let source = legacyRoot.standardizedFileURL
+            guard self.isDescendantOrEqual(standardized, parent: source) else { continue }
+
+            let relativeComponents = Array(standardized.pathComponents.dropFirst(source.pathComponents.count))
+            return relativeComponents.reduce(self.rootDirectoryURL) { result, component in
+                result.appendingPathComponent(component)
+            }
+        }
+        return standardized
+    }
+
+    private func migrateLegacyDirectoriesIfNeeded(fileManager: FileManager) throws {
+        let existingSources = self.legacyRootDirectoryURLs.filter {
+            fileManager.fileExists(atPath: $0.path)
+        }
+        guard !existingSources.isEmpty else { return }
+
         try fileManager.createDirectory(
             at: self.rootDirectoryURL,
             withIntermediateDirectories: true)
-        try self.mergeDirectory(
-            from: self.legacyRootDirectoryURL,
-            to: self.rootDirectoryURL,
-            fileManager: fileManager)
+        for source in existingSources {
+            try self.mergeDirectory(from: source, to: self.rootDirectoryURL, fileManager: fileManager)
+        }
     }
 
     private func mergeDirectory(from source: URL, to destination: URL, fileManager: FileManager) throws {
@@ -75,6 +100,10 @@ struct WorkingDirectoryManager {
             let destinationItem = destination.appendingPathComponent(sourceItem.lastPathComponent)
             let values = try sourceItem.resourceValues(forKeys: [.isDirectoryKey])
             if values.isDirectory == true {
+                var isDirectory: ObjCBool = false
+                if fileManager.fileExists(atPath: destinationItem.path, isDirectory: &isDirectory) {
+                    guard isDirectory.boolValue else { continue }
+                }
                 try self.mergeDirectory(from: sourceItem, to: destinationItem, fileManager: fileManager)
             } else if !fileManager.fileExists(atPath: destinationItem.path) {
                 try fileManager.copyItem(at: sourceItem, to: destinationItem)

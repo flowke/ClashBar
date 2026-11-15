@@ -38,6 +38,8 @@
 "ui.action.core_unavailable" = "未找到内核";
 "ui.action.quit" = "退出";
 "ui.action.test_latency" = "延迟测试";
+"ui.action.refresh_remote_config" = "刷新当前远程配置";
+"ui.proxy.remaining_quota" = "剩余 %@";
 "ui.action.show_hidden_proxy_groups" = "显示 hidden 代理组";
 "ui.action.hide_hidden_proxy_groups" = "隐藏 hidden 代理组";
 "ui.action.sort_nodes_by_latency" = "节点按延迟排序";

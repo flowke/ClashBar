@@ -40,6 +40,8 @@ hdiutil create \
   -format UDZO \
   "$DMG_PATH"
 
+hdiutil verify "$DMG_PATH" >/dev/null
+
 ( cd "$ROOT/dist" && shasum -a 256 "$DMG_NAME" > "${DMG_NAME}.sha256" )
 
 echo "Created dmg: $DMG_PATH"

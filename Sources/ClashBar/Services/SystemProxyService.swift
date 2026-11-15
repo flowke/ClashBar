@@ -469,11 +469,7 @@ struct SystemProxyService: SystemProxyServicing {
     }
 
     private func isDevelopmentBuild() -> Bool {
-#if DEBUG
-        return ProxyHelperInstaller.helperSourceAvailable()
-#else
-        return false
-#endif
+        return ProxyHelperInstaller.developmentHelperSourceAvailable()
     }
 
     private func triggerHelperDemandLaunchAndWait() async throws -> Bool {

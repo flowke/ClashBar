@@ -75,6 +75,7 @@
 		6AF1229E49C39DE400711D28 /* TrafficStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2CEB0DB097DBB31E7EC3B7C /* TrafficStore.swift */; };
 		6B4CFDB3F9A0D6C5E9325D97 /* AppViewModel+Lifecycle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93B525E2D089C89E5689958B /* AppViewModel+Lifecycle.swift */; };
 		6C8CA20480FE414A1377F863 /* ProxyHelperProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9230F3D2C50E81F13404A21 /* ProxyHelperProtocol.swift */; };
+		B10000000000000000000001 /* SystemProxyBackup.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000002 /* SystemProxyBackup.swift */; };
 		71B5D17969E27E16931AF0C1 /* SSIDStrategyRule.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDCBAB4912FAC9DC4E44FC49 /* SSIDStrategyRule.swift */; };
 		72E303A491DEA045A2180BD0 /* LaunchAtLoginService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE7F8C9A2EFF3CD1D848E305 /* LaunchAtLoginService.swift */; };
 		74709978215A9005348049A4 /* libProxyHelperShared.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C8BAA1CD2175700E31A720A9 /* libProxyHelperShared.a */; };
@@ -269,6 +270,7 @@
 		C6C5E24565FDAC46341709A9 /* MenuBarHeaderView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = MenuBarHeaderView.swift; path = Sources/ClashBar/Views/MenuBar/MenuBarHeaderView.swift; sourceTree = "<group>"; };
 		C8BAA1CD2175700E31A720A9 /* libProxyHelperShared.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libProxyHelperShared.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		C9230F3D2C50E81F13404A21 /* ProxyHelperProtocol.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ProxyHelperProtocol.swift; path = Sources/ProxyHelperShared/ProxyHelperProtocol.swift; sourceTree = "<group>"; };
+		B10000000000000000000002 /* SystemProxyBackup.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SystemProxyBackup.swift; path = Sources/ProxyHelperShared/SystemProxyBackup.swift; sourceTree = "<group>"; };
 		CAD716A393331E5B0D7EB2E1 /* AppViewModel+NetworkMonitoring.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = "AppViewModel+NetworkMonitoring.swift"; path = "Sources/ClashBar/ViewModels/AppViewModel+NetworkMonitoring.swift"; sourceTree = "<group>"; };
 		CAFE6857DFEF4E0A8D29D064 /* AppViewModel+Validation.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = "AppViewModel+Validation.swift"; path = "Sources/ClashBar/ViewModels/AppViewModel+Validation.swift"; sourceTree = "<group>"; };
 		CC3B298312A86FE408AE2BE2 /* MenuBarCommonViews.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = MenuBarCommonViews.swift; path = Sources/ClashBar/Views/MenuBar/Common/MenuBarCommonViews.swift; sourceTree = "<group>"; };
@@ -345,6 +347,7 @@
 			isa = PBXGroup;
 			children = (
 				C9230F3D2C50E81F13404A21 /* ProxyHelperProtocol.swift */,
+				B10000000000000000000002 /* SystemProxyBackup.swift */,
 			);
 			name = ProxyHelperShared;
 			sourceTree = "<group>";
@@ -687,6 +690,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				6C8CA20480FE414A1377F863 /* ProxyHelperProtocol.swift in Sources */,
+				B10000000000000000000001 /* SystemProxyBackup.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

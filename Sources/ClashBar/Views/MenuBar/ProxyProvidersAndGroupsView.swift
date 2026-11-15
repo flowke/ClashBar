@@ -121,8 +121,8 @@ extension ProxyTabView {
                         if let upload, let download, let total {
                             let used = upload + download
                             let quotaText =
-                                "\(ValueFormatter.bytesCompactNoSpace(used)) / " +
-                                "\(ValueFormatter.bytesCompactNoSpace(total))"
+                                "\(ValueFormatter.bytesGBNoSpace(used)) / " +
+                                "\(ValueFormatter.bytesGBNoSpace(total))"
                             Text(quotaText)
                                 .font(.app(size: T.FontSize.caption, weight: .regular))
                                 .foregroundStyle(nativeSecondaryLabel)
@@ -194,12 +194,45 @@ extension ProxyTabView {
 
     var proxyGroupsSection: some View {
         let groups = rootViewModel.filteredProxyGroups
+        let configName = appViewModel.selectedConfigName
+        let subscription = appViewModel.isRemoteTarget ? nil : appViewModel.remoteConfigSubscriptions[configName]
 
         return VStack(alignment: .leading, spacing: T.proxySectionSpacing) {
             self.nodesSectionHeader(
                 tr("ui.section.proxy_groups"),
                 symbol: "point.3.connected.trianglepath.dotted",
-                count: "\(groups.count)")
+                count: "\(groups.count)",
+                countSpacing: T.space1,
+                leading: {
+                    if let subscription, subscription.isEnabled,
+                       let usage = subscription.usage, let total = usage.total, total > 0,
+                       let used = usage.used {
+                        let phase = appViewModel.remoteConfigMenuState(for: configName).phase
+                        let remaining = ValueFormatter.bytesGBNoSpace(max(0, total - used))
+                        let refreshLabel = tr(phase == .failed ? "ui.quick.remote.refresh_failed" : "ui.action.refresh_remote_config")
+
+                        HStack(alignment: .center, spacing: T.space2) {
+                            Text(tr("ui.proxy.remaining_quota", remaining))
+                                .font(.app(size: T.FontSize.caption, weight: .medium))
+                                .foregroundStyle(nativePositive)
+                                .fixedSize()
+                                .frame(height: T.rowLeadingIcon, alignment: .center)
+
+                            self.compactAsyncIconButton(
+                                symbol: "arrow.clockwise",
+                                label: refreshLabel,
+                                tint: phase == .failed ? nativeCritical : nativePositive,
+                                baseTint: phase == .failed ? nativeCritical : nativePositive,
+                                isLoading: phase == .refreshing,
+                                size: T.rowLeadingIcon,
+                                fontSize: T.FontSize.caption)
+                            {
+                                await appViewModel.refreshRemoteConfigFile(named: configName)
+                            }
+                        }
+                        .fixedSize()
+                    }
+                })
             {
                 HStack(spacing: T.space6) {
                     self.compactTopIcon(
@@ -447,8 +480,34 @@ extension ProxyTabView {
         _ title: String,
         symbol: String,
         count: String? = nil,
+        countSpacing: CGFloat = T.space6,
+        @ViewBuilder leading: () -> some View = { EmptyView() },
         @ViewBuilder trailing: () -> some View = { EmptyView() }) -> some View
     {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: T.space6) {
+                self.nodesSectionHeaderLabel(title, symbol: symbol, count: count, countSpacing: countSpacing)
+                leading()
+                Spacer(minLength: 0)
+                trailing()
+            }
+
+            VStack(alignment: .leading, spacing: T.space4) {
+                HStack(spacing: T.space6) {
+                    self.nodesSectionHeaderLabel(title, symbol: symbol, count: count, countSpacing: countSpacing)
+                    leading()
+                }
+                HStack {
+                    Spacer(minLength: 0)
+                    trailing()
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, T.space4)
+    }
+
+    private func nodesSectionHeaderLabel(_ title: String, symbol: String, count: String?, countSpacing: CGFloat) -> some View {
         HStack(spacing: T.space6) {
             Image(systemName: symbol)
                 .font(.app(size: T.FontSize.caption, weight: .semibold))
@@ -458,25 +517,24 @@ extension ProxyTabView {
                     height: T.rowLeadingIcon,
                     alignment: .center)
 
-            Text(title)
-                .font(.app(size: T.FontSize.body, weight: .bold))
-                .foregroundStyle(nativeTertiaryLabel)
-                .textCase(.uppercase)
+            HStack(spacing: countSpacing) {
+                Text(title)
+                    .font(.app(size: T.FontSize.body, weight: .bold))
+                    .foregroundStyle(nativeTertiaryLabel)
+                    .textCase(.uppercase)
+                    .fixedSize()
 
-            if let count {
-                Text(count)
-                    .font(.app(size: T.FontSize.caption, weight: .bold))
-                    .foregroundStyle(nativeSecondaryLabel)
-                    .padding(.horizontal, T.space4)
-                    .padding(.vertical, T.space1)
-                    .background(nativeBadgeCapsule())
+                if let count {
+                    Text(count)
+                        .font(.app(size: T.FontSize.caption, weight: .bold))
+                        .foregroundStyle(nativeSecondaryLabel)
+                        .padding(.horizontal, T.space4)
+                        .padding(.vertical, T.space1)
+                        .background(nativeBadgeCapsule())
+                }
             }
-
-            Spacer(minLength: 0)
-            trailing()
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, T.space4)
+        .fixedSize()
     }
 
     func popoverHeader(

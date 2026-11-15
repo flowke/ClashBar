@@ -3,7 +3,9 @@ title: 配置与订阅
 description: 数据目录、配置发现规则、导入与订阅维护。
 ---
 
-安装并完成首次启动后，配置与订阅是日常维护的核心。ClashBar 将工作文件放在 `~/config/clashbar`；配置相关文件位于 `…/clashbar/config`，并在菜单栏面板的配置菜单中提供切换入口。
+安装并完成首次启动后，配置与订阅是日常维护的核心。ClashBar 将工作文件放在 `~/.config/clashbar`；配置相关文件位于 `…/.config/clashbar/config`，并在菜单栏面板的配置菜单中提供切换入口。
+
+升级时，应用会从旧目录 `~/config/clashbar` 和更早的 `~/Library/Application Support/clashbar` 自动迁移缺失文件到新目录。新目录中已有同名文件会保留，旧目录不会被自动删除。
 
 面板内选节点、测延迟见 [日常使用](/docs/daily-use)；按 Wi‑Fi 自动换配置见 [SSID 策略](/docs/ssid-strategy)。
 

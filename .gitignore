@@ -11,7 +11,14 @@ dist/
 .claude/
 .codex/
 skills-lock.json
-.swiftpm/
+.swiftpm/*
+!.swiftpm/xcode/
+.swiftpm/xcode/*
+!.swiftpm/xcode/xcshareddata/
+.swiftpm/xcode/xcshareddata/*
+!.swiftpm/xcode/xcshareddata/xcschemes/
+.swiftpm/xcode/xcshareddata/xcschemes/*
+!.swiftpm/xcode/xcshareddata/xcschemes/ClashBar.xcscheme
 .home/
 CLAUDE.md
 Sources/ClashBar/Resources/bin/mihomo
