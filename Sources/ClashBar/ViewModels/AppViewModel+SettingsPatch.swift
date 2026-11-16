@@ -81,8 +81,37 @@ extension AppViewModel {
 
     func resolvedProxyPorts(configURL: URL? = nil) throws -> ProxyPortValues {
         if let manualProxyPorts { return manualProxyPorts }
-        guard let url = configURL ?? configService.selectedConfig else { throw ProxyPortError.missingConfig }
+        guard let url = configURL ?? currentLocalProxyPortConfigURL() else {
+            throw ProxyPortError.missingConfig
+        }
         return try ProxyPortValues.fromConfig(Data(contentsOf: url))
+    }
+
+    func currentLocalProxyPortConfigURL() -> URL? {
+        if let record = try? effectiveConfigTransaction.currentRecord(),
+           let effective = effectiveConfigTransaction.currentFile(record),
+           FileManager.default.fileExists(atPath: effective.path)
+        {
+            return effective
+        }
+        return configService.selectedConfig
+    }
+
+    func configuredProxyPortsForPresentation() -> ProxyPortValues? {
+        guard !isRemoteTarget else { return nil }
+        return try? resolvedProxyPorts()
+    }
+
+    func proxyPortsForPresentation(_ runtimeConfig: ConfigSnapshot) -> ProxyPortValues {
+        configuredProxyPortsForPresentation() ?? ProxyPortValues(config: runtimeConfig)
+    }
+
+    func editableSettingsSnapshotForPresentation(_ runtimeConfig: ConfigSnapshot)
+        -> EditableSettingsSnapshot
+    {
+        let snapshot = EditableSettingsSnapshot(config: runtimeConfig)
+        guard let ports = configuredProxyPortsForPresentation() else { return snapshot }
+        return snapshot.withProxyPorts(ports)
     }
 
     func applyRuntimeProxyPorts(configURL: URL) async throws {
@@ -115,7 +144,7 @@ extension AppViewModel {
     }
 
     func followConfigProxyPorts() async {
-        guard !isRemoteTarget, let url = configService.selectedConfig else { return }
+        guard !isRemoteTarget, let url = currentLocalProxyPortConfigURL() else { return }
         cancelProxyPortRetry()
         await waitForProxyPortRetryToStop()
         do {
@@ -364,7 +393,7 @@ extension AppViewModel {
     func reconcileEditableSettingsWithRuntimeConfig() async {
         do {
             let config = try await self.fetchRuntimeConfigSnapshot()
-            let incoming = EditableSettingsSnapshot(config: config)
+            let incoming = self.editableSettingsSnapshotForPresentation(config)
             self.applyEditableSettingsSnapshotToUI(incoming)
             self.lastSyncedEditableSettings = incoming
             self.persistEditableSettingsSnapshot()

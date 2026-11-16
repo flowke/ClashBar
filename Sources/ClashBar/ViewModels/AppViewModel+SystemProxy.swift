@@ -307,7 +307,13 @@ extension AppViewModel {
     }
 
     func systemProxyPorts(from config: ConfigSnapshot) -> SystemProxyPorts {
-        Self.resolveSystemProxyPorts(
+        if let configured = self.configuredProxyPortsForPresentation() {
+            return Self.resolveSystemProxyPorts(
+                mixedPort: configured.mixedPort,
+                httpPort: configured.port,
+                socksPort: configured.socksPort)
+        }
+        return Self.resolveSystemProxyPorts(
             mixedPort: config.mixedPort,
             httpPort: config.port,
             socksPort: config.socksPort)

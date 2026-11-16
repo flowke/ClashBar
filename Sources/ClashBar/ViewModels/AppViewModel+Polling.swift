@@ -267,17 +267,18 @@ extension AppViewModel {
     }
 
     private func applyRuntimeConfigSnapshot(_ config: ConfigSnapshot) {
+        let presentationPorts = self.proxyPortsForPresentation(config)
         let remoteMode = normalizeMode(config.mode)
         if let remoteMode {
             currentMode = remoteMode
         }
         logLevel = config.logLevel ?? logLevel
 
-        port = config.port
-        socksPort = config.socksPort
-        redirPort = config.redirPort
-        tproxyPort = config.tproxyPort
-        mixedPort = config.mixedPort ?? 0
+        port = presentationPorts.port
+        socksPort = presentationPorts.socksPort
+        redirPort = presentationPorts.redirPort
+        tproxyPort = presentationPorts.tproxyPort
+        mixedPort = presentationPorts.mixedPort
 
         tunStack = config.tun?.stack?.trimmedNonEmpty ?? tunStack
 

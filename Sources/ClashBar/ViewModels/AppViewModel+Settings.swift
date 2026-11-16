@@ -137,7 +137,7 @@ extension AppViewModel {
     }
 
     func syncEditableSettings(from config: ConfigSnapshot) {
-        let incoming = EditableSettingsSnapshot(config: config)
+        let incoming = editableSettingsSnapshotForPresentation(config)
 
         if preserveLocalSettingsOnNextSync {
             preserveLocalSettingsOnNextSync = false
