@@ -540,11 +540,16 @@ extension AppViewModel {
     func seedCoreFeatureRecoveryFromPersistedQuitState() {
         let wasSystemProxyEnabled = defaults.bool(forKey: systemProxyEnabledOnQuitKey)
         defaults.removeObject(forKey: systemProxyEnabledOnQuitKey)
-        guard wasSystemProxyEnabled else { return }
-        self.systemProxyMayResumeAfterOwnedClear = self.defaults.bool(forKey: self.systemProxyResumeOnLaunchKey)
+        let mayResumeAfterOwnedClear = self.defaults.bool(forKey: self.systemProxyResumeOnLaunchKey)
         self.defaults.removeObject(forKey: self.systemProxyResumeOnLaunchKey)
-        // Conflicts survive relaunch; a clean shutdown may resume only when no other proxy is enabled.
-        self.isSystemProxyEnabled = !self.systemProxyMayResumeAfterOwnedClear
+        guard self.autoStartSystemProxyEnabled else {
+            self.systemProxyMayResumeAfterOwnedClear = false
+            self.isSystemProxyEnabled = false
+            return
+        }
+
+        self.systemProxyMayResumeAfterOwnedClear = wasSystemProxyEnabled && mayResumeAfterOwnedClear
+        self.isSystemProxyEnabled = true
         guard pendingCoreFeatureRecoveryState == nil else { return }
         pendingCoreFeatureRecoveryState = CoreFeatureRecoveryState(
             systemProxyEnabled: true,
@@ -601,7 +606,7 @@ extension AppViewModel {
                 let target = SystemProxyTarget(host: resolved.host, ports: resolved.ports)
                 self.rememberSystemProxyTarget(host: target.host, ports: target.ports)
                 let snapshot = try self.systemProxyService.readSnapshot()
-                if self.systemProxyMayResumeAfterOwnedClear && !snapshot.isEnabled {
+                if !snapshot.isEnabled {
                     try await self.applySystemProxy(enabled: true, host: target.host, ports: target.ports)
                 }
                 self.systemProxyMayResumeAfterOwnedClear = false

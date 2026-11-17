@@ -101,12 +101,13 @@ private final class ProxyStateFixture {
     let model: AppViewModel
     private let persisted: [String: Any]
     private let keys = ["clashbar.system_proxy.expected_target.v1", "clashbar.system_proxy.enabled_on_quit",
-                        "clashbar.system_proxy.resume_after_owned_clear"]
+                        "clashbar.system_proxy.resume_after_owned_clear", "clashbar.system_proxy.auto_start"]
 
-    init(runtimePort: Int = 7890) throws {
+    init(runtimePort: Int = 7890, configureDefaults: ((UserDefaults) -> Void)? = nil) throws {
         self.persisted = Dictionary(uniqueKeysWithValues: self.keys.compactMap { key in
             UserDefaults.standard.object(forKey: key).map { (key, $0) }
         })
+        configureDefaults?(UserDefaults.standard)
         let directory = WorkingDirectoryManager(homeDirectory: self.root)
         try directory.bootstrapDirectories()
         let configuration = URLSessionConfiguration.ephemeral
@@ -232,6 +233,49 @@ final class SystemProxyStateTests: XCTestCase {
             XCTAssertEqual(fixture.model.systemProxyStatus, externalProxy ? .overridden : .active)
             XCTAssertEqual(fixture.model.systemProxyExpectedTarget?.ports.primaryPort, 7891)
         }
+    }
+
+    func testSystemProxyAutoStartPreferenceMigratesFromQuitState() throws {
+        let fixture = try ProxyStateFixture { defaults in
+            defaults.removeObject(forKey: "clashbar.system_proxy.auto_start")
+            defaults.set(true, forKey: "clashbar.system_proxy.enabled_on_quit")
+        }
+        defer { fixture.cleanup() }
+
+        XCTAssertTrue(fixture.model.autoStartSystemProxyEnabled)
+        XCTAssertTrue(UserDefaults.standard.bool(forKey: "clashbar.system_proxy.auto_start"))
+    }
+
+    func testSystemProxyAutoStartEnablesDisabledProxyAfterStartup() async throws {
+        let fixture = try ProxyStateFixture { defaults in
+            defaults.set(true, forKey: "clashbar.system_proxy.auto_start")
+            defaults.set(false, forKey: "clashbar.system_proxy.enabled_on_quit")
+        }
+        defer { fixture.cleanup() }
+
+        fixture.service.set([.init(dictionary: [:])])
+        fixture.model.seedCoreFeatureRecoveryFromPersistedQuitState()
+        await fixture.model.restoreCoreFeaturesAfterStartupIfNeeded()
+
+        XCTAssertEqual(fixture.service.writes, [true])
+        XCTAssertEqual(fixture.model.systemProxyStatus, .active)
+        XCTAssertTrue(fixture.model.isSystemProxyEnabled)
+    }
+
+    func testSystemProxyAutoStartPreservesExternalProxyAfterStartup() async throws {
+        let fixture = try ProxyStateFixture { defaults in
+            defaults.set(true, forKey: "clashbar.system_proxy.auto_start")
+            defaults.set(false, forKey: "clashbar.system_proxy.enabled_on_quit")
+        }
+        defer { fixture.cleanup() }
+
+        fixture.service.set([proxyConfiguration(port: 8888)])
+        fixture.model.seedCoreFeatureRecoveryFromPersistedQuitState()
+        await fixture.model.restoreCoreFeaturesAfterStartupIfNeeded()
+
+        XCTAssertTrue(fixture.service.writes.isEmpty)
+        XCTAssertEqual(fixture.model.systemProxyStatus, .overridden)
+        XCTAssertTrue(fixture.model.isSystemProxyEnabled)
     }
 
     func testExplicitDisableAndOwnedQuitRetainNormalCleanup() async throws {

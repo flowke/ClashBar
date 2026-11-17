@@ -549,6 +549,13 @@ struct SystemTabView: TranslatingView {
                 Binding(
                     get: { self.appViewModel.autoStartCoreEnabled },
                     set: { self.appViewModel.autoStartCoreEnabled = $0 })),
+            (
+                "auto-start-system-proxy",
+                tr("ui.settings.auto_start_system_proxy"),
+                "network.badge.shield.half.filled",
+                Binding(
+                    get: { self.appViewModel.autoStartSystemProxyEnabled },
+                    set: { self.appViewModel.autoStartSystemProxyEnabled = $0 })),
         ]
         let coreToggleItems: [(id: String, title: String, symbol: String, isOn: Binding<Bool>)] = [
             (

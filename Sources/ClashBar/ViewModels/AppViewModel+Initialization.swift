@@ -129,12 +129,12 @@ extension AppViewModel {
         let persistedSystemProxyExceptions = loadPersistedSystemProxyExceptions() ?? Self.defaultSystemProxyExceptions
         self.replaceSystemProxyExceptionsDraft(with: persistedSystemProxyExceptions)
         self.lastSavedSystemProxyExceptions = self.normalizedSystemProxyExceptionValues(persistedSystemProxyExceptions)
+        self.seedCoreFeatureRecoveryFromPersistedQuitState()
 
         self.startupRefreshTask = Task { [weak self] in
             guard let self else { return }
             await self.refreshFromAPI(includeSlowCalls: true)
             await self.applyPendingAppLaunchSettingsOverlayIfNeeded()
-            self.seedCoreFeatureRecoveryFromPersistedQuitState()
             if self.hasSystemProxyOpenIntent {
                 await self.refreshSystemProxyHelperStatus()
                 await self.refreshSystemProxyStatus()
@@ -146,7 +146,7 @@ extension AppViewModel {
         }
 
         self.startConfigDirectoryMonitoringIfNeeded()
-        if self.autoStartCore {
+        if self.autoStartCore || self.autoStartSystemProxyEnabled {
             if !self.shouldDeferAutoStartForMissingManagedCore() {
                 self.autoStartTask = Task { [weak self] in
                     await self?.attemptAutoStartIfNeeded()

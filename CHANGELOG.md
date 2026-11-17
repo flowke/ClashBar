@@ -1,3 +1,25 @@
+## v0.3.13
+
+![macOS](https://img.shields.io/badge/macOS-Supported-000000?style=flat-square&logo=apple) ![Version](https://img.shields.io/badge/Release-v0.3.13-10B981?style=flat-square) ![Core](https://img.shields.io/badge/Core-Mihomo-6366f1?style=flat-square)
+
+> 本次更新在系统设置中新增 **系统代理自启** 开关：启用后，ClashBar 下次启动会自动恢复系统代理；即使关闭内核自启，也会按需启动本地内核作为代理依赖。首次升级会根据原有退出状态迁移偏好，并保留外部代理应用已经启用的系统代理配置。
+
+### 📝 更新日志 (Changelog)
+
+**✨ 新增功能 (New Features)**
+
+- ![Feature](https://img.shields.io/badge/Feature-10B981?style=flat-square) **系统代理自启**：在「设置 → 基础设置」中新增系统代理自启开关，开关状态持久化并在下次启动时恢复系统代理。
+- ![Feature](https://img.shields.io/badge/Feature-10B981?style=flat-square) **代理依赖自动启动**：系统代理自启开启且内核自启关闭时，ClashBar 会按需启动本地内核，确保代理恢复流程具备依赖。
+
+**🚀 优化改进 (Improvements)**
+
+- ![Optimize](https://img.shields.io/badge/Optimize-3B82F6?style=flat-square) **升级迁移**：首次启动时从既有退出时系统代理状态迁移新偏好；新安装默认关闭，升级用户保持原有行为。
+- ![Optimize](https://img.shields.io/badge/Optimize-3B82F6?style=flat-square) **外部代理保护**：检测到其它应用已启用系统代理时不覆盖其配置，避免自启恢复修改外部代理设置。
+
+**🐞 修复问题 (Bug Fixes)**
+
+- ![Fix](https://img.shields.io/badge/Fix-EF4444?style=flat-square) **启动恢复竞态**：在自动启动内核前预置系统代理恢复状态，避免启动时序导致代理恢复偶发遗漏。
+
 ## v0.3.6
 
 ![macOS](https://img.shields.io/badge/macOS-Supported-000000?style=flat-square&logo=apple) ![Version](https://img.shields.io/badge/Release-v0.3.6-10B981?style=flat-square) ![Core](https://img.shields.io/badge/Core-Mihomo-6366f1?style=flat-square)

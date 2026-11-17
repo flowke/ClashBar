@@ -203,6 +203,7 @@ extension AppViewModel {
 
     var hasSystemProxyOpenIntent: Bool {
         self.isSystemProxyEnabled
+            || self.autoStartSystemProxyEnabled
             || self.systemProxyEnableIntentInFlight
             || (self.pendingCoreFeatureRecoveryState?.systemProxyEnabled ?? false)
             || self.defaults.bool(forKey: self.systemProxyEnabledOnQuitKey)

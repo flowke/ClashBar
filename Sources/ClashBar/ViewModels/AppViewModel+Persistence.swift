@@ -180,6 +180,16 @@ extension AppViewModel {
         return self.normalizedSystemProxyExceptionValues(values)
     }
 
+    func loadPersistedSystemProxyAutoStart() -> Bool {
+        if self.defaults.object(forKey: self.systemProxyAutoStartKey) != nil {
+            return self.defaults.bool(forKey: self.systemProxyAutoStartKey)
+        }
+
+        let migratedValue = self.defaults.bool(forKey: self.systemProxyEnabledOnQuitKey)
+        self.defaults.set(migratedValue, forKey: self.systemProxyAutoStartKey)
+        return migratedValue
+    }
+
     func loadPersistedUILanguage() -> AppLanguage {
         if let raw = defaults.string(forKey: uiLanguageKey),
            let language = AppLanguage(rawValue: raw)

@@ -255,6 +255,12 @@ final class AppViewModel: ObservableObject {
     @Published var activeMenuTab: RootTab = .proxy
     @Published var launchAtLoginEnabled: Bool = false
     @Published var launchAtLoginErrorMessage: String?
+    @Published var autoStartSystemProxyEnabled: Bool = false {
+        didSet {
+            guard oldValue != self.autoStartSystemProxyEnabled else { return }
+            self.defaults.set(self.autoStartSystemProxyEnabled, forKey: self.systemProxyAutoStartKey)
+        }
+    }
     @Published var latestAppReleaseInfo: AppReleaseInfo?
     @Published private(set) var menuBarDisplaySnapshot = MenuBarDisplay(
         mode: .iconOnly,
@@ -553,6 +559,7 @@ final class AppViewModel: ObservableObject {
     let lastSuccessfulConfigPathKey = "clashbar.last.success.config.path"
     let editableSettingsSnapshotKey = "clashbar.settings.editable.snapshot.v1"
     let systemProxyEnabledOnQuitKey = "clashbar.system_proxy.enabled_on_quit"
+    let systemProxyAutoStartKey = "clashbar.system_proxy.auto_start"
     let systemProxyTargetKey = "clashbar.system_proxy.expected_target.v1"
     let systemProxyResumeOnLaunchKey = "clashbar.system_proxy.resume_after_owned_clear"
     let systemProxyExceptionsKey = "clashbar.system_proxy.exceptions.v1"
@@ -624,6 +631,7 @@ final class AppViewModel: ObservableObject {
         self.clashbarLogFileURL = dependencies.clashbarLogStore.logFileURL
         self.mihomoLogFileURL = dependencies.mihomoLogStore.logFileURL
         self.bundlesMihomoCore = Self.resolveBundledMihomoCoreFlag()
+        self.autoStartSystemProxyEnabled = self.loadPersistedSystemProxyAutoStart()
         self.uiLanguage = loadPersistedUILanguage()
         self.appearanceMode = loadPersistedAppearanceMode()
         self.appTheme = loadPersistedAppTheme()
