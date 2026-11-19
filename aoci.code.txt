@@ -1,0 +1,386 @@
+#AOCI-CODE-VOLUME: 1
+
+===/<repository>/===
+.gitattributes[FC4T]: F:Defines repository line-ending attributes for stable AOCI baselines | R:- | A:Git checkout behavior | S:-
+.gitignore[FC4T]: F:Excludes build, package, credential, and local tooling artifacts from Git | R:- | A:Repository hygiene | S:-
+.swiftformat[FC5S]: F:Configures SwiftFormat style and Swift 6.2 formatting behavior | R:- | A:Source formatting policy | S:Explicit self insertion and a 120 column limit are required by the project style
+.swiftlint.yml[FC6M]: F:Configures SwiftLint rules, paths, and severity thresholds | R:- | A:Static analysis policy | S:Only Sources is linted while generated and resource directories are excluded
+AGENTS.md[SZ8L]: F:Defines ClashBar development, release, helper, architecture, and AOCI governance rules | R:code:Scripts/build.sh,code:Sources/ProxyHelperShared/ProxyHelperProtocol.swift | A:Project collaboration contract | S:Release policy requires arm64 DMGs, helper version checks, signed artifact verification, and cleanup of generated packages
+CHANGELOG.md[SL8L]: F:Records user-facing ClashBar release changes and fixes by version | R:- | A:Release communication history | S:Release note generation selects the section matching the exact semantic version
+LICENSE[SL8L]: F:Provides the GNU GPL v3 license terms for the project | R:- | A:Open source distribution terms | S:Modified covered works must preserve the license obligations and notices
+Makefile[OV5S]: F:Provides build, distribution, DMG, format, and cleanup targets | R:code:Scripts/build.sh,code:Scripts/make_dmg.sh | A:Developer command entry points | S:WITH_CORE controls Mihomo bundling and TARGET_ARCH is forwarded to packaging scripts
+Package.resolved[FC4T]: F:Locks the root SwiftPM dependency revision for Yams | R:code:Package.swift | A:Dependency resolution lockfile | S:-
+Package.swift[LV8S]: F:Defines SwiftPM products, targets, dependencies, resources, and macOS deployment settings | R:code:Sources/ClashBar/App/AppDependencies.swift,code:Package.resolved | A:Swift package build graph | S:The package requires Swift 6.2 and macOS 13 while linking native SDK platform settings
+README.md[SZ8L]: F:Documents ClashBar features, installation, development builds, and runtime data paths | R:code:Package.swift,code:Scripts/build.sh | A:User and contributor documentation | S:Users must install the app in /Applications for system proxy integration and choose only one proxy client
+untitled.pen[AU8L]: F:Stores editable product design content for an unnamed Pen document | R:code:design/README.md | A:Design source document | S:Preserve the document as a design source
+
+===/<repository>/.github/ISSUE_TEMPLATE/===
+bug_report.yml[OV6S]: F:Defines the GitHub bug report form and required diagnostic details | R:- | A:Issue intake validation | S:Requires an installed /Applications app, exclusive proxy ownership, debug logs, and a reproducible sanitized config before review
+feature_request.yml[OV4S]: F:Defines the GitHub feature request form | R:- | A:Issue intake | S:-
+
+===/<repository>/.github/workflows/===
+release-dmg-beta.yml[OV8L]: F:Builds and publishes arm64 beta DMG variants from the alpha branch | R:code:Scripts/build.sh,code:Scripts/verify_release_artifact.sh | A:Beta release automation | S:The workflow force-updates the pre-release tag and publishes prerelease assets only; both matrix variants target arm64
+release-dmg.yml[OV8L]: F:Builds and publishes arm64 release DMGs, checksums, and updates the Homebrew cask | R:code:Scripts/build.sh,code:Scripts/verify_release_artifact.sh,code:Scripts/generate_release_notes.sh | A:Release automation | S:Tags must be semantic versions and the matrix always emits arm64 with-core and no-core variants
+
+===/<repository>/.swiftpm/xcode/xcshareddata/xcschemes/===
+ClashBar.xcscheme[OV6S]: F:Defines the shared SwiftPM Xcode scheme for app, helper, tests, and release actions | R:code:Package.swift | A:Xcode build and test orchestration | S:The scheme builds both ClashBar and ClashBarProxyHelper as shared package products
+
+===/<repository>/ClashBar.xcodeproj/===
+project.pbxproj[FL9L]: F:Defines Xcode targets, source membership, resources, frameworks, and build settings | R:code:Package.swift,code:ClashBar.xcodeproj/xcshareddata/xcschemes/ClashBar.xcscheme | A:Xcode project graph | S:Generated and manually maintained file references must remain consistent with SwiftPM source targets
+
+===/<repository>/ClashBar.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/===
+Package.resolved[FC4T]: F:Pins the Xcode workspace SwiftPM dependency revision for Yams | R:code:Package.swift | A:Dependency resolution lockfile | S:-
+
+===/<repository>/ClashBar.xcodeproj/xcshareddata/xcschemes/===
+ClashBar.xcscheme[OV5S]: F:Defines the app Xcode scheme for the ClashBar Dev application | R:code:ClashBar.xcodeproj/project.pbxproj | A:Development app run configuration | S:The scheme launches a fixed ClashBar Dev.app bundle for repeatable Xcode runs
+
+===/<repository>/DevApp/===
+Info.plist[FC5S]: F:Defines the development app bundle metadata and macOS menu bar behavior | R:code:ClashBar.xcodeproj/project.pbxproj | A:Development bundle configuration | S:LSUIElement keeps the development app as an accessory menu bar process
+
+===/<repository>/Scripts/===
+build.sh[OV6S]: F:Dispatches preprocess, package, DMG, app, and all build stages | R:code:Scripts/preprocess.sh,code:Scripts/package_app.sh,code:Scripts/make_dmg.sh | A:Build pipeline entry point | S:The all stage always runs preprocessing before packaging and DMG creation
+generate_beta_release_notes.sh[OV5S]: F:Generates beta release notes with metadata and arm64 download links | R:code:.github/workflows/release-dmg-beta.yml | A:Beta release documentation generator | S:GITHUB_REPOSITORY is mandatory and the script labels the release as a prerelease
+generate_release_notes.sh[OV5S]: F:Extracts a versioned changelog section into release notes and DMG links | R:code:CHANGELOG.md,code:.github/workflows/release-dmg.yml | A:Release documentation generator | S:The script fails when the requested version has no exact changelog heading
+make_dmg.sh[OV5S]: F:Creates a compressed DMG from the packaged app and writes a SHA256 file | R:code:Scripts/package_app.sh | A:DMG packaging | S:The output is verified with hdiutil before its checksum is written
+package_app.sh[OV8L]: F:Builds the signed ClashBar app bundle, helper, resources, metadata, and optional Mihomo payload | R:code:Package.swift,code:Scripts/preprocess.sh,code:Sources/ProxyHelper/LaunchDaemons/com.clashbar.helper.plist | A:Application packaging | S:BUNDLE_MIHOMO_BINARY selects with-core versus no-core output and defaults to ad hoc signing
+package_release.sh[OV5S]: F:Coordinates release preprocessing, app packaging, DMG creation, and artifact verification | R:code:Scripts/build.sh,code:Scripts/verify_release_artifact.sh | A:Release packaging orchestration | S:-
+preprocess.sh[OV8M]: F:Prepares an architecture-specific Mihomo binary and converts the app icon to ICNS | R:code:Sources/ClashBar/Resources/bin/mihomo | A:Release asset preprocessing | S:TARGET_ARCH selects the Mihomo asset architecture and the local resource is reused when it is a valid Mach-O
+verify_release_artifact.sh[OV8M]: F:Verifies DMG integrity, version metadata, arm64 binaries, signatures, and core mode | R:code:Scripts/make_dmg.sh,code:Scripts/package_app.sh | A:Release artifact validation | S:Validation rejects non-arm64 app or helper binaries and rejects a bundled core in no-core mode
+
+===/<repository>/Sources/ClashBar/App/===
+AppDelegate.swift[EU8M]: F:Owns application lifecycle, menu bar activation, dashboard presentation, and window suppression | R:code:Sources/ClashBar/App/AppDependencies.swift,code:Sources/ClashBar/ViewModels/AppViewModel.swift | A:AppKit lifecycle coordinator | S:The app suppresses unrecognized windows but preserves dashboard, panels, sheets, alerts, and the managed modal identifier
+AppDependencies.swift[RG7S]: F:Constructs live services, stores, sessions, and filesystem-backed dependencies for the app | R:code:Sources/ClashBar/App/AppDelegate.swift,code:Sources/ClashBar/Services/ConfigService.swift | A:Dependency composition root | S:The live graph shares one ephemeral URLSession and derives persistent paths from WorkingDirectoryManager
+ClashBarApp.swift[EU8S]: F:Defines SwiftUI application scenes and command menus | R:code:Sources/ClashBar/App/AppDelegate.swift,code:Sources/ClashBar/ViewModels/AppViewModel.swift | A:Application entry point | S:The settings scene is hidden and closed to keep the menu bar app windowless
+
+===/<repository>/Sources/ClashBar/Core/Extensions/===
+KeyedDecodingContainer+FlexibleValues.swift[AD7T]: F:Adds tolerant Codable decoding helpers for booleans, integers, strings, and delay history | R:code:Sources/ClashBar/Models/Runtime.swift | A:Data decoding support | S:String booleans accept common textual forms and delay history is capped to the configured limit
+String+Whitespace.swift[AB5T]: F:Provides trimmed and non-empty String helpers for input parsing | R:code:Sources/ClashBar/Core/Extensions/KeyedDecodingContainer+FlexibleValues.swift | A:Shared string utility | S:-
+
+===/<repository>/Sources/ClashBar/Core/UI/===
+AppFonts.swift[AL4T]: F:Maps SwiftUI font weights to monospaced AppKit fonts | R:code:Sources/ClashBar/Core/UI/MenuBarLayoutTokens.swift | A:UI typography utility | S:-
+AppMaterialStyle.swift[AU5T]: F:Defines reusable material surfaces and bordered button styles | R:code:Sources/ClashBar/Core/UI/AppTheme.swift | A:UI surface styling | S:-
+AppTheme.swift[AU6T]: F:Defines selectable palettes for light and dark themes | R:code:Sources/ClashBar/Core/UI/AppMaterialStyle.swift | A:Theme configuration | S:Theme variants are sage, ocean, clay, and graphite
+HeightReportingModifier.swift[AU3T]: F:Reports SwiftUI content height through a geometry-backed modifier | R:- | A:Layout measurement utility | S:-
+Localization.swift[AL7S]: F:Resolves localized strings and locale data for Simplified Chinese and English | R:code:Sources/ClashBar/Core/Utils/AppResourceBundleLocator.swift | A:Localization service | S:English falls back to Simplified Chinese and locale instances are cached per thread
+MenuBarLayoutTokens.swift[AU5T]: F:Centralizes menu bar dimensions, spacing, typography, opacity, animation, and shadow constants | R:- | A:Layout token configuration | S:Panel width is fixed at 360 points and proxy row metrics differ from compact controls
+
+===/<repository>/Sources/ClashBar/Core/UI/Components/===
+AttachedPopoverMenu.swift[EU8L]: F:Implements anchored popover menus with sizing, placement, restoration, and hover behavior | R:code:Sources/ClashBar/Core/UI/MenuBarLayoutTokens.swift,code:Sources/ClashBar/ViewModels/PopoverLayoutModel.swift | A:Popover interaction component | S:Registration coordinates attachment, pinned restoration, and width synchronization across presentations
+BrandIcon.swift[AU6T]: F:Loads brand and state-specific NSImage assets from SwiftPM and app bundles | R:code:Sources/ClashBar/Core/Utils/AppResourceBundleLocator.swift | A:Brand asset adapter | S:Missing assets fall through candidate bundles and repository-relative resource paths
+NSAlert+ScrollableDetails.swift[AU4T]: F:Adds a scrollable accessory view for long alert details | R:- | A:Alert presentation utility | S:Details are clipped at 20000 characters before display
+
+===/<repository>/Sources/ClashBar/Core/Utils/===
+AdministratorShell.swift[AI7T]: F:Runs privileged shell commands through osascript and safely quotes values | R:code:Sources/ClashBar/Services/ProxyHelperInstaller.swift | A:Authorization process adapter | S:User cancellation is recognized from its message and osascript status -128
+AppResourceBundleLocator.swift[AR6S]: F:Locates module, main, config template, and web resource bundles across app and test layouts | R:code:Sources/ClashBar/Core/UI/Components/BrandIcon.swift,code:Sources/ClashBar/Core/UI/Localization.swift | A:Resource lookup adapter | S:Candidates include XCTest bundles, app Resources, executable siblings, and SwiftPM module bundles
+DeviceIPv4AddressResolver.swift[AH6T]: F:Selects a preferred active non-loopback IPv4 interface address | R:- | A:Network interface adapter | S:en0 is preferred; loopback, awdl, llw, and link-local addresses are excluded
+Formatters.swift[AA7M]: F:Formats speeds, byte counts, timestamps, expiry values, and ISO8601 dates | R:code:Sources/ClashBar/Core/UI/Localization.swift | A:Display formatting library | S:Timestamp formatting uses a bounded 512-entry cache and invalid inputs produce localized unknown values
+PanelGeometry.swift[AU7S]: F:Computes menu panel frames, offsets, and screen-constrained positions | R:code:Sources/ClashBar/Core/UI/MenuBarLayoutTokens.swift,code:Sources/ClashBar/ViewModels/PopoverLayoutModel.swift | A:Panel placement geometry | S:Placement clamps popovers to visible screen frames while preserving configured panel width
+ProxyGroupIconCache.swift[AR7S]: F:Caches asynchronously loaded proxy group icons with fallback rendering | R:code:Sources/ClashBar/Services/MihomoAPIService.swift | A:Proxy icon cache | S:Keys are normalized URLs and failed loads fall back to generated initials
+URLSessionFactory.swift[AR5T]: F:Creates shared URLSession configurations for application networking | R:code:Sources/ClashBar/App/AppDependencies.swift | A:Network session factory | S:-
+
+===/<repository>/Sources/ClashBar/Models/===
+AppRelease.swift[AB5T]: F:Models release metadata and update availability | R:code:Sources/ClashBar/Services/AppReleaseService.swift | A:Release model | S:-
+Connection.swift[AN7M]: F:Models active proxy connections, metadata, and traffic counters | R:code:Sources/ClashBar/ViewModels/Stores/ConnectionsStore.swift,code:Sources/ClashBar/Services/MihomoAPIService.swift | A:Connection domain model | S:-
+Log.swift[AO5T]: F:Models runtime log levels and log entries for display and filtering | R:code:Sources/ClashBar/Services/AppLogStore.swift | A:Log model | S:-
+Provider.swift[AN7S]: F:Models proxy provider records, health state, and metadata | R:code:Sources/ClashBar/Services/MihomoAPIService.swift,code:Sources/ClashBar/ViewModels/Stores/ProxyStore.swift | A:Provider domain model | S:-
+Proxy.swift[AN8S]: F:Models proxy nodes, groups, delay history, and node metadata | R:code:Sources/ClashBar/Services/MihomoAPIService.swift,code:Sources/ClashBar/ViewModels/Stores/ProxyStore.swift | A:Proxy domain model | S:Delay history and metadata support Mihomo API decoding and UI selection
+RemoteConfigSubscription.swift[AC5T]: F:Models remote configuration subscription metadata and refresh state | R:code:Sources/ClashBar/Services/ConfigService.swift | A:Subscription configuration model | S:-
+RemoteMachine.swift[AN5T]: F:Models remote machine connection identity and endpoint data | R:code:Sources/ClashBar/ViewModels/Stores/RemoteMachineStore.swift | A:Remote machine model | S:-
+Rules.swift[AB5T]: F:Models routing rule payloads and rule provider data | R:code:Sources/ClashBar/Services/AgentRuleService.swift | A:Routing rule model | S:-
+Runtime.swift[AR5T]: F:Models runtime state, core mode, traffic, and delay history values | R:code:Sources/ClashBar/Services/CoreService.swift | A:Runtime state model | S:-
+SSIDStrategyRule.swift[AC5T]: F:Models SSID-based routing strategy rules and matching modes | R:code:Sources/ClashBar/ViewModels/AppViewModel+SSIDStrategy.swift | A:Network configuration model | S:-
+ServiceStatus.swift[AR5T]: F:Models helper, core, and proxy service status values | R:code:Sources/ClashBar/Services/ServiceStatusChecker.swift | A:Service status model | S:-
+
+===/<repository>/Sources/ClashBar/Resources/Assets.xcassets/AppIcon.appiconset/===
+Contents.json[FC3T]: F:Declares AppIcon asset renditions and scale metadata | R:- | A:Asset catalog configuration | S:-
+
+===/<repository>/Sources/ClashBar/Resources/Assets.xcassets/BrandAppIcon.imageset/===
+Contents.json[FC3T]: F:Declares BrandAppIcon image asset scale metadata | R:code:Sources/ClashBar/Core/UI/Components/BrandIcon.swift | A:Asset catalog configuration | S:-
+
+===/<repository>/Sources/ClashBar/Resources/Assets.xcassets/BrandHeader.imageset/===
+Contents.json[FC3T]: F:Declares BrandHeader image asset scale metadata | R:code:Sources/ClashBar/Core/UI/Components/BrandIcon.swift | A:Asset catalog configuration | S:-
+
+===/<repository>/Sources/ClashBar/Resources/Assets.xcassets/BrandHeaderSleep.imageset/===
+Contents.json[FC3T]: F:Declares BrandHeaderSleep image asset scale metadata | R:code:Sources/ClashBar/Core/UI/Components/BrandIcon.swift | A:Asset catalog configuration | S:-
+
+===/<repository>/Sources/ClashBar/Resources/Assets.xcassets/BrandHeaderTun.imageset/===
+Contents.json[FC3T]: F:Declares BrandHeaderTun image asset scale metadata | R:code:Sources/ClashBar/Core/UI/Components/BrandIcon.swift | A:Asset catalog configuration | S:-
+
+===/<repository>/Sources/ClashBar/Resources/Assets.xcassets/BrandHeaderWarning.imageset/===
+Contents.json[FC3T]: F:Declares BrandHeaderWarning image asset scale metadata | R:code:Sources/ClashBar/Core/UI/Components/BrandIcon.swift | A:Asset catalog configuration | S:-
+
+===/<repository>/Sources/ClashBar/Resources/Assets.xcassets/BrandLogo.imageset/===
+Contents.json[FC3T]: F:Declares BrandLogo image asset scale metadata | R:code:Sources/ClashBar/Core/UI/Components/BrandIcon.swift | A:Asset catalog configuration | S:-
+
+===/<repository>/Sources/ClashBar/Resources/Assets.xcassets/BrandRun.imageset/===
+Contents.json[FC3T]: F:Declares BrandRun image asset scale metadata | R:code:Sources/ClashBar/Core/UI/Components/BrandIcon.swift | A:Asset catalog configuration | S:-
+
+===/<repository>/Sources/ClashBar/Resources/Assets.xcassets/BrandSleep.imageset/===
+Contents.json[FC3T]: F:Declares BrandSleep image asset scale metadata | R:code:Sources/ClashBar/Core/UI/Components/BrandIcon.swift | A:Asset catalog configuration | S:-
+
+===/<repository>/Sources/ClashBar/Resources/Assets.xcassets/BrandTun.imageset/===
+Contents.json[FC3T]: F:Declares BrandTun image asset scale metadata | R:code:Sources/ClashBar/Core/UI/Components/BrandIcon.swift | A:Asset catalog configuration | S:-
+
+===/<repository>/Sources/ClashBar/Resources/Assets.xcassets/BrandWarning.imageset/===
+Contents.json[FC3T]: F:Declares BrandWarning image asset scale metadata | R:code:Sources/ClashBar/Core/UI/Components/BrandIcon.swift | A:Asset catalog configuration | S:-
+
+===/<repository>/Sources/ClashBar/Resources/Assets.xcassets/===
+Contents.json[FC3T]: F:Declares the Xcode asset catalog metadata version | R:- | A:Asset catalog configuration | S:-
+
+===/<repository>/Sources/ClashBar/Resources/ConfigTemplates/===
+ClashBar.yaml[FB6M]: F:Supplies the default Mihomo configuration with DNS, TUN, proxy groups, providers, and routing rules | R:code:Sources/ClashBar/Services/ConfigService.swift,code:Sources/ClashBar/Services/ConfigRuleMerger.swift | A:Default core configuration | S:The application treats this file as its managed default template; provider URLs, group names, and YAML anchors are consumed by Mihomo
+
+===/<repository>/Sources/ClashBar/Resources/Localization/en.lproj/===
+Localizable.strings[FL5L]: F:Maps application localization keys to English interface text | R:code:Sources/ClashBar/Core/UI/Localization.swift | A:English localization dictionary | S:Placeholder tokens such as %@ and %d must match their call-site argument types and counts
+
+===/<repository>/Sources/ClashBar/Resources/Localization/zh-Hans.lproj/===
+Localizable.strings[FL5L]: F:Maps application localization keys to Simplified Chinese interface text | R:code:Sources/ClashBar/Core/UI/Localization.swift,code:Sources/ClashBar/Resources/Localization/en.lproj/Localizable.strings | A:Simplified Chinese localization dictionary | S:Placeholder tokens such as %@ and %d must match their call-site argument types and counts
+
+===/<repository>/Sources/ClashBar/Services/===
+AgentRuleService.swift[AD6S]: F:Builds revisioned rule snapshots and applies validated add, update, and remove requests through AppViewModel | R:code:Sources/ClashBar/Services/ConfigRuleMerger.swift,code:Sources/ClashBar/Services/EffectiveConfigTransaction.swift,code:Sources/ClashBar/Services/AgentRuleSocket.swift | A:Agent-facing custom rule service | S:Mutations require the caller's current SHA-256 revision and are rejected for remote targets or while configuration/core operations are busy
+AgentRuleSocket.swift[AI6S]: F:Serves newline-delimited JSON rule requests over a private Unix domain socket | R:code:Sources/ClashBar/Services/AgentRuleService.swift | A:Local agent IPC adapter | S:Socket directory and file are owner-only, clients must share the process UID, requests are limited to 256 KiB, and a lock prevents duplicate service instances
+AppLogStore.swift[AP5T]: F:Serializes application error log writes, clearing, flushing, and size-based rotation | R:- | A:File log persistence | S:Default rotation retains five backups after a 10 MiB limit
+AppReleaseService.swift[AI5T]: F:Fetches and decodes the latest GitHub release using a bounded ephemeral URLSession | R:code:Sources/ClashBar/Services/AppRepository.swift,code:Sources/ClashBar/Models/AppRelease.swift | A:Release metadata client | S:Requests time out after 8 seconds and reject non-2xx HTTP responses
+AppRepository.swift[AV3T]: F:Defines the canonical project, releases, and latest-release API URLs | R:code:Sources/ClashBar/Services/AppReleaseService.swift | A:Repository endpoint constants | S:-
+ConfigDirectoryMonitor.swift[AR5T]: F:Monitors configuration directory and selected-file changes using filesystem dispatch sources | R:code:Sources/ClashBar/Services/ConfigService.swift | A:Configuration change observer | S:-
+ConfigRuleMerger.swift[AD7M]: F:Parses proxy port settings and merges enabled custom rule changes into configuration snapshots | R:code:Sources/ClashBar/Services/ConfigService.swift,code:Sources/ClashBar/Services/EffectiveConfigTransaction.swift,code:Sources/ClashBar/Models/Rules.swift | A:Configuration rule transformation | S:Port validation requires values in 1...65535 and generated rule edits are checked against the selected configuration structure
+ConfigService.swift[AP8L]: F:Manages working-directory migration, config discovery and selection, remote config imports, and config file persistence | R:code:Sources/ClashBar/Services/ConfigDirectoryMonitor.swift,code:Sources/ClashBar/Services/EffectiveConfigTransaction.swift,code:Sources/ClashBar/Models/RemoteConfigSubscription.swift | A:Configuration lifecycle and import service | S:Legacy config directories are merged into the current root without replacing existing destination files; remote responses are size-limited before write
+CoreService.swift[AI8L]: F:Installs, locates, validates, launches, and controls the Mihomo core process | R:code:Sources/ClashBar/Services/ConfigService.swift,code:Sources/ClashBar/Services/MihomoAPIService.swift,code:Sources/ClashBar/Services/TunService.swift | A:Core installation and runtime lifecycle | S:Core package architecture is selected for the running host; managed configuration and process startup are coordinated with AppViewModel lifecycle
+EffectiveConfigTransaction.swift[AP7S]: F:Persists the effective configuration record and custom rule edits for the selected base file | R:code:Sources/ClashBar/Services/ConfigService.swift,code:Sources/ClashBar/Services/ConfigRuleMerger.swift,code:code:Sources/ClashBar/Services/AgentRuleService.swift | A:Effective configuration transaction state | S:Stored record tracks the base filename and change list so edits can be reconciled with the active source
+LaunchAtLoginService.swift[AI5T]: F:Reads and changes the application's login item registration state | R:code:Sources/ClashBar/App/AppDependencies.swift | A:Login item adapter | S:-
+MihomoAPIService.swift[AI8L]: F:Provides typed HTTP and WebSocket access to Mihomo controller endpoints and rule testing | R:code:Sources/ClashBar/Services/CoreService.swift,code:Sources/ClashBar/Services/StreamCoordinator.swift,code:Sources/ClashBar/Models/Proxy.swift,code:Sources/ClashBar/Models/Connection.swift,code:Sources/ClashBar/Models/Rules.swift | A:Mihomo controller client | S:Controller requests use the configured secret and endpoint paths; WebSocket streams are coordinated separately from request decoding
+NetworkMonitorService.swift[AH5T]: F:Maps NWPathMonitor updates into network reachability state | R:code:Sources/ClashBar/ViewModels/AppViewModel+NetworkMonitoring.swift | A:System network reachability adapter | S:-
+ProxyHelperInstaller.swift[AI7S]: F:Locates bundled helper resources, validates installed helper identity, and builds the privileged installation command | R:code:Sources/ClashBar/Services/SystemProxyService.swift,code:Sources/ProxyHelperShared/ProxyHelperProtocol.swift | A:Privileged helper installation adapter | S:Installation is restricted to the app in /Applications and verifies the helper version and signing team before mutation
+SSIDMonitorService.swift[AH6M]: F:Monitors Wi-Fi SSID changes and reports authorization status through CoreLocation and CoreWLAN | R:code:Sources/ClashBar/ViewModels/AppViewModel+SSIDStrategy.swift,code:Sources/ClashBar/Models/SSIDStrategyRule.swift | A:Wi-Fi network identity observer | S:Location authorization may be required to obtain the current SSID
+ServiceDirectSession.swift[AI7M]: F:Creates isolated temporary Mihomo sessions for direct-route probes and cleans up owned processes and files | R:code:Sources/ClashBar/Services/ServiceStatusChecker.swift,code:Sources/ClashBar/Services/CoreService.swift | A:Direct route probe adapter | S:Probe configuration omits proxy groups, providers, persisted cache, and TUN; it copies the managed core into a temporary directory and removes it at completion or app exit
+ServiceStatusChecker.swift[AI7M]: F:Probes configured service URLs through current or forced-direct routing and derives service status | R:code:Sources/ClashBar/Services/ServiceDirectSession.swift,code:Sources/ClashBar/Services/MihomoAPIService.swift,code:Sources/ClashBar/Models/ServiceStatus.swift | A:Service availability and route verifier | S:Direct probes reject redirects, curl configuration, cookies, credentials, retries, and proxy environment settings; routing fingerprints include config, proxies, rules, providers, and network
+StreamCoordinator.swift[AR6S]: F:Owns keyed WebSocket receive tasks, reconnect state, disconnect log throttling, and cancellation | R:code:Sources/ClashBar/Services/MihomoAPIService.swift | A:WebSocket stream lifecycle | S:Reconnect delay grows exponentially with jitter up to the configured maximum and resets after a payload arrives
+SystemProxyService.swift[AI8L]: F:Reads system proxy state and invokes the privileged helper for proxy changes, exceptions, and health checks | R:code:Sources/ClashBar/Services/ProxyHelperInstaller.swift,code:Sources/ProxyHelperShared/ProxyHelperProtocol.swift,code:Sources/ProxyHelperShared/SystemProxyBackup.swift | A:System proxy controller and helper client | S:Read-only monitoring does not launch the helper; mutations require a registered version-matched helper and enforce bounded connection and response retries
+TunService.swift[AI6T]: F:Validates Mihomo executable permissions and grants required root ownership and setuid through administrator authorization | R:code:Sources/ClashBar/Core/Utils/AdministratorShell.swift,code:Sources/ClashBar/Services/CoreService.swift | A:TUN privilege management | S:Permission validation requires root ownership, setuid, and owner execute bits; authorization results are verified after mutation
+WebUIAssetService.swift[AP7L]: F:Manages WebUI release metadata, download, installation, status, and cleanup for the Mihomo external UI | R:code:Sources/ClashBar/Services/ConfigService.swift,code:Sources/ClashBar/Services/MihomoAPIService.swift | A:WebUI asset lifecycle | S:WebUI assets are installed under the managed configuration root and exposed through Mihomo's external-ui directory setting
+
+===/<repository>/Sources/ClashBar/ViewModels/===
+AppViewModel+Alerts.swift[AU6S]: F:Handles alert presentation state and user-facing errors | R:code:Sources/ClashBar/ViewModels/AppViewModel.swift | A:Alert coordination | S:Alert state updates run on the main actor
+AppViewModel+ConfigMonitoring.swift[AP6S]: F:Coordinates configuration directory monitoring and reload reactions | R:code:Sources/ClashBar/Services/ConfigDirectoryMonitor.swift,code:Sources/ClashBar/Services/ConfigService.swift | A:Configuration observation | S:External changes reload the selected configuration when possible
+AppViewModel+EffectiveConfig.swift[AP7M]: F:Loads, resolves, validates, and applies effective rule changes | R:code:Sources/ClashBar/Services/EffectiveConfigTransaction.swift,code:Sources/ClashBar/Services/ConfigRuleMerger.swift | A:Effective configuration workflow | S:Apply operations reject stale transaction records
+AppViewModel+Initialization.swift[AP6S]: F:Initializes dependencies, persisted settings, configuration state, and startup tasks | R:code:Sources/ClashBar/ViewModels/AppViewModel.swift,code:Sources/ClashBar/App/AppDependencies.swift | A:Startup orchestration | S:Working directories are established before state loading
+AppViewModel+Lifecycle.swift[AP8L]: F:Runs activation, shutdown, core lifecycle, polling setup, and cleanup | R:code:Sources/ClashBar/Services/CoreService.swift,code:Sources/ClashBar/Services/StreamCoordinator.swift | A:Lifecycle orchestration | S:Shutdown cancels streams and terminates managed core processes
+AppViewModel+LocalConfig.swift[AP6S]: F:Implements local configuration selection, import, deletion, and file actions | R:code:Sources/ClashBar/Services/ConfigService.swift | A:Local configuration workflow | S:Destructive actions require a selected local file
+AppViewModel+Logging.swift[AO5S]: F:Collects app and Mihomo logs and updates filtering state | R:code:Sources/ClashBar/Services/AppLogStore.swift,code:Sources/ClashBar/Models/Log.swift | A:Logging workflow | S:Persistence uses the serial AppLogStore queue
+AppViewModel+Maintenance.swift[AP7M]: F:Performs maintenance for configuration, core, WebUI, logs, and runtime state | R:code:Sources/ClashBar/Services/CoreService.swift,code:Sources/ClashBar/Services/WebUIAssetService.swift | A:Maintenance workflow | S:Busy state serializes maintenance mutations
+AppViewModel+NetworkMonitoring.swift[AH6S]: F:Starts reachability monitoring and reacts to interface changes | R:code:Sources/ClashBar/Services/NetworkMonitorService.swift,code:Sources/ClashBar/Services/SSIDMonitorService.swift | A:Network monitoring | S:Network changes invalidate service checks
+AppViewModel+Persistence.swift[AP7M]: F:Loads and saves subscriptions, remote machines, settings, and user state | R:code:Sources/ClashBar/Services/ConfigService.swift,code:Sources/ClashBar/Models/RemoteConfigSubscription.swift,code:Sources/ClashBar/Models/RemoteMachine.swift | A:Persistence workflow | S:Legacy state is migrated additively under the managed root
+AppViewModel+Polling.swift[AR8L]: F:Schedules recurring core, traffic, proxy, connection, log, and service polling | R:code:Sources/ClashBar/Services/MihomoAPIService.swift,code:Sources/ClashBar/ViewModels/Stores/TrafficStore.swift | A:Runtime polling | S:Polling tasks are cancelled and recreated with lifecycle changes
+AppViewModel+Providers.swift[AP7M]: F:Refreshes proxy and rule providers and exposes provider actions | R:code:Sources/ClashBar/Services/MihomoAPIService.swift,code:Sources/ClashBar/ViewModels/Stores/ProxyStore.swift | A:Provider workflow | S:Refresh state is reflected in the view model
+AppViewModel+Proxy.swift[AU8L]: F:Controls proxy mode, selected groups, nodes, latency tests, and proxy actions | R:code:Sources/ClashBar/Services/MihomoAPIService.swift,code:Sources/ClashBar/ViewModels/Stores/ProxyStore.swift | A:Proxy interaction workflow | S:Remote targets and unavailable cores are guarded before mutation
+AppViewModel+RemoteConfig.swift[AP8L]: F:Manages remote subscription refresh, import, selection, and update feedback | R:code:Sources/ClashBar/Services/ConfigService.swift,code:Sources/ClashBar/Models/RemoteConfigSubscription.swift | A:Remote configuration workflow | S:Downloaded data is size-limited and written through the config import service
+AppViewModel+RemoteMachine.swift[AI5T]: F:Coordinates remote machine selection and connection state | R:code:Sources/ClashBar/ViewModels/Stores/RemoteMachineStore.swift | A:Remote machine workflow | S:-
+AppViewModel+SSIDStrategy.swift[AP7M]: F:Evaluates SSID strategy rules and applies network-specific proxy behavior | R:code:Sources/ClashBar/Services/SSIDMonitorService.swift,code:Sources/ClashBar/Models/SSIDStrategyRule.swift | A:SSID strategy workflow | S:Rule precedence determines the active network mode
+AppViewModel+Settings.swift[AU7M]: F:Reads and changes application settings including theme, launch, and behavior | R:code:Sources/ClashBar/Services/LaunchAtLoginService.swift,code:Sources/ClashBar/Core/UI/AppTheme.swift | A:Settings workflow | S:Settings mutations update dependent services after persistence
+AppViewModel+SettingsPatch.swift[AP7L]: F:Applies partial settings changes and validates patch values | R:code:Sources/ClashBar/ViewModels/AppViewModel+Settings.swift | A:Settings patch workflow | S:Patches are validated before being persisted or propagated
+AppViewModel+Streams.swift[AR7M]: F:Starts and handles traffic, memory, and log WebSocket streams | R:code:Sources/ClashBar/Services/StreamCoordinator.swift,code:Sources/ClashBar/Services/MihomoAPIService.swift | A:Stream workflow | S:Stream cancellation follows target and core lifecycle changes
+AppViewModel+SystemProxy.swift[AI8L]: F:Reads and changes system proxy state, exceptions, and helper health | R:code:Sources/ClashBar/Services/SystemProxyService.swift,code:Sources/ClashBar/Services/ProxyHelperInstaller.swift | A:System proxy workflow | S:Mutations require a registered version-matched helper
+AppViewModel+Tun.swift[AI7M]: F:Controls TUN mode, privileges, and related core configuration | R:code:Sources/ClashBar/Services/TunService.swift,code:Sources/ClashBar/Services/CoreService.swift | A:TUN workflow | S:Permission changes are verified before enabling TUN
+AppViewModel+Validation.swift[AP7M]: F:Validates configuration, core readiness, ports, and service prerequisites | R:code:Sources/ClashBar/Services/CoreService.swift,code:Sources/ClashBar/Services/ConfigRuleMerger.swift | A:Validation workflow | S:Validation failures block dependent start and apply operations
+AppViewModel+WebUI.swift[AP6S]: F:Coordinates WebUI asset status, updates, and opening the external UI | R:code:Sources/ClashBar/Services/WebUIAssetService.swift | A:WebUI workflow | S:WebUI actions depend on the managed configuration directory
+AppViewModel.swift[AP8L]: F:Owns application state, services, stores, settings, and main menu-bar workflows | R:code:Sources/ClashBar/ViewModels/AppViewModelTypes.swift,code:Sources/ClashBar/App/AppDependencies.swift | A:Application state coordinator | S:Main-actor isolation protects shared UI and service state
+AppViewModelTypes.swift[AP7M]: F:Defines AppViewModel state types, dependency protocols, and shared workflow values | R:code:Sources/ClashBar/ViewModels/AppViewModel.swift | A:View-model type contracts | S:Protocol contracts allow service implementations to be replaced in tests
+ConnectionsViewModel.swift[AU6S]: F:Provides filtered connection snapshots and connection close actions | R:code:Sources/ClashBar/ViewModels/Stores/ConnectionsStore.swift,code:Sources/ClashBar/Services/MihomoAPIService.swift | A:Connections view model | S:Close actions target the active controller
+LogsViewModel.swift[AO4T]: F:Exposes log entries and filters for the logs view | R:code:Sources/ClashBar/ViewModels/Stores/LogsStore.swift,code:Sources/ClashBar/Models/Log.swift | A:Logs view model | S:-
+PopoverLayoutModel.swift[AU4T]: F:Stores popover placement and panel layout state | R:code:Sources/ClashBar/Core/Utils/PanelGeometry.swift,code:Sources/ClashBar/Core/UI/Components/AttachedPopoverMenu.swift | A:Popover layout state | S:-
+ProxyGroupsViewModel.swift[AU4T]: F:Stores selected proxy group UI state | R:code:Sources/ClashBar/ViewModels/AppViewModel+Proxy.swift | A:Proxy group view model | S:-
+RulesViewModel.swift[AU6S]: F:Loads routing rules, provider data, and rule test actions | R:code:Sources/ClashBar/Services/MihomoAPIService.swift,code:Sources/ClashBar/Models/Rules.swift | A:Rules view model | S:Rules are read from the active controller
+ServiceStatusViewModel.swift[AI7M]: F:Maintains service status results, refresh state, and route summaries | R:code:Sources/ClashBar/Services/ServiceStatusChecker.swift,code:Sources/ClashBar/Models/ServiceStatus.swift | A:Service status view model | S:Refresh results are associated with the current routing fingerprint
+StatusBarViewModel.swift[AU4T]: F:Provides compact status-bar display state | R:code:Sources/ClashBar/ViewModels/AppViewModel.swift | A:Status bar view model | S:-
+SystemTabViewModel.swift[AU4T]: F:Provides system settings tab display state | R:code:Sources/ClashBar/ViewModels/AppViewModel+Settings.swift | A:System tab view model | S:-
+
+===/<repository>/Sources/ClashBar/ViewModels/Stores/===
+ConnectionsStore.swift[AP3T]: F:Stores the latest connection snapshot | R:code:Sources/ClashBar/ViewModels/ConnectionsViewModel.swift | A:Connection state store | S:-
+LogsStore.swift[AO3T]: F:Stores the latest runtime logs and filter state | R:code:Sources/ClashBar/ViewModels/LogsViewModel.swift | A:Log state store | S:-
+ProxyStore.swift[AP5T]: F:Stores proxy groups, nodes, and selection state | R:code:Sources/ClashBar/ViewModels/AppViewModel+Proxy.swift,code:Sources/ClashBar/Models/Proxy.swift | A:Proxy state store | S:-
+RemoteMachineStore.swift[AI7M]: F:Persists and selects remote machine connection records | R:code:Sources/ClashBar/ViewModels/AppViewModel+RemoteMachine.swift,code:Sources/ClashBar/Models/RemoteMachine.swift | A:Remote machine state store | S:Stored records preserve endpoint identity for reconnection
+TrafficStore.swift[AR4T]: F:Stores current traffic upload and download totals | R:code:Sources/ClashBar/ViewModels/AppViewModel+Polling.swift | A:Traffic state store | S:-
+
+===/<repository>/Sources/ClashBar/Views/Dashboard/===
+DashboardConfigurationView.swift[AU8L]: F:Provides the dashboard configuration editor for local and remote config settings | R:code:Sources/ClashBar/ViewModels/AppViewModel+LocalConfig.swift,code:Sources/ClashBar/ViewModels/AppViewModel+RemoteConfig.swift | A:Dashboard configuration UI | S:Edits are disabled while configuration or core operations are busy
+DashboardCustomRulesView.swift[AU8L]: F:Provides dashboard editing for custom routing rules and rule transactions | R:code:Sources/ClashBar/ViewModels/AppViewModel+EffectiveConfig.swift,code:Sources/ClashBar/Services/ConfigRuleMerger.swift | A:Dashboard rule editor | S:Rule edits use effective configuration transaction state
+DashboardOverviewView.swift[AU5S]: F:Displays dashboard overview status and runtime summaries | R:code:Sources/ClashBar/ViewModels/AppViewModel.swift | A:Dashboard overview UI | S:-
+DashboardServiceStatusView.swift[AU7M]: F:Displays service availability checks and routing summaries | R:code:Sources/ClashBar/ViewModels/ServiceStatusViewModel.swift | A:Dashboard service status UI | S:Results use the current routing fingerprint
+DashboardView.swift[AU7M]: F:Composes dashboard tabs and shared dashboard layout | R:code:Sources/ClashBar/Views/Dashboard/DashboardOverviewView.swift | A:Dashboard container UI | S:-
+
+===/<repository>/Sources/ClashBar/Views/MenuBar/Common/===
+MenuBarCommonViews.swift[AU8L]: F:Provides shared menu-bar rows controls badges and empty states | R:code:Sources/ClashBar/Core/UI/MenuBarLayoutTokens.swift | A:Shared menu-bar UI | S:Shared rows use fixed menu panel dimensions
+
+===/<repository>/Sources/ClashBar/Views/MenuBar/===
+ConnectionsTabView.swift[AU8L]: F:Displays active connections metadata and close actions | R:code:Sources/ClashBar/ViewModels/ConnectionsViewModel.swift | A:Connections tab UI | S:Close actions target the active controller
+LogsTabView.swift[AU7M]: F:Displays filtered application and core logs with copy and clear actions | R:code:Sources/ClashBar/ViewModels/LogsViewModel.swift | A:Logs tab UI | S:-
+MenuBarHeaderView.swift[AU7M]: F:Displays branding core status mode controls and quick actions | R:code:Sources/ClashBar/ViewModels/AppViewModel.swift | A:Menu header UI | S:-
+ProxyProvidersAndGroupsView.swift[AU8L]: F:Displays proxy providers groups nodes health and selection controls | R:code:Sources/ClashBar/ViewModels/AppViewModel+Proxy.swift | A:Proxy provider UI | S:Selection targets the active Mihomo controller
+ProxyTabView.swift[AU8L]: F:Composes proxy mode groups nodes latency and proxy actions | R:code:Sources/ClashBar/ViewModels/AppViewModel+Proxy.swift | A:Proxy tab UI | S:Unavailable cores disable controller mutations
+RulesTabView.swift[AU7M]: F:Displays routing rules providers and rule test controls | R:code:Sources/ClashBar/ViewModels/RulesViewModel.swift | A:Rules tab UI | S:-
+SystemTabView.swift[AU8L]: F:Displays system settings service status maintenance proxy TUN and WebUI controls | R:code:Sources/ClashBar/ViewModels/AppViewModel+Settings.swift | A:System tab UI | S:Controls reflect helper and core availability
+TrafficSparklineView.swift[AU5S]: F:Renders compact traffic history as a SwiftUI sparkline | R:code:Sources/ClashBar/ViewModels/Stores/TrafficStore.swift | A:Traffic visualization | S:-
+
+===/<repository>/Sources/ClashBar/Views/MenuBar/Root/===
+MenuBarRoot+Layout.swift[AU4T]: F:Defines root menu-bar layout composition and sizing | R:code:Sources/ClashBar/Views/MenuBar/Root/MenuBarRootView.swift | A:Menu-bar layout UI | S:-
+MenuBarRoot+ModeTabs.swift[AU7L]: F:Builds menu-bar mode tabs and tab-specific content | R:code:Sources/ClashBar/Views/MenuBar/Root/MenuBarRootView.swift | A:Mode tab UI | S:-
+MenuBarRootView.swift[AU7M]: F:Owns root menu-bar view tab selection and shared app bindings | R:code:Sources/ClashBar/ViewModels/AppViewModel.swift | A:Menu-bar root UI | S:-
+RemoteMachineManagerView.swift[AU7L]: F:Provides remote machine selection editing and connection controls | R:code:Sources/ClashBar/ViewModels/AppViewModel+RemoteMachine.swift | A:Remote machine UI | S:-
+
+===/<repository>/Sources/ClashBar/Views/StatusBar/===
+ScrollIndicatorPolicy.swift[AU3T]: F:Defines scroll indicator visibility policy for status-bar content | R:code:Sources/ClashBar/Views/StatusBar/StatusItemContentView.swift | A:Scroll behavior policy | S:-
+StatusItemContentView.swift[AU7M]: F:Displays status-bar title traffic core state and menu interactions | R:code:Sources/ClashBar/ViewModels/StatusBarViewModel.swift | A:Status item UI | S:-
+StatusItemController.swift[AI8L]: F:Hosts the macOS status item popover menu-bar button and lifecycle callbacks | R:code:Sources/ClashBar/Views/StatusBar/StatusItemContentView.swift | A:Status item controller | S:Popover lifecycle is owned by the controller
+
+===/<repository>/Sources/ProxyHelper/Daemon/===
+main.swift[AI8L]: F:Runs the privileged ClashBar helper daemon and serves proxy operations over XPC | R:code:Sources/ProxyHelperShared/ProxyHelperProtocol.swift | A:Privileged helper daemon | S:The daemon validates launchd identity and serves only the declared protocol
+
+===/<repository>/Sources/ProxyHelper/LaunchDaemons/===
+com.clashbar.helper.plist[AV3T]: F:Declares launchd job for the privileged ClashBar helper | R:code:Sources/ProxyHelper/Daemon/main.swift | A:Launch daemon configuration | S:Label and executable path match helper constants
+
+===/<repository>/Sources/ProxyHelperShared/===
+ProxyHelperProtocol.swift[AI4T]: F:Defines XPC protocol and helper installation version constants | R:code:Sources/ProxyHelper/Daemon/main.swift | A:Helper protocol contract | S:Protocol selectors and helperVersion stay synchronized
+SystemProxyBackup.swift[AP5T]: F:Encodes and restores saved macOS proxy configuration state | R:code:Sources/ProxyHelper/Daemon/main.swift | A:Proxy state persistence | S:Backup data restores prior system proxy state
+
+===/<repository>/Tests/ClashBarTests/===
+BrandIconRenderingTests.swift[TQ6M]: F:Tests brand icon rendering and resource fallback behavior | R:code:Sources/ClashBar/Core/UI/Components/BrandIcon.swift | A:Rendering test coverage | S:-
+ConfigFileNameTests.swift[TQ3T]: F:Tests configuration filename normalization and fallback rules | R:code:Sources/ClashBar/Services/ConfigService.swift | A:Filename test coverage | S:-
+ConfigRuleMergerTests.swift[TQ5S]: F:Tests proxy port parsing and custom rule merging | R:code:Sources/ClashBar/Services/ConfigRuleMerger.swift | A:Configuration test coverage | S:Invalid ports and malformed rules fail
+ConnectionsSnapshotTests.swift[TQ3T]: F:Tests connection snapshot decoding and selection behavior | R:code:Sources/ClashBar/ViewModels/Stores/ConnectionsStore.swift | A:Connection test coverage | S:-
+CoreInstallationTests.swift[TQ5S]: F:Tests core package selection validation and installation errors | R:code:Sources/ClashBar/Services/CoreService.swift | A:Core installation test coverage | S:Architecture and checksum failures are tested
+DashboardConfigIntegrationTests.swift[TQ8L]: F:Tests dashboard configuration flows and effective config integration | R:code:Sources/ClashBar/Views/Dashboard/DashboardConfigurationView.swift | A:Dashboard integration test coverage | S:Tests cover busy-state and transaction consistency
+DashboardRenderingTests.swift[TQ6M]: F:Tests dashboard view rendering and state presentation | R:code:Sources/ClashBar/Views/Dashboard/DashboardView.swift | A:Dashboard rendering tests | S:-
+EffectiveConfigTransactionTests.swift[TQ3T]: F:Tests effective configuration persistence and reconciliation | R:code:Sources/ClashBar/Services/EffectiveConfigTransaction.swift | A:Transaction test coverage | S:-
+FormattersTests.swift[TQ3T]: F:Tests display formatter outputs and invalid input handling | R:code:Sources/ClashBar/Core/Utils/Formatters.swift | A:Formatter test coverage | S:-
+MihomoValidationTests.swift[TQ5S]: F:Tests Mihomo configuration and binary validation behavior | R:code:Sources/ClashBar/Services/CoreService.swift | A:Validation test coverage | S:-
+ProxyHelperInstallerTests.swift[TQ3T]: F:Tests helper source discovery and installation validation | R:code:Sources/ClashBar/Services/ProxyHelperInstaller.swift | A:Helper installer tests | S:-
+ProxyPortValuesTests.swift[TQ3T]: F:Tests proxy port value decoding and equality | R:code:Sources/ClashBar/Services/ConfigRuleMerger.swift | A:Port value tests | S:-
+ServiceStatusIntegrationTests.swift[TQ6M]: F:Tests service status probes and routing integration | R:code:Sources/ClashBar/Services/ServiceStatusChecker.swift | A:Service status integration tests | S:-
+ServiceStatusRenderingTests.swift[TQ5S]: F:Tests service status UI rendering and state labels | R:code:Sources/ClashBar/Views/Dashboard/DashboardServiceStatusView.swift | A:Service status rendering tests | S:-
+ServiceStatusTests.swift[TQ6M]: F:Tests service status classification and routing fingerprints | R:code:Sources/ClashBar/Services/ServiceStatusChecker.swift | A:Service status test coverage | S:-
+SubscriptionUsageTests.swift[TQ3T]: F:Tests subscription usage parsing and display values | R:code:Sources/ClashBar/Models/RemoteConfigSubscription.swift | A:Subscription tests | S:-
+SystemProxyBackupTests.swift[TQ3T]: F:Tests system proxy backup encoding and restore values | R:code:Sources/ProxyHelperShared/SystemProxyBackup.swift | A:Proxy backup tests | S:-
+SystemProxyStateTests.swift[TQ7L]: F:Tests system proxy state parsing matching and helper health behavior | R:code:Sources/ClashBar/Services/SystemProxyService.swift | A:Proxy state test coverage | S:-
+WebUIUpdateFeedbackTests.swift[TQ6M]: F:Tests WebUI update feedback and completion states | R:code:Sources/ClashBar/Views/WebUI/WebUIUpdateFeedbackView.swift | A:WebUI feedback tests | S:-
+WorkingDirectoryManagerTests.swift[TQ4T]: F:Tests working directory creation and persisted paths | R:code:Sources/ClashBar/Services/WorkingDirectoryManager.swift | A:Working directory tests | S:-
+
+===/<repository>/design/===
+README.md[AU3T]: F:Documents ClashBar design assets and icon workflows | R:code:design/icons/README.md | A:Design documentation | S:-
+
+===/<repository>/design/icons/===
+README.md[AU3T]: F:Documents icon variants, previews, and build conventions | R:code:design/README.md | A:Icon design documentation | S:-
+build-app-icon-assets.sh[AI3T]: F:Builds icon assets from design sources | R:code:design/icons/README.md | A:Icon asset build script | S:Generated assets stay under design output
+build-header-assets.swift[AI4T]: F:Generates header icon assets from vector design inputs | R:code:design/icons/README.md | A:Header asset generator | S:-
+
+===/<repository>/design/icons/applied-four-states/===
+code-preview.html[AU3T]: F:Previews applied icon states in a browser document | R:code:design/icons/README.md | A:Icon preview | S:-
+
+===/<repository>/design/icons/color-studies-2026-11-11/===
+README.md[AU3T]: F:Describes dated icon color studies and preview outputs | R:code:design/icons/README.md | A:Color study documentation | S:-
+build-preview.py[AI4T]: F:Builds HTML previews for icon color studies | R:code:design/icons/color-studies-2026-11-11/README.md | A:Color preview generator | S:-
+
+===/<repository>/design/icons/menu-bar-balanced/===
+preview.html[AU3T]: F:Previews the balanced menu-bar icon design | R:code:design/icons/README.md | A:Menu-bar icon preview | S:-
+
+===/<repository>/design/icons/monochrome-g/===
+build-template-assets.swift[AI5S]: F:Generates monochrome icon template assets | R:code:design/icons/README.md | A:Monochrome asset generator | S:Generated templates preserve monochrome alpha
+
+===/<repository>/design/icons/upper-body-design/===
+preview.html[AU3T]: F:Previews the upper-body icon design variant | R:code:design/icons/README.md | A:Icon preview | S:-
+
+===/<repository>/design/icons/upper-body-rounded/===
+preview.html[AU3T]: F:Previews the rounded upper-body icon variant | R:code:design/icons/README.md | A:Icon preview | S:-
+
+===/<repository>/design/icons/upper-body-shield-inset-spaced/===
+menu-bar-states.html[AU3T]: F:Previews shield inset menu-bar icon states | R:code:design/icons/README.md | A:Menu-bar state preview | S:-
+
+===/<repository>/design/icons/upper-body-shield/===
+preview.html[AU3T]: F:Previews the shield upper-body icon variant | R:code:design/icons/README.md | A:Icon preview | S:-
+
+===/<repository>/docs/===
+.gitignore[AV3T]: F:Excludes generated documentation build output | R:code:docs/package.json | A:Documentation build configuration | S:-
+README.md[AU3T]: F:Documents the ClashBar documentation site and local development | R:code:docs/package.json | A:Documentation site guide | S:-
+middleware.ts[AI3T]: F:Configures documentation middleware and request handling | R:code:docs/src/app/layout.tsx | A:Docs middleware | S:-
+next.config.mjs[AV3T]: F:Configures the Next.js documentation build | R:code:docs/package.json | A:Next configuration | S:-
+open-next.config.ts[AV3T]: F:Configures OpenNext deployment output for the docs site | R:code:docs/next.config.mjs | A:OpenNext configuration | S:-
+package.json[AV3T]: F:Declares documentation scripts dependencies and build metadata | R:code:docs/pnpm-workspace.yaml | A:Docs package manifest | S:-
+pnpm-workspace.yaml[AV3T]: F:Defines documentation workspace package boundaries | R:code:docs/package.json | A:Workspace configuration | S:-
+postcss.config.mjs[AV3T]: F:Configures PostCSS processing for documentation styles | R:code:docs/src/app/global.css | A:PostCSS configuration | S:-
+service-status.md[AU3T]: F:Documents service status meanings and troubleshooting context | R:code:Sources/ClashBar/Services/ServiceStatusChecker.swift | A:Service status documentation | S:-
+source.config.ts[AV3T]: F:Configures the documentation source loader and navigation | R:code:docs/content/docs/meta.json | A:Docs source configuration | S:-
+tsconfig.json[AV3T]: F:Configures TypeScript compilation for documentation sources | R:code:docs/package.json | A:TypeScript configuration | S:-
+wrangler.jsonc[AV3T]: F:Configures Cloudflare deployment for the docs site | R:code:docs/open-next.config.ts | A:Cloudflare deployment configuration | S:-
+
+===/<repository>/docs/content/docs/===
+about.mdx[AU3T]: F:Explains ClashBar purpose platform and project background | R:code:docs/content/docs/index.mdx | A:About documentation | S:-
+changelog.mdx[AU3T]: F:Publishes generated release change history | R:code:docs/src/data/changelog.generated.json | A:Changelog documentation | S:-
+configuration.mdx[AU3T]: F:Documents configuration files profiles and update behavior | R:code:Sources/ClashBar/Services/ConfigService.swift | A:Configuration documentation | S:-
+daily-use.mdx[AU3T]: F:Describes daily menu-bar workflows and proxy operations | R:code:Sources/ClashBar/Views/MenuBar/Root/MenuBarRootView.swift | A:Usage documentation | S:-
+features.mdx[AU5S]: F:Lists ClashBar features including proxy control monitoring and remote machines | R:code:docs/content/docs/index.mdx | A:Feature documentation | S:-
+index.mdx[AU3T]: F:Defines the documentation home page and navigation overview | R:code:docs/content/docs/meta.json | A:Documentation index | S:-
+meta.json[AV3T]: F:Defines documentation navigation labels and page order | R:code:docs/content/docs/index.mdx | A:Documentation navigation | S:Navigation order is consumed by the docs loader
+network-mode.mdx[AU3T]: F:Explains network mode selection and proxy routing semantics | R:code:Sources/ClashBar/ViewModels/AppViewModel.swift | A:Network mode documentation | S:-
+quick-start.mdx[AU5S]: F:Guides first launch core setup and initial proxy configuration | R:code:Sources/ClashBar/Services/CoreService.swift | A:Quick start documentation | S:-
+remote-machine.mdx[AU3T]: F:Explains adding and using remote Clash machines | R:code:Sources/ClashBar/Views/MenuBar/Root/RemoteMachineManagerView.swift | A:Remote machine documentation | S:-
+settings.mdx[AU3T]: F:Documents application settings and system integration controls | R:code:Sources/ClashBar/Views/MenuBar/SystemTabView.swift | A:Settings documentation | S:-
+ssid-strategy.mdx[AU3T]: F:Documents SSID based proxy strategy configuration | R:code:Sources/ClashBar/Services/SSIDStrategyService.swift | A:SSID strategy documentation | S:-
+troubleshooting.mdx[AU5S]: F:Lists diagnosis steps for core proxy and helper failures | R:code:docs/content/docs/quick-start.mdx | A:Troubleshooting documentation | S:-
+
+===/<repository>/docs/public/===
+_headers[AV3T]: F:Declares deployment response headers for the docs site | R:code:docs/package.json | A:Deployment headers | S:-
+
+===/<repository>/docs/scripts/===
+parse-changelog.mjs[AI5M]: F:Parses release notes into generated documentation changelog data | R:code:docs/src/data/changelog.generated.json | A:Changelog generator | S:-
+
+===/<repository>/docs/src/app/(home)/===
+layout.tsx[AU3T]: F:Defines the documentation home layout and shared chrome | R:code:docs/src/app/layout.tsx | A:Docs home layout | S:-
+page.tsx[AU8L]: F:Renders the documentation home page and feature navigation | R:code:docs/src/app/(home)/layout.tsx | A:Docs home page | S:-
+
+===/<repository>/docs/src/app/api/search/===
+route.ts[AI3T]: F:Serves documentation search requests | R:code:docs/src/lib/source.ts | A:Docs search API | S:-
+
+===/<repository>/docs/src/app/docs/[[...slug]]/===
+page.tsx[AU3T]: F:Renders a documentation page from the dynamic slug route | R:code:docs/source.config.ts | A:Docs page route | S:-
+
+===/<repository>/docs/src/app/docs/===
+layout.tsx[AU3T]: F:Defines shared layout for documentation pages | R:code:docs/src/app/layout.tsx | A:Docs page layout | S:-
+
+===/<repository>/docs/src/app/===
+global.css[AU3T]: F:Defines global documentation site styles and tokens | R:code:docs/src/app/layout.tsx | A:Docs global styles | S:-
+layout.tsx[AU3T]: F:Defines root metadata and providers for the documentation site | R:code:docs/src/app/global.css | A:Docs root layout | S:-
+
+===/<repository>/docs/src/app/llms-full.txt/===
+route.ts[AI3T]: F:Serves the complete documentation as LLM text | R:code:docs/src/lib/source.ts | A:LLM documentation route | S:-
+
+===/<repository>/docs/src/app/llms.mdx/docs/[[...slug]]/===
+route.ts[AI3T]: F:Serves an individual documentation page as MDX text | R:code:docs/src/lib/source.ts | A:MDX text route | S:-
+
+===/<repository>/docs/src/app/llms.txt/===
+route.ts[AI3T]: F:Serves the compact documentation index for LLM clients | R:code:docs/src/lib/source.ts | A:LLM index route | S:-
+
+===/<repository>/docs/src/app/og/docs/[...slug]/===
+route.tsx[AI3T]: F:Renders Open Graph images for documentation pages | R:code:docs/src/lib/source.ts | A:Documentation OG route | S:-
+
+===/<repository>/docs/src/components/changelog/===
+index.tsx[AU3T]: F:Exports changelog presentation components | R:code:docs/src/components/changelog/timeline.tsx | A:Changelog component index | S:-
+item-text.tsx[AU3T]: F:Renders formatted text for a changelog item | R:code:docs/src/components/changelog/timeline.tsx | A:Changelog item UI | S:-
+timeline.tsx[AU6M]: F:Renders the chronological release changelog timeline | R:code:docs/src/components/changelog/item-text.tsx | A:Changelog timeline UI | S:-
+
+===/<repository>/docs/src/components/===
+mdx.tsx[AU3T]: F:Defines MDX component mappings for documentation content | R:code:docs/src/app/docs/[[...slug]]/page.tsx | A:MDX rendering components | S:-
+
+===/<repository>/docs/src/data/===
+changelog.generated.json[AV8L]: F:Stores generated release changelog data for the docs site | R:code:docs/scripts/parse-changelog.mjs | A:Generated changelog data | S:File is generated from release history
+
+===/<repository>/docs/src/lib/===
+changelog.ts[AI3T]: F:Loads and transforms generated changelog data | R:code:docs/src/data/changelog.generated.json | A:Changelog data loader | S:-
+cn.ts[AI3T]: F:Merges conditional CSS class names for documentation UI | R:code:docs/src/app/global.css | A:CSS class helper | S:-
+layout.shared.tsx[AU3T]: F:Provides shared layout elements for documentation routes | R:code:docs/src/app/layout.tsx | A:Shared docs layout | S:-
+shared.ts[AI3T]: F:Provides shared documentation constants and helpers | R:code:docs/src/lib/source.ts | A:Shared docs helpers | S:-
+source.ts[AI3T]: F:Builds the documentation content source and page index | R:code:docs/source.config.ts | A:Docs content source | S:-
+
+===/<repository>/skills/clashbar-rules/===
+SKILL.md[AU3T]: F:Documents the ClashBar custom routing rules skill | R:code:skills/clashbar-rules/scripts/clashbar_rules.py | A:Routing rules skill | S:-
+
+===/<repository>/skills/clashbar-rules/scripts/===
+clashbar_rules.py[AI3T]: F:Implements local custom routing rule management commands | R:code:skills/clashbar-rules/SKILL.md | A:Routing rule helper | S:Preserves unrelated configuration
