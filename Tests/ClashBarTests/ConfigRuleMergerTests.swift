@@ -20,6 +20,27 @@ final class ConfigRuleMergerTests: XCTestCase {
         ])
     }
 
+    func testDisabledChangesAreSkippedAndCanBeRestoredInPlace() throws {
+        let input = Data("rules: ['DOMAIN,base.example,DIRECT', 'DOMAIN,old.example,DIRECT', 'MATCH,DIRECT']".utf8)
+        var changes = [
+            CustomRuleChange(operation: .add, original: "", value: "DOMAIN,first.example,DIRECT"),
+            CustomRuleChange(operation: .add, original: "", value: "DOMAIN,second.example,DIRECT", isEnabled: false),
+            CustomRuleChange(operation: .add, original: "", value: "DOMAIN,third.example,DIRECT"),
+            CustomRuleChange(operation: .replace, original: "DOMAIN,base.example,DIRECT", value: "DOMAIN,base.example,REJECT", isEnabled: false),
+            CustomRuleChange(operation: .delete, original: "DOMAIN,old.example,DIRECT", value: "", isEnabled: false),
+        ]
+        let merger = ConfigRuleMerger()
+        XCTAssertEqual(try merger.rules(in: merger.merge(input, changes: changes)), [
+            "DOMAIN,first.example,DIRECT", "DOMAIN,third.example,DIRECT",
+            "DOMAIN,base.example,DIRECT", "DOMAIN,old.example,DIRECT", "MATCH,DIRECT",
+        ])
+        for index in changes.indices { changes[index].isEnabled = true }
+        XCTAssertEqual(try merger.rules(in: merger.merge(input, changes: changes)), [
+            "DOMAIN,first.example,DIRECT", "DOMAIN,second.example,DIRECT", "DOMAIN,third.example,DIRECT",
+            "DOMAIN,base.example,REJECT", "MATCH,DIRECT",
+        ])
+    }
+
     func testSelectionPersistencePreservesOtherProfileSettings() throws {
         let input = Data("profile:\n  store-selected: false\n  store-fake-ip: true\nrules: ['MATCH,DIRECT']\n".utf8)
         let merged = try ConfigRuleMerger().merge(input, changes: [])
@@ -34,10 +55,11 @@ final class ConfigRuleMergerTests: XCTestCase {
     }
 
     func testRejectsMissingOriginalInsteadOfSilentlyApplyingWrongRule() {
-        let input = Data("rules: [MATCH,DIRECT]\n".utf8)
-        XCTAssertThrowsError(try ConfigRuleMerger().merge(input, changes: [
-            CustomRuleChange(operation: .delete, original: "DOMAIN,missing,DIRECT", value: ""),
-        ]))
+        let input = Data("rules: ['MATCH,DIRECT']\n".utf8)
+        var change = CustomRuleChange(operation: .delete, original: "DOMAIN,missing,DIRECT", value: "")
+        XCTAssertThrowsError(try ConfigRuleMerger().merge(input, changes: [change]))
+        change.isEnabled = false
+        XCTAssertNoThrow(try ConfigRuleMerger().merge(input, changes: [change]))
     }
 
     func testRejectsInvalidRules() {
@@ -48,11 +70,22 @@ final class ConfigRuleMergerTests: XCTestCase {
         let old = Data(#"{"operation":"add","original":"","value":"DOMAIN,example.com,DIRECT","id":"00000000-0000-0000-0000-000000000001"}"#.utf8)
         let decoded = try JSONDecoder().decode(CustomRuleChange.self, from: old)
         XCTAssertNil(decoded.testURL)
+        XCTAssertTrue(decoded.isEnabled)
         var change = decoded
         change.testURL = "https://example.com/path"
         XCTAssertEqual(try JSONDecoder().decode(CustomRuleChange.self, from: JSONEncoder().encode(change)), change)
         let merged = try ConfigRuleMerger().merge(Data("rules: ['MATCH,DIRECT']".utf8), changes: [change])
         XCTAssertFalse(String(decoding: merged, as: UTF8.self).contains("https://example.com"))
+    }
+
+    func testDisabledRulePersistsAndIsExcludedFromTesting() throws {
+        var change = CustomRuleChange(operation: .add, original: "", value: "DOMAIN,example.com,DIRECT",
+                                      testURL: "https://example.com/path")
+        XCTAssertTrue(RuleTester.canTest(change))
+        change.isEnabled = false
+        let restored = try JSONDecoder().decode(CustomRuleChange.self, from: JSONEncoder().encode(change))
+        XCTAssertEqual(restored, change)
+        XCTAssertFalse(RuleTester.canTest(restored))
     }
 
     func testRuleTestValidationAndConnectionEvidence() throws {

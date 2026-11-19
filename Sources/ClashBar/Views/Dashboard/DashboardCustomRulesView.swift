@@ -83,7 +83,7 @@ struct DashboardCustomRulesView: View {
         .onChange(of: changes) { _ in cancelTests() }
         .onChange(of: appViewModel.isRuntimeRunning) { _ in cancelTests() }
         .onChange(of: appViewModel.dashboardConfigBusy) { busy in if busy { cancelTests() } }
-        .onChange(of: testAllRequest) { _ in startTests(changes.filter(canTest)) }
+        .onChange(of: testAllRequest) { _ in startTests(changes.filter(RuleTester.canTest)) }
         .onDisappear { cancelTests() }
         .onExitCommand { if request != nil { closeEditor() } }
     }
@@ -234,7 +234,7 @@ struct DashboardCustomRulesView: View {
             ForEach(changes) { change in
                 if let index = changes.firstIndex(where: { $0.id == change.id }) { ruleRow(change, index: index) }
             }
-            Text(text("规则会先经过校验，再合并到当前基础配置。", "Rules are validated before merging into the base configuration."))
+            Text(text("已启用的规则会先经过校验，再合并到当前基础配置。", "Enabled rules are validated before merging into the base configuration."))
                 .font(.system(size: 10)).foregroundStyle(muted)
         }.padding(16).frame(maxWidth: .infinity, alignment: .topLeading)
             .background(surface, in: RoundedRectangle(cornerRadius: 12))
@@ -250,13 +250,24 @@ struct DashboardCustomRulesView: View {
                 Spacer(minLength: 0)
             }
             HStack(alignment: .top, spacing: 8) {
-                Text(change.operation == .delete ? text("从基础配置移除", "Removed from base") : change.value)
+                Text(change.operation == .delete
+                    ? (change.isEnabled ? text("从基础配置移除", "Removed from base") : text("删除操作已停用", "Deletion disabled"))
+                    : change.value)
                     .font(.system(size: 10)).foregroundStyle(muted).lineLimit(2).textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                Toggle(isOn: Binding(get: { change.isEnabled }, set: { setEnabled($0, id: change.id) })) {
+                    Text(text("启用", "Enabled")).font(.system(size: 11)).foregroundStyle(muted)
+                }
+                .toggleStyle(.switch)
+                .controlSize(.small)
+                .tint(blue)
+                .fixedSize()
+                .accessibilityLabel(Text("\(text("启用规则", "Enable rule")): \(summary(change))"))
+                .disabled(disabled)
                 if change.operation != .delete {
                     Button(text("测试", "Test")) { startTests([change]) }
                         .buttonStyle(RuleLinkStyle())
-                        .disabled(disabled || !appViewModel.isRuntimeRunning || appViewModel.dashboardEffectiveRecord?.baseName != appViewModel.selectedConfigName || !canTest(change) || !testingIDs.isEmpty)
+                        .disabled(disabled || !appViewModel.isRuntimeRunning || appViewModel.dashboardEffectiveRecord?.baseName != appViewModel.selectedConfigName || !RuleTester.canTest(change) || !testingIDs.isEmpty)
                 }
                 Button(text("编辑", "Edit")) { edit(change, index: index) }.buttonStyle(RuleLinkStyle()).disabled(disabled)
                 Button(change.operation == .delete ? text("撤销删除", "Undo") : text("删除", "Remove")) { remove(index: index) }
@@ -293,10 +304,6 @@ struct DashboardCustomRulesView: View {
             Text("\(text("线路", "Route")): \(result.chain.map { Array($0.reversed()).joined(separator: " → ") } ?? text("无法确认", "Unknown"))")
             if let error = result.requestError { Text(error).textSelection(.enabled) }
         }.font(.system(size: 10)).foregroundStyle(muted).fixedSize(horizontal: false, vertical: true)
-    }
-
-    private func canTest(_ change: CustomRuleChange) -> Bool {
-        RuleTester.supports(change) && change.testURL.flatMap(RuleTester.validURL) != nil
     }
 
     private func startTests(_ candidates: [CustomRuleChange]) {
@@ -439,9 +446,21 @@ struct DashboardCustomRulesView: View {
             localError = text("规则列表已变更，请重新编辑。", "The rule list changed. Edit the rule again.")
             return
         }
-        let change = CustomRuleChange(id: editingIndex.map { next[$0].id } ?? UUID(), operation: operation, original: operation == .add ? "" : original, value: operation == .delete ? "" : nextValue, testURL: operation == .delete || urlValue.isEmpty ? nil : urlValue)
+        let change = CustomRuleChange(id: editingOriginal?.id ?? UUID(), operation: operation,
+                                      original: operation == .add ? "" : original, value: operation == .delete ? "" : nextValue,
+                                      testURL: operation == .delete || urlValue.isEmpty ? nil : urlValue,
+                                      isEnabled: editingOriginal?.isEnabled ?? true)
         if let index = editingIndex { next[index] = change } else { next.append(change) }
         Task { if await appViewModel.applyDashboardConfiguration(baseName: appViewModel.selectedConfigName, changes: next) { closeEditor(); loadOptions() } }
+    }
+    private func setEnabled(_ enabled: Bool, id: UUID) {
+        Task {
+            var next = changes
+            guard !disabled, let index = next.firstIndex(where: { $0.id == id }), next[index].isEnabled != enabled else { return }
+            localError = nil
+            next[index].isEnabled = enabled
+            await appViewModel.applyDashboardConfiguration(baseName: appViewModel.selectedConfigName, changes: next)
+        }
     }
     private func remove(index: Int) {
         var next = changes

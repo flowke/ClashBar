@@ -85,7 +85,8 @@ extension AppViewModel {
                         throw AgentRuleError.notFound
                     }
                     changes[index] = CustomRuleChange(id: id, operation: operation, original: original, value: value,
-                                                      testURL: operation == .delete ? nil : changes[index].testURL)
+                                                      testURL: operation == .delete ? nil : changes[index].testURL,
+                                                      isEnabled: changes[index].isEnabled)
                 }
             case "remove":
                 guard let id = request.id, let index = changes.firstIndex(where: { $0.id == id }) else {

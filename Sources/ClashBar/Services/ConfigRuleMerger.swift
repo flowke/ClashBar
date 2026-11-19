@@ -98,6 +98,19 @@ struct CustomRuleChange: Codable, Equatable, Identifiable {
     var original: String
     var value: String
     var testURL: String? = nil
+    var isEnabled = true
+}
+
+extension CustomRuleChange {
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        operation = try container.decode(Operation.self, forKey: .operation)
+        original = try container.decode(String.self, forKey: .original)
+        value = try container.decode(String.self, forKey: .value)
+        testURL = try container.decodeIfPresent(String.self, forKey: .testURL)
+        isEnabled = try container.decodeIfPresent(Bool.self, forKey: .isEnabled) ?? true
+    }
 }
 
 enum ConfigRuleMergeError: LocalizedError {
@@ -139,7 +152,7 @@ struct ConfigRuleMerger {
             throw ConfigRuleMergeError.invalidDocument
         }
         let result = try resolve(rules: rules(in: data), changes: changes)
-        if !changes.isEmpty || document["rules"] != nil {
+        if changes.contains(where: \.isEnabled) || document["rules"] != nil {
             document["rules"] = Node(result.map { Node($0.value, .implicit, .doubleQuoted) })
         }
         try enableSelectionPersistence(in: &document)
@@ -166,7 +179,7 @@ struct ConfigRuleMerger {
     func resolve(rules originalRules: [String], changes: [CustomRuleChange]) throws -> [ResolvedRule] {
         var rules = originalRules.map { ResolvedRule(value: $0, origin: nil) }
         var additions: [ResolvedRule] = []
-        for change in changes {
+        for change in changes where change.isEnabled {
             let original = change.original.trimmingCharacters(in: .whitespacesAndNewlines)
             let value = change.value.trimmingCharacters(in: .whitespacesAndNewlines)
             switch change.operation {

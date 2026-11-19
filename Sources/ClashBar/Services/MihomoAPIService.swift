@@ -462,6 +462,10 @@ enum RuleTestError: LocalizedError {
 }
 
 enum RuleTester {
+    static func canTest(_ change: CustomRuleChange) -> Bool {
+        change.isEnabled && supports(change) && change.testURL.flatMap(validURL) != nil
+    }
+
     static func supports(_ change: CustomRuleChange) -> Bool {
         guard change.operation != .delete else { return false }
         let type = change.value.split(separator: ",", maxSplits: 1).first?.uppercased()

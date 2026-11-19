@@ -188,7 +188,7 @@ struct DashboardConfigurationView: View {
                     .buttonStyle(DashboardSectionButtonStyle())
                     .disabled(testingCustomRules || appViewModel.dashboardConfigBusy || appViewModel.isRemoteTarget || !appViewModel.isRuntimeRunning ||
                               appViewModel.dashboardEffectiveRecord?.baseName != appViewModel.selectedConfigName ||
-                              !changes.contains { RuleTester.supports($0) && $0.testURL.flatMap(RuleTester.validURL) != nil })
+                              !changes.contains(where: RuleTester.canTest))
                     Button {
                         customRuleRequest = nil
                         customRuleMenuPresented.toggle()

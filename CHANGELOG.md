@@ -1,3 +1,11 @@
+## v0.3.14
+
+在「配置 → 自定义配置」中，每条规则现在都有独立的启用开关。
+
+- 现有规则和新建规则默认启用，开关状态会自动保存。
+- 停用后，规则仍可编辑，并保留原有内容和优先级。停用规则不参与生效配置、单条测试或「测试全部」。
+- 重新启用后，规则按原优先级生效。
+
 ## v0.3.13
 
 ![macOS](https://img.shields.io/badge/macOS-Supported-000000?style=flat-square&logo=apple) ![Version](https://img.shields.io/badge/Release-v0.3.13-10B981?style=flat-square) ![Core](https://img.shields.io/badge/Core-Mihomo-6366f1?style=flat-square)
