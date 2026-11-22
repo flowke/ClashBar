@@ -653,6 +653,52 @@ final class DashboardConfigIntegrationTests: XCTestCase {
 }
 
 final class PanelGeometryTests: XCTestCase {
+    func testMenuBarClickUsesClickedDisplayWhenButtonIsOnAnotherDisplay() {
+        let otherDisplay = PanelAnchorContext(
+            visibleFrame: CGRect(x: 0, y: 0, width: 1440, height: 874),
+            anchorFrameOnScreen: CGRect(x: 1200, y: 874, width: 24, height: 26),
+            hostWindowFrame: nil)
+        let screenFrame = CGRect(x: -1280, y: -180, width: 1280, height: 800)
+        let visibleFrame = CGRect(x: -1280, y: -180, width: 1280, height: 774)
+        let click = CGPoint(x: -200, y: 607)
+        let context = PanelAnchorContext.menuBarAnchor(
+            buttonContext: otherDisplay,
+            clickLocation: click,
+            screenFrame: screenFrame,
+            visibleFrame: visibleFrame)
+        let options = MenuBarDropdownPlacementOptions(
+            horizontalPadding: 8,
+            verticalSpacing: 0,
+            screenPadding: 10,
+            lockedOriginX: nil,
+            preserveHorizontalPosition: false)
+
+        XCTAssertEqual(context.anchorCenterOnScreen, click)
+        let initial = context.menuBarDropdownPlacement(panelSize: CGSize(width: 360, height: 320), options: options)
+        let resized = context.menuBarDropdownPlacement(panelSize: CGSize(width: 360, height: 550), options: options)
+        XCTAssertEqual(resized.frame.midX, initial.frame.midX)
+        XCTAssertEqual(resized.frame.maxY, initial.frame.maxY)
+        XCTAssertEqual(resized.frame.maxY, visibleFrame.maxY)
+        XCTAssertTrue(visibleFrame.contains(initial.frame))
+        XCTAssertTrue(visibleFrame.contains(resized.frame))
+    }
+
+    func testMenuBarClickKeepsButtonAlignmentOnTheClickedDisplay() {
+        let screenFrame = CGRect(x: 1440, y: -80, width: 1280, height: 800)
+        let visibleFrame = CGRect(x: 1440, y: -80, width: 1280, height: 774)
+        let button = PanelAnchorContext(
+            visibleFrame: visibleFrame,
+            anchorFrameOnScreen: CGRect(x: 2350, y: 694, width: 60, height: 26),
+            hostWindowFrame: nil)
+        let context = PanelAnchorContext.menuBarAnchor(
+            buttonContext: button,
+            clickLocation: CGPoint(x: 2355, y: 700),
+            screenFrame: screenFrame,
+            visibleFrame: visibleFrame)
+
+        XCTAssertEqual(context.anchorFrameOnScreen, button.anchorFrameOnScreen)
+    }
+
     func testMenuBarDropdownPlacementStaysOnTheAnchoredDisplay() {
         let panelSize = CGSize(width: 432, height: 336)
         let options = MenuBarDropdownPlacementOptions(

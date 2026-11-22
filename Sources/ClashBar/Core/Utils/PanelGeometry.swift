@@ -45,6 +45,29 @@ struct PanelAnchorContext {
             hostWindowFrame: hostWindow.frame)
     }
 
+    static func menuBarAnchor(
+        buttonContext: PanelAnchorContext?,
+        clickLocation: CGPoint,
+        screenFrame: CGRect,
+        visibleFrame: CGRect) -> PanelAnchorContext
+    {
+        if let buttonContext, screenFrame.contains(buttonContext.anchorCenterOnScreen) {
+            return PanelAnchorContext(
+                visibleFrame: visibleFrame,
+                anchorFrameOnScreen: buttonContext.anchorFrameOnScreen,
+                hostWindowFrame: buttonContext.hostWindowFrame)
+        }
+
+        return PanelAnchorContext(
+            visibleFrame: visibleFrame,
+            anchorFrameOnScreen: CGRect(origin: clickLocation, size: .zero),
+            hostWindowFrame: nil)
+    }
+
+    var anchorCenterOnScreen: CGPoint {
+        CGPoint(x: self.anchorFrameOnScreen.midX, y: self.anchorFrameOnScreen.midY)
+    }
+
     var statusBarBottomY: CGFloat {
         self.visibleFrame.maxY
     }
