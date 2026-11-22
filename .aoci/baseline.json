@@ -1,7 +1,7 @@
 {
   "version": 1,
   "created_at": "2026-11-19T16:38:21Z",
-  "updated_at": "2026-11-22T14:48:54Z",
+  "updated_at": "2026-11-22T17:49:55Z",
   "files": {
     ".gitattributes": {
       "role": "index",
@@ -65,9 +65,9 @@
     },
     "CHANGELOG.md": {
       "role": "index",
-      "sha256": "6c96ae6ab20e93a921bd6e324f95dfeff2a0136373e068109a485bcef66f2bbf",
-      "size": 67759,
-      "normalized_sha256": "6c96ae6ab20e93a921bd6e324f95dfeff2a0136373e068109a485bcef66f2bbf"
+      "sha256": "94d5bcb91c408e8b9a7296d5719a464a46dac0c0ebcfcd63b99064ae7985e743",
+      "size": 68215,
+      "normalized_sha256": "94d5bcb91c408e8b9a7296d5719a464a46dac0c0ebcfcd63b99064ae7985e743"
     },
     "ClashBar-Pencil-Migrated.pen": {
       "role": "index",
