@@ -41,7 +41,7 @@ struct DashboardCustomRulesView: View {
     @State private var testURL = ""
     @State private var testResults: [UUID: RuleTestResult] = [:]
     @State private var testingIDs: Set<UUID> = []
-    @State private var activeTestID: UUID?
+    @State private var activeTestIDs: Set<UUID> = []
     @State private var testTask: Task<Void, Never>?
 
     private let ink = Color(red: 0.13, green: 0.20, blue: 0.25)
@@ -280,7 +280,7 @@ struct DashboardCustomRulesView: View {
                     Text(text("此规则类型暂不支持测试", "Testing is not supported for this rule type"))
                         .font(.system(size: 10)).foregroundStyle(muted)
                 } else if testingIDs.contains(change.id) {
-                    Text(activeTestID == change.id ? text("测试中…", "Testing…") : text("等待测试", "Waiting to test"))
+                    Text(activeTestIDs.contains(change.id) ? text("测试中…", "Testing…") : text("等待测试", "Waiting to test"))
                         .font(.system(size: 11)).foregroundStyle(blue)
                 } else if let result = testResults[change.id] {
                     resultView(result)
@@ -314,27 +314,28 @@ struct DashboardCustomRulesView: View {
         isTesting = true
         for change in candidates { testResults.removeValue(forKey: change.id) }
         testTask = Task {
-            for change in candidates {
-                guard !Task.isCancelled else { return }
-                activeTestID = change.id
-                do {
-                    let result = try await RuleTester.run(change: change, client: client)
-                    guard !Task.isCancelled else { return }
-                    testResults[change.id] = result
-                } catch {
-                    guard !Task.isCancelled else { return }
-                    testResults[change.id] = RuleTestResult(match: .unknown, rule: nil, chain: nil, statusCode: nil, requestError: error.localizedDescription)
-                }
-                testingIDs.remove(change.id)
-            }
-            activeTestID = nil
+            await RuleTester.runBatch(candidates, measure: { change in
+                try await RuleTester.run(change: change, client: client)
+            }, started: { id in
+                activeTestIDs.insert(id)
+            }, finished: { id, result in
+                testResults[id] = result
+                activeTestIDs.remove(id)
+                testingIDs.remove(id)
+            })
+            guard !Task.isCancelled else { return }
             isTesting = false
             testTask = nil
         }
     }
 
     private func cancelTests() {
-        testTask?.cancel(); testTask = nil; testingIDs = []; activeTestID = nil; isTesting = false; testResults = [:]
+        testTask?.cancel()
+        testTask = nil
+        testingIDs = []
+        activeTestIDs = []
+        isTesting = false
+        testResults = [:]
     }
 
     private func fieldLabel(_ label: String) -> some View {

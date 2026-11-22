@@ -75,8 +75,8 @@ actor ServiceStatusChecker: ServiceStatusChecking {
             }
             selectedProxy = "socks5h://127.0.0.1:\(direct.proxyPort)"
         }
-        return try await Self.request(url: url, proxy: selectedProxy, client: kind == .current ? client : nil,
-                                      forcedDirect: kind == .direct)
+        return try await request(url: url, proxy: selectedProxy, client: kind == .current ? client : nil,
+                                 forcedDirect: kind == .direct)
     }
 
     struct Connections: Decodable {
@@ -105,11 +105,12 @@ actor ServiceStatusChecker: ServiceStatusChecking {
         return metadata?.destinationIP == literal
     }
 
-    static func curlArguments(url: URL, proxy: String, sourcePort: Int) -> [String] {
+    static func curlArguments(url: URL, proxy: String, sourcePort: Int?) -> [String] {
         var args = ["--disable", "--silent", "--show-error", "--proxy", proxy, "--noproxy", "",
-                    "--local-port", String(sourcePort), "--connect-timeout", "4", "--max-time", "8",
+                    "--connect-timeout", "4", "--max-time", "8",
                     "--max-filesize", "65536", "--range", "0-0", "--output", "/dev/null",
                     "--write-out", "%{http_code}\n%{time_starttransfer}\n%{time_total}\n%{http_connect}"]
+        if let sourcePort { args += ["--local-port", String(sourcePort)] }
         // Tunnel plain HTTP as well. Otherwise an HTTP proxy can synthesize a
         // 502 on dial failure, which is not a response from the tested service.
         if proxy.hasPrefix("http://") { args.append("--proxytunnel") }
@@ -142,18 +143,34 @@ actor ServiceStatusChecker: ServiceStatusChecking {
         return ServiceProbeResult(state: state, elapsed: total, detail: error, checkedAt: Date())
     }
 
-    static func request(url: URL, proxy: String, client: (any MihomoAPITransporting)?, forcedDirect: Bool) async throws -> ServiceProbeResult {
-        let sourcePort = try ServiceDirectSession.unusedLoopbackPort()
+    func request(url: URL, proxy: String, client: (any MihomoAPITransporting)?, forcedDirect: Bool) async throws -> ServiceProbeResult {
         var baseline: Set<String>?
         if let client, let snapshot: Connections = try? await client.request(.connections(interval: nil)) {
             baseline = Set((snapshot.connections ?? []).map(\.id))
         }
+        guard let baseline else {
+            return try await runCurl(url: url, proxy: proxy, client: client, forcedDirect: forcedDirect,
+                                     baseline: nil, sourcePort: nil) ?? Self.parsedResult(output: "", error: "", exit: 45)
+        }
+        for _ in 0..<3 {
+            if let result = try await ProbeSourcePorts.shared.withPort({ sourcePort in
+                try await self.runCurl(url: url, proxy: proxy, client: client, forcedDirect: forcedDirect,
+                                       baseline: baseline, sourcePort: sourcePort)
+            }) {
+                return result
+            }
+        }
+        return Self.parsedResult(output: "", error: "", exit: 45)
+    }
+
+    private func runCurl(url: URL, proxy: String, client: (any MihomoAPITransporting)?, forcedDirect: Bool,
+                         baseline: Set<String>?, sourcePort: Int?) async throws -> ServiceProbeResult? {
         try Task.checkCancellation()
         let output = Pipe()
         let errors = Pipe()
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/curl")
-        process.arguments = curlArguments(url: url, proxy: proxy, sourcePort: sourcePort)
+        process.arguments = Self.curlArguments(url: url, proxy: proxy, sourcePort: sourcePort)
         process.environment = ["PATH": "/usr/bin:/bin"]
         process.standardOutput = output
         process.standardError = errors
@@ -165,10 +182,10 @@ actor ServiceStatusChecker: ServiceStatusChecking {
         do {
             while process.isRunning {
                 try Task.checkCancellation()
-                if let client, let baseline,
+                if let client, let baseline, let sourcePort,
                    let snapshot: Connections = try? await client.request(.connections(interval: nil)),
-                   let connection = correlatedConnection(snapshot.connections ?? [], baseline: baseline,
-                                                         sourcePort: sourcePort, host: url.host ?? "", startedAt: startedAt) {
+                   let connection = Self.correlatedConnection(snapshot.connections ?? [], baseline: baseline,
+                                                              sourcePort: sourcePort, host: url.host ?? "", startedAt: startedAt) {
                     // Conflicting observations are not evidence of one route.
                     if let previous = observed, previous.chains != connection.chains { observed = nil; break }
                     observed = connection
@@ -184,15 +201,16 @@ actor ServiceStatusChecker: ServiceStatusChecking {
             throw error
         }
         await ServiceProbeProcess.waitForExit(process)
-        var result = parsedResult(output: String(decoding: output.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self),
-                                  error: String(decoding: errors.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
-                                      .trimmingCharacters(in: .whitespacesAndNewlines), exit: process.terminationStatus)
+        if process.terminationStatus == 45 { return nil }
         if forcedDirect, process.terminationStatus == 7 {
             return .unavailable("无法连接独立直连核心，未完成直连检测。 / Cannot connect to the isolated DIRECT core.")
         }
-        if forcedDirect, process.terminationStatus != 45 {
+        var result = Self.parsedResult(output: String(decoding: output.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self),
+                                       error: String(decoding: errors.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+                                           .trimmingCharacters(in: .whitespacesAndNewlines), exit: process.terminationStatus)
+        if forcedDirect {
             result.chains = ["DIRECT"]
-        } else if ![7, 45, 97].contains(process.terminationStatus), let observed {
+        } else if ![7, 97].contains(process.terminationStatus), let observed {
             result.chains = observed.chains
             result.rule = [observed.rule, observed.rulePayload].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: ",")
         }

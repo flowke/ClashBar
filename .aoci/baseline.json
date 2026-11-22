@@ -1,7 +1,7 @@
 {
   "version": 1,
   "created_at": "2026-11-19T16:38:21Z",
-  "updated_at": "2026-11-22T14:13:16Z",
+  "updated_at": "2026-11-22T14:48:54Z",
   "files": {
     ".gitattributes": {
       "role": "index",
@@ -607,9 +607,9 @@
     },
     "Sources/ClashBar/Services/ConfigRuleMerger.swift": {
       "role": "index",
-      "sha256": "6e9db8639a9a846324ac9357b92273ed91a8c46e914478596751f29a82686358",
-      "size": 8377,
-      "normalized_sha256": "6e9db8639a9a846324ac9357b92273ed91a8c46e914478596751f29a82686358"
+      "sha256": "0075672f86ce82d80a44945b13dcb679a755dce934ebef93a72919e0946edc76",
+      "size": 8397,
+      "normalized_sha256": "0075672f86ce82d80a44945b13dcb679a755dce934ebef93a72919e0946edc76"
     },
     "Sources/ClashBar/Services/ConfigService.swift": {
       "role": "index",
@@ -637,9 +637,9 @@
     },
     "Sources/ClashBar/Services/MihomoAPIService.swift": {
       "role": "index",
-      "sha256": "e7aba53dcae05ad6c32087ad4b508c68b77cfb93b3df7d88b97004f719748bf3",
-      "size": 21174,
-      "normalized_sha256": "e7aba53dcae05ad6c32087ad4b508c68b77cfb93b3df7d88b97004f719748bf3"
+      "sha256": "d3f1cd2661f1ea88ffeb024e9d2b81fd4c9a4178d0f426bab3d086152296b59d",
+      "size": 24015,
+      "normalized_sha256": "d3f1cd2661f1ea88ffeb024e9d2b81fd4c9a4178d0f426bab3d086152296b59d"
     },
     "Sources/ClashBar/Services/NetworkMonitorService.swift": {
       "role": "index",
@@ -661,15 +661,15 @@
     },
     "Sources/ClashBar/Services/ServiceDirectSession.swift": {
       "role": "index",
-      "sha256": "fe9cce920190dbe2374a6133df5df44119facd982895749371623b7308572be1",
-      "size": 13547,
-      "normalized_sha256": "fe9cce920190dbe2374a6133df5df44119facd982895749371623b7308572be1"
+      "sha256": "c124d7fb83d19044036dee4e8a9d9713a45784092393013631bb5e5bf58080ee",
+      "size": 14085,
+      "normalized_sha256": "c124d7fb83d19044036dee4e8a9d9713a45784092393013631bb5e5bf58080ee"
     },
     "Sources/ClashBar/Services/ServiceStatusChecker.swift": {
       "role": "index",
-      "sha256": "e49e046b29ee41bdf9be4d570244b8873b5c14d9daef27e4607af392ca67089b",
-      "size": 12774,
-      "normalized_sha256": "e49e046b29ee41bdf9be4d570244b8873b5c14d9daef27e4607af392ca67089b"
+      "sha256": "5af9739645558c1c2f4a725d6252d71a22568248f3a235a3caa52ceccec3f2ce",
+      "size": 13724,
+      "normalized_sha256": "5af9739645558c1c2f4a725d6252d71a22568248f3a235a3caa52ceccec3f2ce"
     },
     "Sources/ClashBar/Services/StreamCoordinator.swift": {
       "role": "index",
@@ -877,9 +877,9 @@
     },
     "Sources/ClashBar/ViewModels/ServiceStatusViewModel.swift": {
       "role": "index",
-      "sha256": "8a8adccb533df528d2c10c4f58a4eaa13eaac6661602161e7fd45739253e7aca",
-      "size": 11525,
-      "normalized_sha256": "8a8adccb533df528d2c10c4f58a4eaa13eaac6661602161e7fd45739253e7aca"
+      "sha256": "e8a3ce213785b1e6cb7af94dfd2a2e104aaf2c1cd35b22d5422e79a9a989fc7e",
+      "size": 12151,
+      "normalized_sha256": "e8a3ce213785b1e6cb7af94dfd2a2e104aaf2c1cd35b22d5422e79a9a989fc7e"
     },
     "Sources/ClashBar/ViewModels/StatusBarViewModel.swift": {
       "role": "index",
@@ -931,9 +931,9 @@
     },
     "Sources/ClashBar/Views/Dashboard/DashboardCustomRulesView.swift": {
       "role": "index",
-      "sha256": "ac41f6bba72bb41db98cad40112e7e7577d17704a967e7a9a140fe7b1f3250ee",
-      "size": 29759,
-      "normalized_sha256": "ac41f6bba72bb41db98cad40112e7e7577d17704a967e7a9a140fe7b1f3250ee"
+      "sha256": "c134e278531f46839aa2608a51ec0f77916e74bc30333970e08e9364ab4d3378",
+      "size": 29545,
+      "normalized_sha256": "c134e278531f46839aa2608a51ec0f77916e74bc30333970e08e9364ab4d3378"
     },
     "Sources/ClashBar/Views/Dashboard/DashboardOverviewView.swift": {
       "role": "index",
@@ -943,9 +943,9 @@
     },
     "Sources/ClashBar/Views/Dashboard/DashboardServiceStatusView.swift": {
       "role": "index",
-      "sha256": "2e0fe3d5941cb2a35e460080182d913bc599337551b3b630abdd63193561a9b2",
-      "size": 19913,
-      "normalized_sha256": "2e0fe3d5941cb2a35e460080182d913bc599337551b3b630abdd63193561a9b2"
+      "sha256": "6ce7bf27786f1041141e6cbf7c6733270a3f45dd23a474bc91201d58094c1f04",
+      "size": 20047,
+      "normalized_sha256": "6ce7bf27786f1041141e6cbf7c6733270a3f45dd23a474bc91201d58094c1f04"
     },
     "Sources/ClashBar/Views/Dashboard/DashboardView.swift": {
       "role": "index",
@@ -1087,9 +1087,9 @@
     },
     "Tests/ClashBarTests/ConfigRuleMergerTests.swift": {
       "role": "index",
-      "sha256": "6c3a23750c02bd9bd49e282dd9f312c774bb4385b86ab28f65308feff3cf9eec",
-      "size": 6837,
-      "normalized_sha256": "6c3a23750c02bd9bd49e282dd9f312c774bb4385b86ab28f65308feff3cf9eec"
+      "sha256": "8e0df882f1d52822e5cc7927f7abde632e4032f52d79c3dcc82a23de440791e4",
+      "size": 9437,
+      "normalized_sha256": "8e0df882f1d52822e5cc7927f7abde632e4032f52d79c3dcc82a23de440791e4"
     },
     "Tests/ClashBarTests/ConnectionsSnapshotTests.swift": {
       "role": "index",
@@ -1147,21 +1147,21 @@
     },
     "Tests/ClashBarTests/ServiceStatusIntegrationTests.swift": {
       "role": "index",
-      "sha256": "d0c4711ccbf6e2ba3d5170bdc87f31f0f73c13c9bcd5bbdf87b3d86598e9d39b",
-      "size": 12498,
-      "normalized_sha256": "d0c4711ccbf6e2ba3d5170bdc87f31f0f73c13c9bcd5bbdf87b3d86598e9d39b"
+      "sha256": "e22b7cc056c5062f00c06440658dba7d1c3ec583dcd187b53293888bab72acea",
+      "size": 14388,
+      "normalized_sha256": "e22b7cc056c5062f00c06440658dba7d1c3ec583dcd187b53293888bab72acea"
     },
     "Tests/ClashBarTests/ServiceStatusRenderingTests.swift": {
       "role": "index",
-      "sha256": "cb1cec981ac2a4808fff441df9fd3df775d9d6dc1971d79b531c428efd301660",
-      "size": 7578,
-      "normalized_sha256": "cb1cec981ac2a4808fff441df9fd3df775d9d6dc1971d79b531c428efd301660"
+      "sha256": "a586ade4bb09728671bea22ec7083c289bb3ea0a8737bdb0ddfb3f6665f76c63",
+      "size": 7614,
+      "normalized_sha256": "a586ade4bb09728671bea22ec7083c289bb3ea0a8737bdb0ddfb3f6665f76c63"
     },
     "Tests/ClashBarTests/ServiceStatusTests.swift": {
       "role": "index",
-      "sha256": "155d2966c6fa3398544703301c16b1ad0b73a3b5348bb2158ee07da0abeb4f7a",
-      "size": 12103,
-      "normalized_sha256": "155d2966c6fa3398544703301c16b1ad0b73a3b5348bb2158ee07da0abeb4f7a"
+      "sha256": "140cd6b49a61b7d7c5a66804f767e0351242400d94c9dec4ac2ccb82f8bcdb64",
+      "size": 14399,
+      "normalized_sha256": "140cd6b49a61b7d7c5a66804f767e0351242400d94c9dec4ac2ccb82f8bcdb64"
     },
     "Tests/ClashBarTests/SubscriptionUsageTests.swift": {
       "role": "index",
@@ -1195,9 +1195,9 @@
     },
     "aoci.code.txt": {
       "role": "index",
-      "sha256": "04421f94205ac943328dc54c5d8611fb838216e0bd4053279d9e5c0af3bbd5f0",
-      "size": 59992,
-      "normalized_sha256": "04421f94205ac943328dc54c5d8611fb838216e0bd4053279d9e5c0af3bbd5f0"
+      "sha256": "c0eb949d7da7d1e422db86da370cd194b8fc23e349b0d6720d2a9fe27f3f027b",
+      "size": 61965,
+      "normalized_sha256": "c0eb949d7da7d1e422db86da370cd194b8fc23e349b0d6720d2a9fe27f3f027b"
     },
     "aoci.meta.txt": {
       "role": "index",
@@ -2686,9 +2686,9 @@
     },
     "docs/service-status.md": {
       "role": "index",
-      "sha256": "193ca7c19ca18be27ce206ba7ac83b7d05ed51fb4382a40b2b4db081101caedf",
-      "size": 3689,
-      "normalized_sha256": "193ca7c19ca18be27ce206ba7ac83b7d05ed51fb4382a40b2b4db081101caedf"
+      "sha256": "cd0568b4d4af978c93fba98beb2efdcab0a7284c5f0f7e218318fa4a5abed844",
+      "size": 3837,
+      "normalized_sha256": "cd0568b4d4af978c93fba98beb2efdcab0a7284c5f0f7e218318fa4a5abed844"
     },
     "docs/source.config.ts": {
       "role": "index",

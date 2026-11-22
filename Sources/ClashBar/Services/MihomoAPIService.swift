@@ -428,8 +428,8 @@ extension String {
     }
 }
 
-struct RuleTestResult {
-    enum Match {
+struct RuleTestResult: Sendable {
+    enum Match: Sendable {
         case matched, other, unknown
     }
 
@@ -462,6 +462,43 @@ enum RuleTestError: LocalizedError {
 }
 
 enum RuleTester {
+    private static let maxConcurrentRules = 20
+
+    @MainActor
+    static func runBatch(_ changes: [CustomRuleChange],
+                         measure: @escaping @Sendable (CustomRuleChange) async throws -> RuleTestResult,
+                         started: (UUID) -> Void,
+                         finished: (UUID, RuleTestResult) -> Void) async {
+        await withTaskGroup(of: (UUID, RuleTestResult).self) { group in
+            var remaining = changes.makeIterator()
+            for _ in 0..<maxConcurrentRules {
+                guard !Task.isCancelled, let change = remaining.next() else { break }
+                if group.addTaskUnlessCancelled(operation: { await measureRule(change, using: measure) }) {
+                    started(change.id)
+                }
+            }
+            while let (id, result) = await group.next() {
+                guard !Task.isCancelled else { return }
+                finished(id, result)
+                if let change = remaining.next(),
+                   group.addTaskUnlessCancelled(operation: { await measureRule(change, using: measure) }) {
+                    started(change.id)
+                }
+            }
+        }
+    }
+
+    private static func measureRule(_ change: CustomRuleChange,
+                                    using measure: @Sendable (CustomRuleChange) async throws -> RuleTestResult) async -> (UUID, RuleTestResult) {
+        do {
+            try Task.checkCancellation()
+            return (change.id, try await measure(change))
+        } catch {
+            return (change.id, RuleTestResult(match: .unknown, rule: nil, chain: nil, statusCode: nil,
+                                              requestError: error.localizedDescription))
+        }
+    }
+
     static func canTest(_ change: CustomRuleChange) -> Bool {
         change.isEnabled && supports(change) && change.testURL.flatMap(validURL) != nil
     }
@@ -501,9 +538,23 @@ enum RuleTester {
         guard let proxyPort = [config.mixedPort, config.port].compactMap({ $0 }).first(where: { $0 > 0 }) else {
             throw RuleTestError.noProxyPort
         }
-        let sourcePort = Int.random(in: 49152...65535)
         let baseline: RuleTestConnections = try await client.request(.connections(interval: nil))
         let existingIDs = Set(baseline.connections.map(\.id))
+        for _ in 0..<3 {
+            if let result = try await ProbeSourcePorts.shared.withPort({ sourcePort in
+                try await runCurl(rule: change.value, url: url, host: host, client: client, proxyPort: proxyPort,
+                                  sourcePort: sourcePort, existingIDs: existingIDs)
+            }) {
+                return result
+            }
+        }
+        return RuleTestResult(match: .unknown, rule: nil, chain: nil, statusCode: nil,
+                              requestError: "Cannot bind the local probe port.")
+    }
+
+    private static func runCurl(rule: String, url: URL, host: String, client: MihomoAPIService, proxyPort: Int,
+                                sourcePort: Int, existingIDs: Set<String>) async throws -> RuleTestResult? {
+        try Task.checkCancellation()
         let start = Date().timeIntervalSince1970
         let output = Pipe()
         let errors = Pipe()
@@ -515,6 +566,8 @@ enum RuleTester {
                              "--write-out", "%{http_code}", "--", url.absoluteString]
         process.standardOutput = output
         process.standardError = errors
+        let terminationObserver = ServiceProbeProcess.terminateOnAppExit(process)
+        defer { NotificationCenter.default.removeObserver(terminationObserver) }
         try process.run()
         var observed: ConnectionSummary?
         do {
@@ -530,21 +583,25 @@ enum RuleTester {
                 }
                 try await Task.sleep(nanoseconds: 100_000_000)
             }
+            try Task.checkCancellation()
         } catch {
             if process.isRunning { process.terminate() }
+            await ServiceProbeProcess.waitForExit(process)
             throw error
         }
+        await ServiceProbeProcess.waitForExit(process)
         let outputData = output.fileHandleForReading.readDataToEndOfFile()
         let errorData = errors.fileHandleForReading.readDataToEndOfFile()
         let status = Int(String(decoding: outputData, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines))
         let code = status.flatMap { $0 > 0 ? $0 : nil }
         let exit = process.terminationStatus
-        if exit == 45 || exit == 7 { observed = nil }
+        if exit == 45 { return nil }
+        if exit == 7 { observed = nil }
         let message = String(decoding: errorData, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
         let requestError = exit == 0 || (exit == 63 && code != nil) ? nil :
             (exit == 28 ? "Request timed out" : (message.isEmpty ? "curl exited with code \(exit)" : message))
         let actualRule = observed.map { [$0.rule, $0.rulePayload].compactMap { $0 }.joined(separator: ", ") }
-        return RuleTestResult(match: match(rule: change.value, connection: observed), rule: actualRule,
+        return RuleTestResult(match: match(rule: rule, connection: observed), rule: actualRule,
                               chain: observed?.chains, statusCode: code, requestError: requestError)
     }
 }

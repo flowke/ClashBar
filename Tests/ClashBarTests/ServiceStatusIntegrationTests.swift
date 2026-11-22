@@ -86,9 +86,40 @@ final class ServiceStatusIntegrationTests: XCTestCase {
             let requests = try String(contentsOf: server.requests, encoding: .utf8).split(separator: "\n")
             XCTAssertEqual(requests.count, 2, "Even identical DIRECT routes require independent requests")
             // No API attribution means unknown, even though HTTP succeeded.
-            let unknown = try await ServiceStatusChecker.request(url: URL(string: endpoint.url)!, proxy: "http://127.0.0.1:\(core.port)", client: nil, forcedDirect: false)
+            let unknown = try await checker.request(url: URL(string: endpoint.url)!, proxy: "http://127.0.0.1:\(core.port)", client: nil, forcedDirect: false)
             XCTAssertEqual(unknown.statusCode, 200)
             XCTAssertNil(unknown.routeDescription)
+            await checker.close()
+        } catch { await checker.close(); throw error }
+    }
+
+    func testTwentyConcurrentServicesKeepBothRoutesAndResponsesSeparate() async throws {
+        let binary = try binaryURL()
+        let server = try await ServiceHTTPFixture.start()
+        defer { server.stop() }
+        let core = try await ServiceCoreFixture.start(binary: binary, reject: false)
+        defer { core.stop() }
+        let checker = ServiceStatusChecker(client: core.client, binary: binary, local: true, running: true)
+        try await checker.prepare()
+        do {
+            try await withThrowingTaskGroup(of: (ServiceProbeKind, Int, ServiceProbeResult).self) { group in
+                for index in 1...20 {
+                    let code = index.isMultiple(of: 2) ? 200 : 403
+                    let endpoint = ServiceEndpoint(id: "\(index)", name: "Fixture \(index)",
+                                                   url: "http://127.0.0.1:\(server.port)/\(code)/\(index)")
+                    for kind in ServiceProbeKind.allCases {
+                        group.addTask { (kind, code, try await checker.measure(endpoint, kind: kind)) }
+                    }
+                }
+                for try await (kind, code, result) in group {
+                    XCTAssertEqual(result.statusCode, code, result.detail ?? "Missing HTTP response")
+                    XCTAssertEqual(result.chains, kind == .current ? ["DIRECT", "Nested", "Policy"] : ["DIRECT"])
+                }
+            }
+            let requests = try String(contentsOf: server.requests, encoding: .utf8).split(separator: "\n")
+            let requestsByPath = Dictionary(grouping: requests, by: { $0 })
+            XCTAssertEqual(requestsByPath.count, 20)
+            XCTAssertTrue(requestsByPath.values.allSatisfy { $0.count == 2 })
             await checker.close()
         } catch { await checker.close(); throw error }
     }
@@ -98,9 +129,10 @@ final class ServiceStatusIntegrationTests: XCTestCase {
         let server = try await ServiceHTTPFixture.start()
         defer { server.stop() }
         let direct = try await ServiceDirectSession.start(binary: binary)
+        let checker = ServiceStatusChecker(client: nil, binary: binary, local: true, running: false)
         let task = Task {
-            try await ServiceStatusChecker.request(url: URL(string: "http://127.0.0.1:\(server.port)/200/hang")!,
-                                                  proxy: "socks5h://127.0.0.1:\(direct.proxyPort)", client: nil, forcedDirect: true)
+            try await checker.request(url: URL(string: "http://127.0.0.1:\(server.port)/200/hang")!,
+                                      proxy: "socks5h://127.0.0.1:\(direct.proxyPort)", client: nil, forcedDirect: true)
         }
         for _ in 0..<100 {
             if FileManager.default.fileExists(atPath: server.requests.path) { break }

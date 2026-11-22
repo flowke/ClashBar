@@ -88,8 +88,8 @@ struct ProxyPortRuntimeError: LocalizedError {
     var errorDescription: String? { message }
 }
 
-struct CustomRuleChange: Codable, Equatable, Identifiable {
-    enum Operation: String, Codable, CaseIterable {
+struct CustomRuleChange: Codable, Equatable, Identifiable, Sendable {
+    enum Operation: String, Codable, CaseIterable, Sendable {
         case add, replace, delete
     }
 

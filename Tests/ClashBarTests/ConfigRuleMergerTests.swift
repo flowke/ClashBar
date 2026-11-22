@@ -102,4 +102,72 @@ final class ConfigRuleMergerTests: XCTestCase {
         XCTAssertFalse(RuleTester.supports(CustomRuleChange(operation: .add, original: "", value: "PROCESS-NAME,app,DIRECT")))
         XCTAssertFalse(RuleTester.supports(CustomRuleChange(operation: .delete, original: "DOMAIN,example.com,DIRECT", value: "")))
     }
+
+    @MainActor
+    func testRuleBatchRunsTwentyAndRefillsAfterAnIndividualFailure() async {
+        let rules = (1...21).map { index in
+            CustomRuleChange(operation: .add, original: "", value: "DOMAIN,rule-\(index).example,DIRECT")
+        }
+        let gate = RuleMeasurementGate()
+        var startedIDs: [UUID] = []
+        var results: [UUID: RuleTestResult] = [:]
+        let batch = Task {
+            await RuleTester.runBatch(rules, measure: { rule in
+                await gate.wait(for: rule.id)
+                if rule.id == rules[0].id { throw RuleTestError.noProxyPort }
+                return RuleTestResult(match: .matched, rule: rule.value, chain: ["DIRECT"], statusCode: 200,
+                                      requestError: nil)
+            }, started: { startedIDs.append($0) }, finished: { results[$0] = $1 })
+        }
+
+        let initialIDs = Set(rules.prefix(20).map(\.id))
+        for _ in 0..<200 {
+            if await gate.activeIDs == initialIDs { break }
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+        let activeIDs = await gate.activeIDs
+        XCTAssertEqual(activeIDs, initialIDs)
+        XCTAssertEqual(startedIDs, Array(rules.prefix(20).map(\.id)))
+        XCTAssertTrue(results.isEmpty)
+
+        await gate.release(rules[0].id)
+        let lastID = rules[20].id
+        for _ in 0..<200 {
+            if await gate.activeIDs.contains(lastID) { break }
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+        let refilledIDs = await gate.activeIDs
+        XCTAssertEqual(refilledIDs, Set(rules.dropFirst().map(\.id)))
+        XCTAssertEqual(results.count, 1)
+        XCTAssertEqual(results[rules[0].id]?.requestError, RuleTestError.noProxyPort.localizedDescription)
+
+        await gate.releaseAll()
+        await batch.value
+        XCTAssertEqual(results.count, 21)
+        XCTAssertEqual(results[lastID]?.rule, rules[20].value)
+    }
+}
+
+private actor RuleMeasurementGate {
+    private var waiting: [UUID: CheckedContinuation<Void, Never>] = [:]
+    private var released: Set<UUID> = []
+    private var isOpen = false
+
+    var activeIDs: Set<UUID> { Set(waiting.keys) }
+
+    func wait(for id: UUID) async {
+        guard !isOpen, !released.contains(id) else { return }
+        await withCheckedContinuation { waiting[id] = $0 }
+    }
+
+    func release(_ id: UUID) {
+        released.insert(id)
+        waiting.removeValue(forKey: id)?.resume()
+    }
+
+    func releaseAll() {
+        isOpen = true
+        for continuation in waiting.values { continuation.resume() }
+        waiting.removeAll()
+    }
 }

@@ -3,11 +3,12 @@ import Foundation
 
 @MainActor
 final class ServiceStatusViewModel: ObservableObject {
+    private static let maxConcurrentServices = 20
+
     @Published private(set) var services = ServiceEndpoint.builtIns
     @Published private(set) var results: [String: ServiceStatusRow] = [:]
     @Published private(set) var isRunning = false
     @Published private(set) var isCancelling = false
-    @Published private(set) var activeServiceName: String?
     @Published private(set) var lastCheckedAt: Date?
     @Published private(set) var lastRunCompleted = false
     @Published private(set) var routingVerificationFailed = false
@@ -43,6 +44,10 @@ final class ServiceStatusViewModel: ObservableObject {
     isolated deinit { task?.cancel() }
 
     var hasStaleResults: Bool { results.values.contains { $0.current.isStale || $0.direct.isStale } }
+    var activeServiceCount: Int {
+        results.values.count { $0.current.state == .checking || $0.direct.state == .checking }
+    }
+
     var completedCount: Int {
         services.filter { service in
             guard let row = results[service.id] else { return false }
@@ -108,22 +113,21 @@ final class ServiceStatusViewModel: ObservableObject {
                     }
                 } else { baseline = nil }
                 try await checker.prepare()
-                for service in snapshot {
-                    try Task.checkCancellation()
-                    guard self.services.contains(where: { $0.id == service.id }) else { continue }
-                    self.activeServiceName = service.name
-                    self.results[service.id] = ServiceStatusRow(current: ServiceProbeResult(state: .checking), direct: ServiceProbeResult(state: .checking))
-                    try await withThrowingTaskGroup(of: (ServiceProbeKind, ServiceProbeResult).self) { group in
-                        for kind in ServiceProbeKind.allCases {
-                            group.addTask { (kind, try await checker.measure(service, kind: kind)) }
+                try await withThrowingTaskGroup(of: Void.self) { group in
+                    var inFlight = 0
+                    for service in snapshot {
+                        if inFlight == Self.maxConcurrentServices {
+                            _ = try await group.next()
+                            inFlight -= 1
                         }
-                        for try await (kind, result) in group {
-                            try Task.checkCancellation()
-                            guard self.results[service.id] != nil else { continue }
-                            self.results[service.id]?[kind] = result
-                            self.lastCheckedAt = result.checkedAt ?? self.lastCheckedAt
+                        try Task.checkCancellation()
+                        guard self.results[service.id] != nil else { continue }
+                        group.addTask {
+                            try await self.checkService(service, using: checker)
                         }
+                        inFlight += 1
                     }
+                    for try await _ in group {}
                 }
                 if let routingClient {
                     let final = try await ServiceRoutingFingerprint.load(client: routingClient)
@@ -146,10 +150,27 @@ final class ServiceStatusViewModel: ObservableObject {
                 }
             }
             await checker.close()
-            self.activeServiceName = nil
             self.isRunning = false
             self.isCancelling = false
             self.task = nil
+        }
+    }
+
+    private func checkService(_ service: ServiceEndpoint, using checker: any ServiceStatusChecking) async throws {
+        try Task.checkCancellation()
+        guard results[service.id] != nil else { return }
+        let checking = ServiceProbeResult(state: .checking)
+        results[service.id] = ServiceStatusRow(current: checking, direct: checking)
+        try await withThrowingTaskGroup(of: (ServiceProbeKind, ServiceProbeResult).self) { group in
+            for kind in ServiceProbeKind.allCases {
+                group.addTask { (kind, try await checker.measure(service, kind: kind)) }
+            }
+            for try await (kind, result) in group {
+                try Task.checkCancellation()
+                guard results[service.id] != nil else { continue }
+                results[service.id]?[kind] = result
+                lastCheckedAt = result.checkedAt ?? lastCheckedAt
+            }
         }
     }
 

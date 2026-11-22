@@ -119,6 +119,40 @@ final class ServiceStatusViewModelTests: XCTestCase {
         XCTAssertEqual(model.services.count, 3)
     }
 
+    func testChecksAtMostTwentyServicesAndRefillsOnlyAfterBothMeasurements() async throws {
+        let path = storage()
+        defer { try? FileManager.default.removeItem(at: path.deletingLastPathComponent()) }
+        let model = ServiceStatusViewModel(storageURL: path)
+        for index in 1...18 {
+            try model.add(name: "Service \(index)", url: "https://example.com/\(index)")
+        }
+        let checker = GatedServiceChecker()
+        let first = try XCTUnwrap(model.services.first)
+        let queued = try XCTUnwrap(model.services.last)
+        model.start(checker: checker)
+        defer { model.cancel() }
+
+        try await waitUntil { model.activeServiceCount == 20 }
+        XCTAssertEqual(model.results[queued.id], ServiceStatusRow())
+        await checker.release(first, kind: .current)
+        try await waitUntil { model.results[first.id]?.current.state == .reachable }
+        XCTAssertEqual(model.completedCount, 0)
+        XCTAssertEqual(model.activeServiceCount, 20)
+        XCTAssertEqual(model.results[queued.id], ServiceStatusRow())
+
+        await checker.release(first, kind: .direct)
+        try await waitUntil { model.results[queued.id]?.current.state == .checking }
+        XCTAssertEqual(model.completedCount, 1)
+        XCTAssertEqual(model.activeServiceCount, 20)
+
+        model.cancel()
+        try await waitUntil { !model.isRunning }
+        XCTAssertEqual(model.completedCount, 1)
+        XCTAssertEqual(model.activeServiceCount, 0)
+        XCTAssertEqual(model.results[queued.id]?.current.state, .cancelled)
+        XCTAssertEqual(model.results[queued.id]?.direct.state, .cancelled)
+    }
+
     func testCancellationKeepsCompletedMeasurementAndAwaitsCleanupBeforeRetry() async throws {
         let path = storage()
         defer { try? FileManager.default.removeItem(at: path.deletingLastPathComponent()) }
@@ -129,7 +163,7 @@ final class ServiceStatusViewModelTests: XCTestCase {
         model.cancel()
         XCTAssertEqual(model.results[ServiceEndpoint.builtIns[0].id]?.current.state, .reachable)
         XCTAssertEqual(model.results[ServiceEndpoint.builtIns[0].id]?.direct.state, .cancelled)
-        XCTAssertEqual(model.results[ServiceEndpoint.builtIns[1].id]?.current.state, .cancelled)
+        XCTAssertEqual(model.results[ServiceEndpoint.builtIns[1].id]?.direct.state, .cancelled)
         try await waitUntil { !model.isRunning }
         let closed = await checker.closed
         XCTAssertTrue(closed)
@@ -205,4 +239,23 @@ private actor PartialServiceChecker: ServiceStatusChecking {
         return ServiceProbeResult(state: .reachable, statusCode: 200, chains: ["DIRECT"], checkedAt: Date())
     }
     func close() async { closed = true }
+}
+
+private actor GatedServiceChecker: ServiceStatusChecking {
+    private var released: [String: Set<ServiceProbeKind>] = [:]
+
+    func prepare() async throws {}
+
+    func measure(_ endpoint: ServiceEndpoint, kind: ServiceProbeKind) async throws -> ServiceProbeResult {
+        while released[endpoint.id]?.contains(kind) != true {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        return ServiceProbeResult(state: .reachable, statusCode: 200, checkedAt: Date())
+    }
+
+    func release(_ endpoint: ServiceEndpoint, kind: ServiceProbeKind) {
+        released[endpoint.id, default: []].insert(kind)
+    }
+
+    func close() async {}
 }

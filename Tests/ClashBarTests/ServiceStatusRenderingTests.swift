@@ -19,7 +19,7 @@ final class ServiceStatusRenderingTests: XCTestCase {
         defer { window.orderOut(nil); window.contentView = nil }
         window.contentView?.layoutSubtreeIfNeeded()
         model.start(checker: RenderingServiceChecker())
-        try await waitUntil { model.activeServiceName != nil }
+        try await waitUntil { model.activeServiceCount == model.services.count }
         app.isDashboardPresented = false
         try await waitUntil { !model.isRunning }
         XCTAssertNotNil(window.contentView, "The real dashboard retains its hosting view when closed")
@@ -55,7 +55,7 @@ final class ServiceStatusRenderingTests: XCTestCase {
         try render("custom", width: 1240, view: DashboardView(appViewModel: app, initialPage: .serviceStatus))
         try render("narrow", width: 760, view: DashboardView(appViewModel: app, initialPage: .serviceStatus))
         model.start(checker: RenderingServiceChecker())
-        try await waitUntil { model.activeServiceName != nil }
+        try await waitUntil { model.activeServiceCount == model.services.count }
         try render("running", width: 1100, view: DashboardView(appViewModel: app, initialPage: .serviceStatus))
         // Removing the page must cancel outstanding measurements.
         try await waitUntil { !model.isRunning }

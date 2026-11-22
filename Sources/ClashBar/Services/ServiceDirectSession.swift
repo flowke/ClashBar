@@ -229,6 +229,21 @@ final class ServiceDirectSession: @unchecked Sendable {
     }
 }
 
+actor ProbeSourcePorts {
+    static let shared = ProbeSourcePorts()
+    private var reserved: Set<Int> = []
+
+    func withPort<Result: Sendable>(_ operation: @Sendable (Int) async throws -> Result) async throws -> Result {
+        try Task.checkCancellation()
+        var port = try ServiceDirectSession.unusedLoopbackPort()
+        while !reserved.insert(port).inserted {
+            port = try ServiceDirectSession.unusedLoopbackPort()
+        }
+        defer { reserved.remove(port) }
+        return try await operation(port)
+    }
+}
+
 /// Cancellation waits for process exit before the run can be used again.
 enum ServiceProbeProcess {
     static func terminateOnAppExit(_ process: Process) -> NSObjectProtocol {

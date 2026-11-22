@@ -74,7 +74,10 @@ struct DashboardServiceStatusView: View {
                 if model.isRunning {
                     ProgressView().controlSize(.small).scaleEffect(0.75).frame(width: 12, height: 12)
                     Text(text("已完成 \(model.completedCount) / \(model.services.count) 项", "Completed \(model.completedCount) / \(model.services.count)"))
-                    if let active = model.activeServiceName { Text("· \(active)").lineLimit(1) }
+                    let activeCount = model.activeServiceCount
+                    if activeCount > 0 {
+                        Text(text("· 正在检测 \(activeCount) 项", "· \(activeCount) in progress"))
+                    }
                 } else {
                     Text(lastCheckText)
                     Text("· \(text("当前模式", "Mode"))：\(modeText)")
