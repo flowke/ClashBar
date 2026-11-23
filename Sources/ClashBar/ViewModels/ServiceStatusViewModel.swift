@@ -27,7 +27,7 @@ final class ServiceStatusViewModel: ObservableObject {
             let saved = try JSONDecoder().decode([ServiceEndpoint].self, from: Data(contentsOf: storageURL))
             var identifiers = Set(services.map(\.id))
             for service in saved {
-                guard !service.id.hasPrefix("builtin."), !service.id.isEmpty,
+                guard !service.id.hasPrefix("builtin."), !service.isRuleOwned, !service.id.isEmpty,
                       identifiers.insert(service.id).inserted,
                       !service.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                       service.name.count <= 80, ServiceEndpoint.validatedURL(service.url) != nil else {
@@ -55,6 +55,21 @@ final class ServiceStatusViewModel: ObservableObject {
         }.count
     }
 
+    func syncRules(_ rules: [CustomRuleChange]) {
+        let previous = services.filter(\.isRuleOwned)
+        var identifiers: Set<String> = []
+        let synced = rules.compactMap(ServiceEndpoint.fromRule).filter { identifiers.insert($0.id).inserted }
+        guard synced != previous else { return }
+
+        let urls = Dictionary(uniqueKeysWithValues: synced.map { ($0.id, $0.url) })
+        for service in previous where urls[service.id] != service.url {
+            results[service.id] = nil
+        }
+        cancel()
+        services = services.filter { !$0.isRuleOwned } + synced
+        lastRunCompleted = false
+    }
+
     func add(name: String, url: String) throws {
         guard !isRunning else { return }
         let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -62,14 +77,14 @@ final class ServiceStatusViewModel: ObservableObject {
               !name.unicodeScalars.contains(where: CharacterSet.controlCharacters.contains),
               let validated = ServiceEndpoint.validatedURL(url) else { throw CocoaError(.validationMissingMandatoryProperty) }
         let service = ServiceEndpoint(id: UUID().uuidString, name: name, url: validated.absoluteString)
-        let updated = services + [service]
+        let updated = services.filter { !$0.isRuleOwned } + [service] + services.filter(\.isRuleOwned)
         try persist(updated)
         services = updated
         lastRunCompleted = false
     }
 
     func delete(_ service: ServiceEndpoint) {
-        guard !service.isBuiltIn else { return }
+        guard service.canDelete else { return }
         let updated = services.filter { $0.id != service.id }
         do {
             try persist(updated)
@@ -83,7 +98,7 @@ final class ServiceStatusViewModel: ObservableObject {
     private func persist(_ services: [ServiceEndpoint]) throws {
         guard !storageReadFailed else { throw CocoaError(.fileReadCorruptFile) }
         try FileManager.default.createDirectory(at: storageURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-        try JSONEncoder().encode(services.filter { !$0.isBuiltIn }).write(to: storageURL, options: .atomic)
+        try JSONEncoder().encode(services.filter(\.canDelete)).write(to: storageURL, options: .atomic)
         storageError = nil
     }
 

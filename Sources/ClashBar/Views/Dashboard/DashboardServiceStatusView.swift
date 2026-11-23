@@ -172,7 +172,7 @@ struct DashboardServiceStatusView: View {
                 .accessibilityElement(children: .contain).accessibilityLabel(service.name)
             }
             separator
-            Label(text("内置服务不可删除；新增服务可在操作栏直接删除。", "Built-in services are permanent. Custom services can be deleted in their row."), systemImage: "info.circle")
+            Label(text("同步服务在配置页管理，手动添加的服务可在这里删除。", "Manage synced services in Configuration. Delete manually added services here."), systemImage: "info.circle")
                 .font(.system(size: 11)).foregroundStyle(muted)
                 .frame(maxWidth: .infinity, minHeight: 32, alignment: .leading).padding(.horizontal, 14)
                 .background(Color(red: 0.97, green: 0.979, blue: 0.983))
@@ -206,10 +206,11 @@ struct DashboardServiceStatusView: View {
             })) {
                 serviceDetails(service)
             }
-            if service.isBuiltIn {
+            if !service.canDelete {
+                let source = service.isBuiltIn ? text("内置服务", "Built-in service") : text("来自自定义配置", "From Custom Rules")
                 Image(systemName: "lock").frame(width: 22, height: 24).foregroundStyle(muted)
-                    .accessibilityLabel(text("内置服务", "Built-in service"))
-                    .help(text("内置服务", "Built-in service"))
+                    .accessibilityLabel(source)
+                    .help(source)
             } else {
                 Button(role: .destructive) { model.delete(service) } label: {
                     Image(systemName: "trash").frame(width: 22, height: 24)
@@ -227,6 +228,10 @@ struct DashboardServiceStatusView: View {
             VStack(alignment: .leading, spacing: 12) {
                 Text(service.name).font(.headline)
                 Text(service.url).font(.callout).foregroundStyle(.secondary)
+                if service.isRuleOwned {
+                    Text(text("由自定义配置中的源规则管理。", "Managed by its source rule in Configuration."))
+                        .font(.caption).foregroundStyle(.secondary)
+                }
                 Divider()
                 measurementDetails(text("当前线路", "Current Route"), kind: .current, service: service)
                 Divider()

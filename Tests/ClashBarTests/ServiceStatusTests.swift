@@ -106,6 +106,44 @@ final class ServiceStatusViewModelTests: XCTestCase {
         XCTAssertEqual(ServiceStatusViewModel(storageURL: path).services, ServiceEndpoint.builtIns)
     }
 
+    func testRuleServicesRetainIdentityAndStayOutOfManualStorage() async throws {
+        let path = storage()
+        defer { try? FileManager.default.removeItem(at: path.deletingLastPathComponent()) }
+        let model = ServiceStatusViewModel(storageURL: path)
+        var rule = CustomRuleChange(operation: .add, original: "", value: "DOMAIN-SUFFIX,example.com,DIRECT",
+                                    testURL: "https://example.com/start")
+        model.syncRules([rule])
+        let synced = try XCTUnwrap(model.services.last)
+        XCTAssertTrue(synced.isRuleOwned)
+        XCTAssertFalse(synced.canDelete)
+        model.delete(synced)
+        XCTAssertEqual(model.services.last, synced)
+        try model.add(name: "Manual", url: synced.url)
+        let manual = try XCTUnwrap(model.services.first { $0.canDelete })
+        XCTAssertEqual(ServiceStatusViewModel(storageURL: path).services, ServiceEndpoint.builtIns + [manual])
+
+        rule.isEnabled = false
+        model.syncRules([rule])
+        XCTAssertEqual(model.services.last, synced)
+        model.start(checker: CompletedServiceChecker())
+        try await waitUntil { !model.isRunning }
+        XCTAssertEqual(model.results[synced.id]?.current.state, .reachable)
+
+        rule.testURL = "https://example.com/updated"
+        model.syncRules([rule])
+        XCTAssertEqual(model.services.last?.id, synced.id)
+        XCTAssertEqual(model.services.last?.url, rule.testURL)
+        XCTAssertNil(model.results[synced.id])
+        XCTAssertEqual(model.results[manual.id]?.current.state, .reachable)
+        XCTAssertFalse(model.lastRunCompleted)
+
+        rule.testURL = nil
+        model.syncRules([rule])
+        XCTAssertEqual(model.services, ServiceEndpoint.builtIns + [manual])
+        model.delete(manual)
+        XCTAssertEqual(model.services, ServiceEndpoint.builtIns)
+    }
+
     func testCorruptStorageIsReportedAndNeverOverwritten() throws {
         let path = storage()
         defer { try? FileManager.default.removeItem(at: path.deletingLastPathComponent()) }

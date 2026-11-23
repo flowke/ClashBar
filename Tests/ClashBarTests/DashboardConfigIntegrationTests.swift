@@ -93,9 +93,31 @@ final class DashboardConfigIntegrationTests: XCTestCase {
             "First.yaml": RemoteConfigSubscription(urlString: "https://first.example/config"),
             "Second.yaml": RemoteConfigSubscription(urlString: "https://second.example/config"),
         ]
-        let change = CustomRuleChange(operation: .add, original: "", value: "DOMAIN,retained.example,DIRECT")
+        var change = CustomRuleChange(operation: .add, original: "", value: "DOMAIN,retained.example,DIRECT")
         let applied = await model.applyDashboardConfiguration(baseName: "First.yaml", changes: [change])
         XCTAssertTrue(applied, model.dashboardConfigError ?? "")
+        XCTAssertFalse(model.serviceStatusStore.services.contains(where: \.isRuleOwned))
+        change.testURL = "https://retained.example/path"
+        core.rejectValidation = true
+        let rejectedEdit = await model.applyDashboardConfiguration(baseName: "First.yaml", changes: [change])
+        XCTAssertFalse(rejectedEdit)
+        XCTAssertFalse(model.serviceStatusStore.services.contains(where: \.isRuleOwned))
+        core.rejectValidation = false
+        let savedEdit = await model.applyDashboardConfiguration(baseName: "First.yaml", changes: [change])
+        XCTAssertTrue(savedEdit, model.dashboardConfigError ?? "")
+        let synced = try XCTUnwrap(model.serviceStatusStore.services.first(where: \.isRuleOwned))
+        XCTAssertEqual(synced.url, change.testURL)
+
+        let restored = AppViewModel(dependencies: dependencies)
+        restored.restoreSavedConfigDirectory()
+        XCTAssertEqual(restored.serviceStatusStore.services.first(where: \.isRuleOwned), synced)
+        let removedRule = await model.applyDashboardConfiguration(baseName: "First.yaml", changes: [])
+        XCTAssertTrue(removedRule, model.dashboardConfigError ?? "")
+        XCTAssertFalse(model.serviceStatusStore.services.contains(where: \.isRuleOwned))
+        let readded = await model.applyDashboardConfiguration(baseName: "First.yaml", changes: [change])
+        XCTAssertTrue(readded, model.dashboardConfigError ?? "")
+        XCTAssertEqual(model.serviceStatusStore.services.first(where: \.isRuleOwned), synced)
+
         let effective = try XCTUnwrap(model.effectiveConfigURL(for: "First.yaml"))
         try Data("profile: {store-selected: false, store-fake-ip: true}\nrules: ['MATCH,DIRECT']".utf8).write(to: effective)
         let resolvedMigrationPath = await model.resolveSelectedConfigPath()

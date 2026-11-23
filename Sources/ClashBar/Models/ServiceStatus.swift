@@ -6,6 +6,18 @@ struct ServiceEndpoint: Codable, Equatable, Identifiable, Sendable {
     let url: String
 
     var isBuiltIn: Bool { Self.builtIns.contains { $0.id == id } }
+    var isRuleOwned: Bool { id.hasPrefix(Self.ruleIDPrefix) }
+    var canDelete: Bool { !isBuiltIn && !isRuleOwned }
+
+    private static let ruleIDPrefix = "rule."
+
+    static func fromRule(_ rule: CustomRuleChange) -> Self? {
+        guard rule.operation != .delete, let address = rule.testURL, let url = validatedURL(address) else { return nil }
+        let parts = rule.value.split(separator: ",", omittingEmptySubsequences: false)
+        let name = parts.dropFirst().first.map { String($0).trimmed }.flatMap { $0.isEmpty ? nil : $0 }
+        return Self(id: ruleIDPrefix + rule.id.uuidString, name: name ?? url.host ?? url.absoluteString,
+                    url: url.absoluteString)
+    }
 
     static let builtIns = [
         ServiceEndpoint(id: "builtin.google", name: "Google", url: "https://www.google.com/"),

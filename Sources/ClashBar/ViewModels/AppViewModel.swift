@@ -75,7 +75,12 @@ final class AppViewModel: ObservableObject {
     @Published var remoteConfigMenuStates: [String: RemoteConfigMenuState] = [:]
     @Published var dashboardConfigBusy = false
     @Published var dashboardConfigError: String?
-    @Published var dashboardEffectiveRecord: EffectiveConfigRecord?
+    @Published var dashboardEffectiveRecord: EffectiveConfigRecord? {
+        didSet {
+            let changes = dashboardEffectiveRecord?.changes ?? []
+            if changes != (oldValue?.changes ?? []) { serviceStatusStore.syncRules(changes) }
+        }
+    }
     @Published var dashboardSubscriptionErrors: [String: String] = [:]
     @Published var isPinned: Bool = false
     @Published var pinnedProxyGroupName: String?
