@@ -1,6 +1,31 @@
 import AppKit
 import SwiftUI
 
+struct DashboardURLField: View {
+    static let defaultPrefix = "https://"
+
+    let title: String
+    @Binding var address: String
+
+    static func isUnfilled(_ address: String) -> Bool {
+        let value = address.trimmed.lowercased()
+        return value.isEmpty || value == defaultPrefix || value == "http://"
+    }
+
+    static func replacing(_ current: String, with input: String) -> String {
+        guard current == defaultPrefix, input.hasPrefix(defaultPrefix) else { return input }
+        let suffix = String(input.dropFirst(defaultPrefix.count))
+        return ServiceEndpoint.validatedURL(suffix) == nil ? input : suffix
+    }
+
+    var body: some View {
+        TextField(title, text: Binding(get: { address }, set: { address = Self.replacing(address, with: $0) }),
+                  prompt: Text(verbatim: "https://example.com").foregroundColor(Color(nsColor: .placeholderTextColor)))
+            .foregroundStyle(.primary)
+            .textFieldStyle(.roundedBorder)
+    }
+}
+
 @MainActor
 final class DashboardSidebarState: ObservableObject {
     @Published var columnVisibility: NavigationSplitViewVisibility = .all

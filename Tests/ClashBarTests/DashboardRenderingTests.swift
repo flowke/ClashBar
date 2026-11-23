@@ -5,6 +5,19 @@ import XCTest
 
 @MainActor
 final class DashboardRenderingTests: XCTestCase {
+    func testDashboardURLPrefixRemainsOptionalAndAllowsPastingFullURLs() {
+        let prefix = DashboardURLField.defaultPrefix
+        XCTAssertEqual(prefix, "https://")
+        XCTAssertTrue(DashboardURLField.isUnfilled(""))
+        XCTAssertTrue(DashboardURLField.isUnfilled(prefix))
+        XCTAssertNil(ServiceEndpoint.validatedURL(prefix))
+        XCTAssertEqual(DashboardURLField.replacing(prefix, with: prefix + "example.com"), "https://example.com")
+        XCTAssertEqual(DashboardURLField.replacing(prefix, with: prefix + "http://example.com/path"), "http://example.com/path")
+        XCTAssertEqual(DashboardURLField.replacing(prefix, with: prefix + "https://example.com/path"), "https://example.com/path")
+        XCTAssertEqual(DashboardURLField.replacing("https://example.com", with: ""), "")
+        XCTAssertFalse(DashboardURLField.isUnfilled("https://example.com"))
+    }
+
     func testLongSourcePreviewRemainsBoundedAndScrollable() throws {
         _ = NSApplication.shared
         let contents = Array(repeating: String(repeating: "x", count: 300), count: 1000).joined(separator: "\n")

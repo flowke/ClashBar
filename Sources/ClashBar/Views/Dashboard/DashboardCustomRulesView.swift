@@ -38,7 +38,7 @@ struct DashboardCustomRulesView: View {
     @State private var choosingPolicy = false
     @State private var policies: [String] = ["DIRECT", "REJECT"]
     @State private var localError: String?
-    @State private var testURL = ""
+    @State private var testURL = DashboardURLField.defaultPrefix
     @State private var testResults: [UUID: RuleTestResult] = [:]
     @State private var testingIDs: Set<UUID> = []
     @State private var activeTestIDs: Set<UUID> = []
@@ -147,7 +147,7 @@ struct DashboardCustomRulesView: View {
                     TextField(type == .ip4 ? "192.0.2.0/24" : type == .ip6 ? "2001:db8::/32" : "example.com", text: $match)
                         .textFieldStyle(.roundedBorder)
                         .onSubmit {
-                            if type == .domain, testURL.isEmpty, RuleTester.validURL("https://\(match)")?.host == match {
+                            if type == .domain, DashboardURLField.isUnfilled(testURL), RuleTester.validURL("https://\(match)")?.host == match {
                                 testURL = "https://\(match)"
                             }
                         }
@@ -172,8 +172,8 @@ struct DashboardCustomRulesView: View {
             if operation != .delete {
                 fieldLabel(text("测试地址（可选）", "Test URL (optional)"))
                 HStack {
-                    TextField("https://example.com", text: $testURL).textFieldStyle(.roundedBorder)
-                    if !advanced && type == .domain && testURL.isEmpty {
+                    DashboardURLField(title: text("测试地址", "Test URL"), address: $testURL)
+                    if !advanced && type == .domain && DashboardURLField.isUnfilled(testURL) {
                         Button(text("使用匹配域名", "Use domain")) { testURL = "https://\(match)" }
                             .buttonStyle(RuleLinkStyle()).disabled(RuleTester.validURL("https://\(match)")?.host != match)
                     }
@@ -469,7 +469,8 @@ struct DashboardCustomRulesView: View {
         } catch { baseRules = []; localError = error.localizedDescription }
     }
     private func reset() {
-        editingIndex = nil; editingOriginal = nil; match = ""; original = ""; raw = ""; testURL = ""; type = .suffix; policy = "DIRECT"; advanced = false
+        editingIndex = nil; editingOriginal = nil; match = ""; original = ""; raw = ""; type = .suffix; policy = "DIRECT"; advanced = false
+        testURL = DashboardURLField.defaultPrefix
         localError = nil; appViewModel.dashboardConfigError = nil
     }
     private func edit(_ change: CustomRuleChange, index: Int) {
@@ -490,8 +491,8 @@ struct DashboardCustomRulesView: View {
         localError = nil
         guard operation == .add || !original.isEmpty else { localError = text("请选择基础规则。", "Select a base rule."); return }
         let nextValue = advanced ? raw.trimmingCharacters(in: .whitespacesAndNewlines) : generated
-        let urlValue = testURL.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard operation == .delete || urlValue.isEmpty || RuleTester.validURL(urlValue) != nil else {
+        let urlValue = DashboardURLField.isUnfilled(testURL) ? nil : testURL.trimmed
+        if operation != .delete, let urlValue, ServiceEndpoint.validatedURL(urlValue) == nil {
             localError = text("请输入完整的 HTTP 或 HTTPS 地址。", "Enter a complete HTTP or HTTPS URL."); return
         }
         guard operation == .delete || (advanced ? !nextValue.isEmpty : !match.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !match.contains(",")) else {
@@ -504,7 +505,7 @@ struct DashboardCustomRulesView: View {
         }
         let change = CustomRuleChange(id: editingOriginal?.id ?? UUID(), operation: operation,
                                       original: operation == .add ? "" : original, value: operation == .delete ? "" : nextValue,
-                                      testURL: operation == .delete || urlValue.isEmpty ? nil : urlValue,
+                                      testURL: operation == .delete ? nil : urlValue,
                                       isEnabled: editingOriginal?.isEnabled ?? true)
         if let index = editingIndex { next[index] = change } else { next.append(change) }
         Task { if await appViewModel.applyDashboardConfiguration(baseName: appViewModel.selectedConfigName, changes: next) { closeEditor(); loadOptions() } }

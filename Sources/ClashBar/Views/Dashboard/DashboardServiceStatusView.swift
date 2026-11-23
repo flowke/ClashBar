@@ -5,7 +5,7 @@ struct DashboardServiceStatusView: View {
     @ObservedObject var model: ServiceStatusViewModel
     @State private var isAdding = false
     @State private var name = ""
-    @State private var address = ""
+    @State private var address = DashboardURLField.defaultPrefix
     @State private var addError: String?
     @State private var presentedDetailsID: String?
     @FocusState private var nameFocused: Bool
@@ -262,8 +262,7 @@ struct DashboardServiceStatusView: View {
                 }.frame(minWidth: 100, idealWidth: 140, maxWidth: 170)
                 VStack(alignment: .leading, spacing: 6) {
                     Text(text("检测网址（http / https）", "Full HTTP / HTTPS URL"))
-                    TextField("https://example.com/", text: $address)
-                        .accessibilityLabel(text("检测网址", "Service URL"))
+                    DashboardURLField(title: text("检测网址", "Service URL"), address: $address)
                 }
                 Button(text("取消", "Cancel"), action: closeEditor).buttonStyle(ServiceStatusButtonStyle(primary: false))
                 Button(text("添加", "Add"), action: add).buttonStyle(ServiceStatusButtonStyle(primary: true))
@@ -288,7 +287,12 @@ struct DashboardServiceStatusView: View {
         catch { addError = text("未能添加，请检查名称、完整网址和本地文件权限。", "Could not add the service. Check its name, full URL, and local file permissions.") }
     }
 
-    private func closeEditor() { isAdding = false; name = ""; address = ""; addError = nil }
+    private func closeEditor() {
+        isAdding = false
+        name = ""
+        address = DashboardURLField.defaultPrefix
+        addError = nil
+    }
 
     private var explanation: some View {
         VStack(alignment: .leading, spacing: 7) {
