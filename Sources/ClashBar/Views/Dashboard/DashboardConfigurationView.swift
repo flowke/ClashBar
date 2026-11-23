@@ -125,8 +125,10 @@ struct DashboardSourcePreview: View {
 }
 
 struct DashboardConfigurationView: View {
+    static let defaultTab = 1
+
     @ObservedObject var appViewModel: AppViewModel
-    @State private var tab = 0
+    @State private var tab: Int
     @State private var customRuleRequest: DashboardCustomRuleRequest?
     @State private var testAllRequest = 0
     @State private var testingCustomRules = false
@@ -158,7 +160,7 @@ struct DashboardConfigurationView: View {
         let contents: String
     }
 
-    init(appViewModel: AppViewModel, initialTab: Int = 0) {
+    init(appViewModel: AppViewModel, initialTab: Int = Self.defaultTab) {
         self.appViewModel = appViewModel
         self._tab = State(initialValue: initialTab)
     }

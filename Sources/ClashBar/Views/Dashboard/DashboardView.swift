@@ -27,7 +27,7 @@ struct DashboardView: View {
     private let initialConfigurationTab: Int
     private let sidebarBackground = Color(red: 238 / 255, green: 238 / 255, blue: 238 / 255)
 
-    init(appViewModel: AppViewModel, sidebarState: DashboardSidebarState = DashboardSidebarState(), initialPage: Page = .overview, initialConfigurationTab: Int = 0) {
+    init(appViewModel: AppViewModel, sidebarState: DashboardSidebarState = DashboardSidebarState(), initialPage: Page = .overview, initialConfigurationTab: Int = DashboardConfigurationView.defaultTab) {
         self.appViewModel = appViewModel
         self.remoteMachineStore = appViewModel.remoteMachineStore
         self.sidebarState = sidebarState
