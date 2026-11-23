@@ -49,7 +49,7 @@ struct DashboardCustomRulesView: View {
     private let muted = Color(red: 0.32, green: 0.42, blue: 0.49)
     private let blue = Color(red: 0.14, green: 0.37, blue: 0.55)
     private let surface = Color(red: 0.96, green: 0.97, blue: 0.975)
-    private let tableColumns = (type: CGFloat(52), enabled: CGFloat(48), status: CGFloat(88), actions: CGFloat(110))
+    private let tableColumns = (type: CGFloat(52), route: CGFloat(116), enabled: CGFloat(48), status: CGFloat(62), actions: CGFloat(110))
     private var chinese: Bool { appViewModel.uiLanguage == .zhHans }
     private func text(_ zh: String, _ en: String) -> String { chinese ? zh : en }
     private var changes: [CustomRuleChange] { appViewModel.dashboardEffectiveRecord?.changes ?? [] }
@@ -238,8 +238,9 @@ struct DashboardCustomRulesView: View {
                     HStack(spacing: 8) {
                         Text(text("类型", "Type")).frame(width: tableColumns.type, alignment: .leading)
                         Text(text("规则摘要", "Rule")).frame(maxWidth: .infinity, alignment: .leading)
+                        Text(text("线路", "Route")).frame(width: tableColumns.route, alignment: .leading)
                         Text(text("启用", "Enabled")).frame(width: tableColumns.enabled)
-                        Text(text("测试状态", "Test Status")).frame(width: tableColumns.status, alignment: .leading)
+                        Text(text("测试状态", "Test Status")).frame(width: tableColumns.status)
                         Text(text("操作", "Actions")).frame(width: tableColumns.actions)
                     }
                     .font(.system(size: 11, weight: .medium)).foregroundStyle(muted)
@@ -263,6 +264,8 @@ struct DashboardCustomRulesView: View {
 
     private func ruleRow(_ change: CustomRuleChange, index: Int) -> some View {
         let status = ruleTestStatus(change)
+        let chain = testResults[change.id]?.chain ?? []
+        let route = chain.first?.trimmedNonEmpty ?? "—"
         return HStack(spacing: 8) {
             Text(operationShort(change.operation))
                 .font(.system(size: 11, weight: .medium))
@@ -271,6 +274,9 @@ struct DashboardCustomRulesView: View {
             Text(summary(change)).font(.system(size: 12, weight: .medium))
                 .truncationMode(.middle).help(summary(change))
                 .frame(maxWidth: .infinity, alignment: .leading)
+            Text(route).font(.system(size: 11)).foregroundStyle(muted)
+                .help(route == "—" ? text("测试后显示实际线路", "Actual route appears after testing") : chain.reversed().joined(separator: " → "))
+                .frame(width: tableColumns.route, alignment: .leading)
             Toggle(text("启用", "Enabled"), isOn: Binding(get: { change.isEnabled }, set: { setEnabled($0, id: change.id) }))
                 .labelsHidden()
                 .toggleStyle(.switch)
@@ -279,8 +285,11 @@ struct DashboardCustomRulesView: View {
                 .accessibilityLabel(Text("\(text("启用规则", "Enable rule")): \(summary(change))"))
                 .disabled(disabled)
                 .frame(width: tableColumns.enabled)
-            Text(status).font(.system(size: 11)).foregroundStyle(testingIDs.contains(change.id) ? blue : muted)
-                .help(status).frame(width: tableColumns.status, alignment: .leading)
+            Circle().fill(status.color).frame(width: 8, height: 8)
+                .frame(width: tableColumns.status, height: 24)
+                .contentShape(Rectangle())
+                .help(status.title)
+                .accessibilityLabel(Text(status.title))
             HStack(spacing: 2) {
                 ruleAction(text("详情", "Details"), icon: "info.circle") { detailedRuleID = change.id }
                     .popover(isPresented: Binding(get: { detailedRuleID == change.id }, set: { if !$0, detailedRuleID == change.id { detailedRuleID = nil } })) {
@@ -309,21 +318,25 @@ struct DashboardCustomRulesView: View {
         .buttonStyle(RuleLinkStyle()).accessibilityLabel(title).help(title)
     }
 
-    private func ruleTestStatus(_ change: CustomRuleChange) -> String {
-        guard RuleTester.supports(change) else { return text("不支持", "Unsupported") }
+    private func ruleTestStatus(_ change: CustomRuleChange) -> (title: String, color: Color) {
+        guard RuleTester.supports(change) else { return (text("不支持", "Unsupported"), muted.opacity(0.45)) }
         if testingIDs.contains(change.id) {
-            return activeTestIDs.contains(change.id) ? text("测试中…", "Testing…") : text("等待测试", "Queued")
+            if activeTestIDs.contains(change.id) { return (text("测试中…", "Testing…"), blue) }
+            return (text("等待测试", "Queued"), blue.opacity(0.5))
         }
         if let result = testResults[change.id] {
-            if result.requestError != nil { return text("请求失败", "Request failed") }
+            if result.requestError != nil {
+                return (text("请求失败", "Request failed"), Color(red: 0.70, green: 0.26, blue: 0.21))
+            }
             switch result.match {
-            case .matched: return text("命中", "Matched")
-            case .other: return text("未命中", "Different rule")
-            case .unknown: return text("无法确认", "Unconfirmed")
+            case .matched: return (text("命中", "Matched"), Color(red: 0.11, green: 0.48, blue: 0.32))
+            case .other: return (text("未命中", "Different rule"), Color(red: 0.65, green: 0.37, blue: 0.08))
+            case .unknown: return (text("无法确认", "Unconfirmed"), .purple)
             }
         }
-        if !change.isEnabled { return text("已停用", "Disabled") }
-        return RuleTester.canTest(change) ? text("待测试", "Not tested") : text("无测试地址", "No test URL")
+        if !change.isEnabled { return (text("已停用", "Disabled"), muted.opacity(0.45)) }
+        if RuleTester.canTest(change) { return (text("待测试", "Not tested"), muted) }
+        return (text("无测试地址", "No test URL"), muted.opacity(0.45))
     }
 
     private func ruleDetails(_ change: CustomRuleChange) -> some View {
@@ -339,7 +352,7 @@ struct DashboardCustomRulesView: View {
                 }
                 Divider()
                 if let result = testResults[change.id] { resultView(result) }
-                else { Text(ruleTestStatus(change)).foregroundStyle(muted) }
+                else { Text(ruleTestStatus(change).title).foregroundStyle(muted) }
             }
             .font(.system(size: 12)).textSelection(.enabled).lineLimit(nil)
             .frame(maxWidth: .infinity, alignment: .leading).padding(16)
