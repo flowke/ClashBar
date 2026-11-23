@@ -31,12 +31,6 @@ enum BrandIcon {
     }
 
     private static func loadSourceIcon(named name: String, fallbackFileName: String) -> NSImage? {
-        #if SWIFT_PACKAGE
-        if let image = Bundle.module.image(forResource: NSImage.Name(name)) {
-            return image
-        }
-        #endif
-
         for bundle in AppResourceBundleLocator.candidateBundles() {
             if let image = bundle.image(forResource: NSImage.Name(name)) {
                 return image

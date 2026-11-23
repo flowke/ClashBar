@@ -1,7 +1,7 @@
 {
   "version": 1,
   "created_at": "2026-11-19T16:38:21Z",
-  "updated_at": "2026-11-23T08:00:08Z",
+  "updated_at": "2026-11-23T08:23:05Z",
   "files": {
     ".gitattributes": {
       "role": "index",
@@ -65,9 +65,9 @@
     },
     "CHANGELOG.md": {
       "role": "index",
-      "sha256": "272a81f96774b3a930feab9da7bb4c9758b9e27224fab5ed2e97edd9a738a3e6",
-      "size": 68803,
-      "normalized_sha256": "272a81f96774b3a930feab9da7bb4c9758b9e27224fab5ed2e97edd9a738a3e6"
+      "sha256": "541b171b5b4eeb696a873659c54b9119f8b9d2200605077174d95b4811aab748",
+      "size": 68947,
+      "normalized_sha256": "541b171b5b4eeb696a873659c54b9119f8b9d2200605077174d95b4811aab748"
     },
     "ClashBar-Pencil-Migrated.pen": {
       "role": "index",
@@ -238,9 +238,9 @@
     },
     "Sources/ClashBar/Core/UI/Components/BrandIcon.swift": {
       "role": "index",
-      "sha256": "b856ba62c055f3b61dda385bf98f2929c5c46a15576114730d495492ca59c366",
-      "size": 3477,
-      "normalized_sha256": "b856ba62c055f3b61dda385bf98f2929c5c46a15576114730d495492ca59c366"
+      "sha256": "16886265655b3873ee337f80ecc15033adc65903930ded8e7e541efe7121dbd5",
+      "size": 3322,
+      "normalized_sha256": "16886265655b3873ee337f80ecc15033adc65903930ded8e7e541efe7121dbd5"
     },
     "Sources/ClashBar/Core/UI/Components/NSAlert+ScrollableDetails.swift": {
       "role": "index",
@@ -274,9 +274,9 @@
     },
     "Sources/ClashBar/Core/Utils/AppResourceBundleLocator.swift": {
       "role": "index",
-      "sha256": "3df6ed6cf096c5c83d20a7c509b26030aae05bc129e85714ad7cad4ccd467a69",
-      "size": 4388,
-      "normalized_sha256": "3df6ed6cf096c5c83d20a7c509b26030aae05bc129e85714ad7cad4ccd467a69"
+      "sha256": "1cc1cecf21b9b952687c4c9f53cb6ceef5057089ee18c56ca49a21111fbbff41",
+      "size": 4426,
+      "normalized_sha256": "1cc1cecf21b9b952687c4c9f53cb6ceef5057089ee18c56ca49a21111fbbff41"
     },
     "Sources/ClashBar/Core/Utils/DeviceIPv4AddressResolver.swift": {
       "role": "index",
@@ -1195,9 +1195,9 @@
     },
     "aoci.code.txt": {
       "role": "index",
-      "sha256": "51e62f675e66c9b62d10f34f0e4b2a2c583272b479f096cb2bde405a70b140e9",
-      "size": 63685,
-      "normalized_sha256": "51e62f675e66c9b62d10f34f0e4b2a2c583272b479f096cb2bde405a70b140e9"
+      "sha256": "f0021843f6dbf7d6ff434932bdf436beeeda44497d5a976eeb5a1c2abd044cd8",
+      "size": 63794,
+      "normalized_sha256": "f0021843f6dbf7d6ff434932bdf436beeeda44497d5a976eeb5a1c2abd044cd8"
     },
     "aoci.meta.txt": {
       "role": "index",

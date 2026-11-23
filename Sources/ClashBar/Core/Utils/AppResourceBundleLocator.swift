@@ -69,16 +69,16 @@ enum AppResourceBundleLocator {
             }
         }
 
-        #if SWIFT_PACKAGE
         let fileURL = URL(fileURLWithPath: name)
-        if let bundledURL = Bundle.module.url(
-            forResource: fileURL.deletingPathExtension().lastPathComponent,
-            withExtension: fileURL.pathExtension),
-           fileManager.fileExists(atPath: bundledURL.path)
-        {
-            return bundledURL
+        for bundle in self.candidateBundles() {
+            if let bundledURL = bundle.url(
+                forResource: fileURL.deletingPathExtension().lastPathComponent,
+                withExtension: fileURL.pathExtension),
+               fileManager.fileExists(atPath: bundledURL.path)
+            {
+                return bundledURL
+            }
         }
-        #endif
 
         return nil
     }
