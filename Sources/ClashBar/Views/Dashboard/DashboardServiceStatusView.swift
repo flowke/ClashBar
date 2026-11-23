@@ -7,6 +7,7 @@ struct DashboardServiceStatusView: View {
     @State private var name = ""
     @State private var address = ""
     @State private var addError: String?
+    @State private var presentedDetailsID: String?
     @FocusState private var nameFocused: Bool
 
     private var chinese: Bool { appViewModel.uiLanguage == .zhHans }
@@ -14,7 +15,8 @@ struct DashboardServiceStatusView: View {
     private let ink = Color(red: 0.13, green: 0.20, blue: 0.25)
     private let muted = Color(red: 0.32, green: 0.42, blue: 0.49)
     private let border = Color(red: 0.85, green: 0.89, blue: 0.91)
-    private let rowHeight: CGFloat = 88
+    private let rowHeight: CGFloat = 36
+    private let minimumTableWidth: CGFloat = 460
 
     init(appViewModel: AppViewModel, model: ServiceStatusViewModel, initiallyAdding: Bool = false) {
         self.appViewModel = appViewModel
@@ -45,11 +47,11 @@ struct DashboardServiceStatusView: View {
             }
             GeometryReader { geometry in
                 ScrollView(.horizontal) {
-                    table(width: max(geometry.size.width, 760))
+                    table(width: max(geometry.size.width, minimumTableWidth))
                 }
-                .scrollIndicators(geometry.size.width < 760 ? .visible : .hidden)
+                .scrollIndicators(geometry.size.width < minimumTableWidth ? .visible : .hidden)
             }
-            .frame(height: 49 + CGFloat(model.services.count) * (rowHeight + 1) + (isAdding ? (addError == nil ? 118 : 146) : 0) + 48)
+            .frame(height: 36 + CGFloat(model.services.count) * (rowHeight + 1) + (isAdding ? (addError == nil ? 118 : 146) : 0) + 33)
             .background(.white, in: RoundedRectangle(cornerRadius: 12))
             .clipShape(RoundedRectangle(cornerRadius: 12))
             .overlay(RoundedRectangle(cornerRadius: 12).stroke(border, lineWidth: 1))
@@ -61,7 +63,7 @@ struct DashboardServiceStatusView: View {
             await model.monitor(client: client)
         }
         .onReceive(appViewModel.$isDashboardPresented.removeDuplicates()) { presented in
-            if !presented { model.cancel(); closeEditor() }
+            if !presented { model.cancel(); closeEditor(); presentedDetailsID = nil }
         }
         .onDisappear { model.cancel(); closeEditor() }
         .onExitCommand { if isAdding { closeEditor() } }
@@ -140,37 +142,39 @@ struct DashboardServiceStatusView: View {
     }
 
     private func table(width: CGFloat) -> some View {
-        let serviceWidth = (width - 40 - 72 - 60) * 0.27
-        let currentWidth = (width - 40 - 72 - 60) * 0.44
-        let directWidth = (width - 40 - 72 - 60) * 0.29
+        let actionsWidth: CGFloat = 48
+        let contentWidth = width - 24 - 30 - actionsWidth
+        let serviceWidth = contentWidth * 0.23
+        let directWidth = max(134, contentWidth * 0.24)
+        let currentWidth = contentWidth - serviceWidth - directWidth
         return VStack(spacing: 0) {
-            HStack(spacing: 24) {
-                Text(text("服务 / 测试地址", "Service / URL")).frame(width: serviceWidth, alignment: .leading)
+            HStack(spacing: 10) {
+                Text(text("服务", "Service")).frame(width: serviceWidth, alignment: .leading)
                 Text(text("当前线路", "Current Route")).frame(width: currentWidth, alignment: .leading)
                 Text(text("直连对照", "Direct Comparison")).frame(width: directWidth, alignment: .leading)
-                Text(text("操作", "Actions")).frame(width: 60)
+                Text(text("操作", "Actions")).frame(width: actionsWidth)
             }
             .font(.system(size: 12)).foregroundStyle(muted)
-            .padding(.horizontal, 20).frame(height: 48)
+            .padding(.horizontal, 12).frame(height: 36)
             .background(Color(red: 0.956, green: 0.968, blue: 0.974))
             if isAdding { separator; editor }
             ForEach(model.services) { service in
                 separator
-                HStack(spacing: 24) {
+                HStack(spacing: 10) {
                     serviceInfo(service).frame(width: serviceWidth, alignment: .leading)
                     ServiceStatusMeasurementView(result: model.results[service.id]?.current ?? ServiceProbeResult(), kind: .current, chinese: chinese)
                         .frame(width: currentWidth, alignment: .leading)
                     ServiceStatusMeasurementView(result: model.results[service.id]?.direct ?? ServiceProbeResult(), kind: .direct, chinese: chinese)
                         .frame(width: directWidth, alignment: .leading)
-                    operation(service).frame(width: 60)
+                    operation(service).frame(width: actionsWidth)
                 }
-                .padding(.horizontal, 20).frame(height: rowHeight)
+                .padding(.horizontal, 12).frame(height: rowHeight)
                 .accessibilityElement(children: .contain).accessibilityLabel(service.name)
             }
             separator
             Label(text("内置服务不可删除；新增服务可在操作栏直接删除。", "Built-in services are permanent. Custom services can be deleted in their row."), systemImage: "info.circle")
                 .font(.system(size: 11)).foregroundStyle(muted)
-                .frame(maxWidth: .infinity, minHeight: 47, alignment: .leading).padding(.horizontal, 20)
+                .frame(maxWidth: .infinity, minHeight: 32, alignment: .leading).padding(.horizontal, 14)
                 .background(Color(red: 0.97, green: 0.979, blue: 0.983))
         }.frame(width: width)
     }
@@ -178,29 +182,68 @@ struct DashboardServiceStatusView: View {
     private var separator: some View { border.frame(height: 1) }
 
     private func serviceInfo(_ service: ServiceEndpoint) -> some View {
-        VStack(alignment: .leading, spacing: 9) {
-            HStack(spacing: 9) {
-                Image(systemName: service.id == "builtin.youtube" ? "play.rectangle" : service.id == "builtin.github" ? "chevron.left.forwardslash.chevron.right" : "globe")
-                    .font(.system(size: 20)).foregroundStyle(Color(red: 0.20, green: 0.31, blue: 0.38))
-                    .frame(width: 22).accessibilityHidden(true)
-                Text(service.name).font(.system(size: 16, weight: .medium)).foregroundStyle(ink)
-                    .lineLimit(2).help(service.name)
-            }
-            Text(service.url).font(.system(size: 11)).foregroundStyle(muted)
-                .lineLimit(2).help(service.url).textSelection(.enabled)
+        HStack(spacing: 6) {
+            Image(systemName: service.id == "builtin.youtube" ? "play.rectangle" : service.id == "builtin.github" ? "chevron.left.forwardslash.chevron.right" : "globe")
+                .font(.system(size: 14)).foregroundStyle(muted)
+                .frame(width: 16).accessibilityHidden(true)
+            Text(service.name).font(.system(size: 13, weight: .medium)).foregroundStyle(ink)
+                .lineLimit(1).help(service.name)
         }
     }
 
-    @ViewBuilder private func operation(_ service: ServiceEndpoint) -> some View {
-        if service.isBuiltIn {
-            Label(text("内置", "Built-in"), systemImage: "lock")
-                .font(.system(size: 11)).foregroundStyle(muted)
-        } else {
-            Button(role: .destructive) { model.delete(service) } label: {
-                Label(text("删除", "Delete"), systemImage: "trash").font(.system(size: 12))
+    private func operation(_ service: ServiceEndpoint) -> some View {
+        HStack(spacing: 4) {
+            Button {
+                presentedDetailsID = service.id
+            } label: {
+                Image(systemName: "info.circle").frame(width: 22, height: 24)
             }
-            .buttonStyle(.plain).foregroundStyle(Color(red: 0.67, green: 0.25, blue: 0.21))
-            .accessibilityLabel(text("删除服务 \(service.name)", "Delete service \(service.name)"))
+            .buttonStyle(.plain).foregroundStyle(Color(red: 0.13, green: 0.38, blue: 0.56))
+            .accessibilityLabel(text("服务详情", "Service details"))
+            .help(text("详情", "Details"))
+            .popover(isPresented: Binding(get: { presentedDetailsID == service.id }, set: { presented in
+                if !presented && presentedDetailsID == service.id { presentedDetailsID = nil }
+            })) {
+                serviceDetails(service)
+            }
+            if service.isBuiltIn {
+                Image(systemName: "lock").frame(width: 22, height: 24).foregroundStyle(muted)
+                    .accessibilityLabel(text("内置服务", "Built-in service"))
+                    .help(text("内置服务", "Built-in service"))
+            } else {
+                Button(role: .destructive) { model.delete(service) } label: {
+                    Image(systemName: "trash").frame(width: 22, height: 24)
+                }
+                .buttonStyle(.plain).foregroundStyle(Color(red: 0.67, green: 0.25, blue: 0.21))
+                .accessibilityLabel(text("删除服务 \(service.name)", "Delete service \(service.name)"))
+                .help(text("删除", "Delete"))
+            }
+        }
+        .font(.system(size: 12))
+    }
+
+    private func serviceDetails(_ service: ServiceEndpoint) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                Text(service.name).font(.headline)
+                Text(service.url).font(.callout).foregroundStyle(.secondary)
+                Divider()
+                measurementDetails(text("当前线路", "Current Route"), kind: .current, service: service)
+                Divider()
+                measurementDetails(text("直连对照", "Direct Comparison"), kind: .direct, service: service)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(16)
+            .textSelection(.enabled)
+        }
+        .frame(width: 380, height: 260)
+    }
+
+    private func measurementDetails(_ title: String, kind: ServiceProbeKind, service: ServiceEndpoint) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title).font(.subheadline.weight(.semibold))
+            ServiceStatusMeasurementView(result: model.results[service.id]?[kind] ?? ServiceProbeResult(),
+                                         kind: kind, chinese: chinese, showsDetails: true)
         }
     }
 
@@ -211,7 +254,7 @@ struct DashboardServiceStatusView: View {
                     Text(text("服务名称", "Service Name"))
                     TextField(text("例如：公司官网", "For example: Company"), text: $name)
                         .focused($nameFocused).accessibilityLabel(text("服务名称", "Service Name"))
-                }.frame(width: 170)
+                }.frame(minWidth: 100, idealWidth: 140, maxWidth: 170)
                 VStack(alignment: .leading, spacing: 6) {
                     Text(text("检测网址（http / https）", "Full HTTP / HTTPS URL"))
                     TextField("https://example.com/", text: $address)
@@ -258,27 +301,31 @@ private struct ServiceStatusMeasurementView: View {
     let result: ServiceProbeResult
     let kind: ServiceProbeKind
     let chinese: Bool
+    var showsDetails = false
     private func text(_ zh: String, _ en: String) -> String { chinese ? zh : en }
     private let muted = Color(red: 0.32, green: 0.42, blue: 0.49)
 
     var body: some View {
         VStack(alignment: .leading, spacing: 7) {
-            HStack(spacing: 6) {
+            HStack(spacing: 4) {
                 if result.state == .checking {
                     ProgressView().controlSize(.small).scaleEffect(0.7).frame(width: 8, height: 8)
                 } else { Circle().fill(statusColor).frame(width: 6, height: 6) }
                 Text(result.isStale ? text("待重新检测", "Check Again") : statusTitle)
-                    .font(.system(size: 13, weight: .medium)).foregroundStyle(statusColor).lineLimit(1)
+                    .font(.system(size: 12, weight: .medium)).foregroundStyle(statusColor).lineLimit(1)
+                    .layoutPriority(1)
+                if !showsDetails, kind == .current, !result.isStale, let node = result.chains?.first, !node.isEmpty {
+                    Text(node).font(.system(size: 11)).foregroundStyle(muted).lineLimit(1).help(node)
+                }
                 Spacer(minLength: 2)
                 Text(elapsedText).font(.system(size: 12)).monospacedDigit().foregroundStyle(muted).fixedSize()
             }
-            Text(routeText).font(.system(size: 12))
-                .foregroundStyle(result.isStale ? muted : Color(red: 0.13, green: 0.38, blue: 0.56))
-                .lineLimit(2).help(routeText)
-            Text(detailText).font(.system(size: 11)).foregroundStyle(muted)
-                .lineLimit(2).help(detailText).textSelection(.enabled)
+            if showsDetails {
+                Text(routeText).font(.callout).foregroundStyle(Color(red: 0.13, green: 0.38, blue: 0.56))
+                Text(detailText).font(.callout).foregroundStyle(muted)
+            }
         }
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: showsDetails ? .contain : .combine)
     }
 
     private var elapsedText: String {
@@ -294,7 +341,7 @@ private struct ServiceStatusMeasurementView: View {
         case .restricted: text("访问受限", "Restricted")
         case .httpError: text("HTTP 异常", "HTTP Error")
         case .timedOut: text("超时", "Timed Out")
-        case .connectionFailed: text("连接失败", "Connection Failed")
+        case .connectionFailed: text("连接失败", showsDetails ? "Connection Failed" : "Failed")
         case .tlsFailed: text("TLS 失败", "TLS Failed")
         case .cancelled: text("已取消", "Canceled")
         case .unavailable: text("无法检测", "Unavailable")
