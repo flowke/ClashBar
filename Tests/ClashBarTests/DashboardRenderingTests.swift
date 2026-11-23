@@ -107,6 +107,15 @@ final class DashboardRenderingTests: XCTestCase {
                 host.cacheDisplay(in: host.bounds, to: image)
                 let data = try XCTUnwrap(image.representation(using: .png, properties: [:]))
                 try data.write(to: URL(fileURLWithPath: directoryPath).appendingPathComponent("\(name).png"), options: .atomic)
+                if name == "custom" {
+                    sampleWindow.setContentSize(NSSize(width: 760, height: 520))
+                    host.layoutSubtreeIfNeeded()
+                    sampleWindow.displayIfNeeded()
+                    let narrow = try XCTUnwrap(host.bitmapImageRepForCachingDisplay(in: host.bounds))
+                    host.cacheDisplay(in: host.bounds, to: narrow)
+                    try XCTUnwrap(narrow.representation(using: .png, properties: [:]))
+                        .write(to: URL(fileURLWithPath: directoryPath).appendingPathComponent("custom-narrow.png"), options: .atomic)
+                }
                 if name == "effective" {
                     sampleWindow.setContentSize(NSSize(width: 760, height: 520))
                     host.layoutSubtreeIfNeeded()

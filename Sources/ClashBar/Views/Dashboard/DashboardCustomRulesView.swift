@@ -43,11 +43,13 @@ struct DashboardCustomRulesView: View {
     @State private var testingIDs: Set<UUID> = []
     @State private var activeTestIDs: Set<UUID> = []
     @State private var testTask: Task<Void, Never>?
+    @State private var detailedRuleID: UUID?
 
     private let ink = Color(red: 0.13, green: 0.20, blue: 0.25)
     private let muted = Color(red: 0.32, green: 0.42, blue: 0.49)
     private let blue = Color(red: 0.14, green: 0.37, blue: 0.55)
     private let surface = Color(red: 0.96, green: 0.97, blue: 0.975)
+    private let tableColumns = (type: CGFloat(52), enabled: CGFloat(48), status: CGFloat(88), actions: CGFloat(110))
     private var chinese: Bool { appViewModel.uiLanguage == .zhHans }
     private func text(_ zh: String, _ en: String) -> String { chinese ? zh : en }
     private var changes: [CustomRuleChange] { appViewModel.dashboardEffectiveRecord?.changes ?? [] }
@@ -231,65 +233,118 @@ struct DashboardCustomRulesView: View {
                 Text(text("暂无自定义规则", "No custom rules yet")).font(.system(size: 12)).foregroundStyle(muted)
                     .frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 20)
             }
-            ForEach(changes) { change in
-                if let index = changes.firstIndex(where: { $0.id == change.id }) { ruleRow(change, index: index) }
+            if !changes.isEmpty {
+                VStack(spacing: 0) {
+                    HStack(spacing: 8) {
+                        Text(text("类型", "Type")).frame(width: tableColumns.type, alignment: .leading)
+                        Text(text("规则摘要", "Rule")).frame(maxWidth: .infinity, alignment: .leading)
+                        Text(text("启用", "Enabled")).frame(width: tableColumns.enabled)
+                        Text(text("测试状态", "Test Status")).frame(width: tableColumns.status, alignment: .leading)
+                        Text(text("操作", "Actions")).frame(width: tableColumns.actions)
+                    }
+                    .font(.system(size: 11, weight: .medium)).foregroundStyle(muted)
+                    .padding(.horizontal, 10).frame(height: 30)
+                    .accessibilityAddTraits(.isHeader)
+
+                    ForEach(Array(changes.enumerated()), id: \.element.id) { index, change in
+                        Divider()
+                        ruleRow(change, index: index)
+                    }
+                }
+                .lineLimit(1)
+                .background(.white, in: RoundedRectangle(cornerRadius: 8))
+                .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(muted.opacity(0.2)))
             }
             Text(text("已启用的规则会先经过校验，再合并到当前基础配置。", "Enabled rules are validated before merging into the base configuration."))
                 .font(.system(size: 10)).foregroundStyle(muted)
-        }.padding(16).frame(maxWidth: .infinity, alignment: .topLeading)
+        }.padding(12).frame(maxWidth: .infinity, alignment: .topLeading)
             .background(surface, in: RoundedRectangle(cornerRadius: 12))
     }
 
     private func ruleRow(_ change: CustomRuleChange, index: Int) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .top, spacing: 12) {
-                Text(operationShort(change.operation)).font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(change.operation == .add ? Color(red: 0.11, green: 0.48, blue: 0.32) : change.operation == .replace ? Color(red: 0.65, green: 0.37, blue: 0.08) : muted)
-                    .frame(width: 40, alignment: .leading)
-                Text(summary(change)).font(.system(size: 12, weight: .medium)).lineLimit(2)
-                Spacer(minLength: 0)
-            }
-            HStack(alignment: .top, spacing: 8) {
-                Text(change.operation == .delete
-                    ? (change.isEnabled ? text("从基础配置移除", "Removed from base") : text("删除操作已停用", "Deletion disabled"))
-                    : change.value)
-                    .font(.system(size: 10)).foregroundStyle(muted).lineLimit(2).textSelection(.enabled)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                Toggle(isOn: Binding(get: { change.isEnabled }, set: { setEnabled($0, id: change.id) })) {
-                    Text(text("启用", "Enabled")).font(.system(size: 11)).foregroundStyle(muted)
-                }
+        let status = ruleTestStatus(change)
+        return HStack(spacing: 8) {
+            Text(operationShort(change.operation))
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(change.operation == .add ? Color(red: 0.11, green: 0.48, blue: 0.32) : change.operation == .replace ? Color(red: 0.65, green: 0.37, blue: 0.08) : muted)
+                .frame(width: tableColumns.type, alignment: .leading)
+            Text(summary(change)).font(.system(size: 12, weight: .medium))
+                .truncationMode(.middle).help(summary(change))
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Toggle(text("启用", "Enabled"), isOn: Binding(get: { change.isEnabled }, set: { setEnabled($0, id: change.id) }))
+                .labelsHidden()
                 .toggleStyle(.switch)
                 .controlSize(.small)
                 .tint(blue)
-                .fixedSize()
                 .accessibilityLabel(Text("\(text("启用规则", "Enable rule")): \(summary(change))"))
                 .disabled(disabled)
+                .frame(width: tableColumns.enabled)
+            Text(status).font(.system(size: 11)).foregroundStyle(testingIDs.contains(change.id) ? blue : muted)
+                .help(status).frame(width: tableColumns.status, alignment: .leading)
+            HStack(spacing: 2) {
+                ruleAction(text("详情", "Details"), icon: "info.circle") { detailedRuleID = change.id }
+                    .popover(isPresented: Binding(get: { detailedRuleID == change.id }, set: { if !$0, detailedRuleID == change.id { detailedRuleID = nil } })) {
+                        ruleDetails(change)
+                    }
                 if change.operation != .delete {
-                    Button(text("测试", "Test")) { startTests([change]) }
-                        .buttonStyle(RuleLinkStyle())
+                    ruleAction(text("测试", "Test"), icon: "play") { startTests([change]) }
                         .disabled(disabled || !appViewModel.isRuntimeRunning || appViewModel.dashboardEffectiveRecord?.baseName != appViewModel.selectedConfigName || !RuleTester.canTest(change) || !testingIDs.isEmpty)
+                } else {
+                    Color.clear.frame(width: 26, height: 20).accessibilityHidden(true)
                 }
-                Button(text("编辑", "Edit")) { edit(change, index: index) }.buttonStyle(RuleLinkStyle()).disabled(disabled)
-                Button(change.operation == .delete ? text("撤销删除", "Undo") : text("删除", "Remove")) { remove(index: index) }
-                    .buttonStyle(RuleLinkStyle()).disabled(disabled)
+                ruleAction(text("编辑", "Edit"), icon: "square.and.pencil") { edit(change, index: index) }.disabled(disabled)
+                ruleAction(change.operation == .delete ? text("撤销删除", "Undo removal") : text("删除", "Remove"),
+                           icon: change.operation == .delete ? "arrow.uturn.backward" : "trash") { remove(index: index) }.disabled(disabled)
             }
-            if change.operation != .delete {
-                Text(change.testURL.map { "\(text("测试地址", "Test URL")): \($0)" } ?? text("未配置测试地址", "No test URL configured"))
-                    .font(.system(size: 10)).foregroundStyle(muted).textSelection(.enabled)
-                if !RuleTester.supports(change) {
-                    Text(text("此规则类型暂不支持测试", "Testing is not supported for this rule type"))
-                        .font(.system(size: 10)).foregroundStyle(muted)
-                } else if testingIDs.contains(change.id) {
-                    Text(activeTestIDs.contains(change.id) ? text("测试中…", "Testing…") : text("等待测试", "Waiting to test"))
-                        .font(.system(size: 11)).foregroundStyle(blue)
-                } else if let result = testResults[change.id] {
-                    resultView(result)
+            .frame(width: tableColumns.actions, alignment: .trailing)
+        }
+        .padding(.horizontal, 10).frame(height: 36)
+        .accessibilityElement(children: .contain)
+    }
+
+    private func ruleAction(_ title: String, icon: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: icon).labelStyle(.iconOnly).frame(width: 20, height: 20)
+        }
+        .buttonStyle(RuleLinkStyle()).accessibilityLabel(title).help(title)
+    }
+
+    private func ruleTestStatus(_ change: CustomRuleChange) -> String {
+        guard RuleTester.supports(change) else { return text("不支持", "Unsupported") }
+        if testingIDs.contains(change.id) {
+            return activeTestIDs.contains(change.id) ? text("测试中…", "Testing…") : text("等待测试", "Queued")
+        }
+        if let result = testResults[change.id] {
+            if result.requestError != nil { return text("请求失败", "Request failed") }
+            switch result.match {
+            case .matched: return text("命中", "Matched")
+            case .other: return text("未命中", "Different rule")
+            case .unknown: return text("无法确认", "Unconfirmed")
+            }
+        }
+        if !change.isEnabled { return text("已停用", "Disabled") }
+        return RuleTester.canTest(change) ? text("待测试", "Not tested") : text("无测试地址", "No test URL")
+    }
+
+    private func ruleDetails(_ change: CustomRuleChange) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 10) {
+                Text(summary(change)).font(.headline)
+                if change.operation != .add {
+                    Text("\(text("原始规则", "Base rule")): \(change.original)")
                 }
+                if change.operation != .delete {
+                    Text("\(text("规则", "Rule")): \(change.value)")
+                    Text(change.testURL.map { "\(text("测试地址", "Test URL")): \($0)" } ?? text("未配置测试地址", "No test URL configured"))
+                }
+                Divider()
+                if let result = testResults[change.id] { resultView(result) }
+                else { Text(ruleTestStatus(change)).foregroundStyle(muted) }
             }
-        }.padding(.horizontal, 14).padding(.vertical, 10)
-            .frame(maxWidth: .infinity, minHeight: 64, alignment: .topLeading)
-            .background(Color.white, in: RoundedRectangle(cornerRadius: 9))
-            .overlay(RoundedRectangle(cornerRadius: 9).stroke(Color(red: 0.86, green: 0.89, blue: 0.91), lineWidth: 1))
+            .font(.system(size: 12)).textSelection(.enabled).lineLimit(nil)
+            .frame(maxWidth: .infinity, alignment: .leading).padding(16)
+        }
+        .frame(width: 386, height: 210)
     }
 
     private func resultView(_ result: RuleTestResult) -> some View {
@@ -477,13 +532,15 @@ struct DashboardCustomRulesView: View {
 }
 
 private struct RuleLinkStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var enabled
     @State private var hovered = false
     func makeBody(configuration: Configuration) -> some View {
         configuration.label.font(.system(size: 11, weight: .medium))
             .foregroundStyle(Color(red: 0.14, green: 0.37, blue: 0.55))
             .padding(.horizontal, 3).padding(.vertical, 4)
             .background(hovered ? Color.black.opacity(0.06) : .clear, in: RoundedRectangle(cornerRadius: 5))
-            .opacity(configuration.isPressed ? 0.6 : 1).contentShape(Rectangle()).onHover { hovered = $0 }
+            .opacity(enabled ? (configuration.isPressed ? 0.6 : 1) : 0.4)
+            .contentShape(Rectangle()).onHover { hovered = $0 }
     }
 }
 
