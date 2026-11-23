@@ -1,7 +1,7 @@
 {
   "version": 1,
   "created_at": "2026-11-19T16:38:21Z",
-  "updated_at": "2026-11-23T08:23:05Z",
+  "updated_at": "2026-11-23T11:27:55Z",
   "files": {
     ".gitattributes": {
       "role": "index",
@@ -931,9 +931,9 @@
     },
     "Sources/ClashBar/Views/Dashboard/DashboardCustomRulesView.swift": {
       "role": "index",
-      "sha256": "fee47360a24b393c773402dd97a3ec756ad57b6b90970f773780e68a19e18234",
-      "size": 32477,
-      "normalized_sha256": "fee47360a24b393c773402dd97a3ec756ad57b6b90970f773780e68a19e18234"
+      "sha256": "ebd8da9a7a5376a2781a5d21ad8df8d07a3b4df8217463cb57109e0bc6fa0f15",
+      "size": 33419,
+      "normalized_sha256": "ebd8da9a7a5376a2781a5d21ad8df8d07a3b4df8217463cb57109e0bc6fa0f15"
     },
     "Sources/ClashBar/Views/Dashboard/DashboardOverviewView.swift": {
       "role": "index",
@@ -943,9 +943,9 @@
     },
     "Sources/ClashBar/Views/Dashboard/DashboardServiceStatusView.swift": {
       "role": "index",
-      "sha256": "34eebc6f12d618d242817a2e8480469754be71e32ba88bb2d4076574cb295062",
-      "size": 22753,
-      "normalized_sha256": "34eebc6f12d618d242817a2e8480469754be71e32ba88bb2d4076574cb295062"
+      "sha256": "73d93bd9b0ac9788baff68cc265939d328dbd868eda16f3666b5424ada1263a0",
+      "size": 22756,
+      "normalized_sha256": "73d93bd9b0ac9788baff68cc265939d328dbd868eda16f3666b5424ada1263a0"
     },
     "Sources/ClashBar/Views/Dashboard/DashboardView.swift": {
       "role": "index",
@@ -1195,9 +1195,9 @@
     },
     "aoci.code.txt": {
       "role": "index",
-      "sha256": "f0021843f6dbf7d6ff434932bdf436beeeda44497d5a976eeb5a1c2abd044cd8",
-      "size": 63794,
-      "normalized_sha256": "f0021843f6dbf7d6ff434932bdf436beeeda44497d5a976eeb5a1c2abd044cd8"
+      "sha256": "56349f5c298fc873a57175a4c1b1311db2824fd585138bb8c3b589d52adcadce",
+      "size": 63870,
+      "normalized_sha256": "56349f5c298fc873a57175a4c1b1311db2824fd585138bb8c3b589d52adcadce"
     },
     "aoci.meta.txt": {
       "role": "index",
@@ -2654,9 +2654,9 @@
     },
     "docs/product-requirements.md": {
       "role": "index",
-      "sha256": "7f8311d8c99d7f74acbbd2bdbab4dea12ef667e2c736e379a5cf3b9974b34935",
-      "size": 7104,
-      "normalized_sha256": "7f8311d8c99d7f74acbbd2bdbab4dea12ef667e2c736e379a5cf3b9974b34935"
+      "sha256": "4a4586d790ad693441b01d97c4c1429e6d37deed8b8d7b0a1e8cba9007acc986",
+      "size": 8133,
+      "normalized_sha256": "4a4586d790ad693441b01d97c4c1429e6d37deed8b8d7b0a1e8cba9007acc986"
     },
     "docs/public/_headers": {
       "role": "index",

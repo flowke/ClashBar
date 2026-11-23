@@ -144,9 +144,9 @@ struct DashboardServiceStatusView: View {
     private func table(width: CGFloat) -> some View {
         let actionsWidth: CGFloat = 48
         let contentWidth = width - 24 - 30 - actionsWidth
-        let serviceWidth = contentWidth * 0.23
-        let directWidth = max(134, contentWidth * 0.24)
-        let currentWidth = contentWidth - serviceWidth - directWidth
+        let directWidth: CGFloat = 134
+        let currentWidth = min(220, max(134, contentWidth * 0.29))
+        let serviceWidth = contentWidth - currentWidth - directWidth
         return VStack(spacing: 0) {
             HStack(spacing: 10) {
                 Text(text("服务", "Service")).frame(width: serviceWidth, alignment: .leading)
