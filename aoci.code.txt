@@ -310,7 +310,7 @@ service-status.md[SU3T]: F:Documents service ownership and sync, bounded current
 source.config.ts[AV3T]: F:Configures the documentation source loader and navigation | R:code:docs/content/docs/meta.json | A:Docs source configuration | S:-
 tsconfig.json[AV3T]: F:Configures TypeScript compilation for documentation sources | R:code:docs/package.json | A:TypeScript configuration | S:-
 wrangler.jsonc[AV3T]: F:Configures Cloudflare deployment for the docs site | R:code:docs/open-next.config.ts | A:Cloudflare deployment configuration | S:-
-product-requirements.md[SU3T]: F:Records dashboard requirements and acceptance criteria for CB-001 through CB-007 | R:code:Sources/ClashBar/Views/Dashboard/DashboardCustomRulesView.swift,code:Sources/ClashBar/Views/Dashboard/DashboardServiceStatusView.swift | A:Numbered product requirements and decision history | S:-
+product-requirements.md[SU3T]: F:Records dashboard requirements and decisions for custom rules, service status, configuration sources, and routing-group management | R:code:Sources/ClashBar/Views/Dashboard/DashboardCustomRulesView.swift,code:Sources/ClashBar/Views/Dashboard/DashboardConfigurationView.swift | A:Numbered product requirements and alignment history | S:-
 
 ===/<repository>/docs/content/docs/===
 about.mdx[AU3T]: F:Explains ClashBar purpose platform and project background | R:code:docs/content/docs/index.mdx | A:About documentation | S:-
