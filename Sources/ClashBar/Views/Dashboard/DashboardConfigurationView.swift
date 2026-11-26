@@ -141,6 +141,8 @@ struct DashboardConfigurationView: View {
     @State private var editorSaving = false
     @State private var editingRemote = false
     @State private var viewingSource: SourcePreview?
+    @State private var routingGroupsPresentation: RoutingGroupsPresentation?
+    @State private var routingGroupsRevision = 0
     @State private var customRuleMenuPresented = false
     @State private var hoveredSource: String?
     @State private var hoveredTab: Int?
@@ -158,6 +160,12 @@ struct DashboardConfigurationView: View {
         let id = UUID()
         let name: String
         let contents: String
+    }
+
+    private struct RoutingGroupsPresentation: Identifiable {
+        let configurationName: String
+
+        var id: String { configurationName }
     }
 
     init(appViewModel: AppViewModel, initialTab: Int = Self.defaultTab) {
@@ -218,7 +226,8 @@ struct DashboardConfigurationView: View {
             }
             switch tab {
             case 0: effectiveView
-            case 1: DashboardCustomRulesView(appViewModel: appViewModel, request: $customRuleRequest, testAllRequest: testAllRequest, isTesting: $testingCustomRules)
+            case 1: DashboardCustomRulesView(appViewModel: appViewModel, request: $customRuleRequest, testAllRequest: testAllRequest,
+                                             isTesting: $testingCustomRules, routingGroupsRevision: routingGroupsRevision)
             default: sourcesView
             }
         }
@@ -242,6 +251,11 @@ struct DashboardConfigurationView: View {
         .sheet(isPresented: Binding(get: { editingName != nil }, set: { if !$0 { editingName = nil } })) { sourceEditor }
         .sheet(item: $viewingSource) { source in
             DashboardSourcePreview(name: source.name, contents: source.contents, closeTitle: text("关闭", "Close")) { viewingSource = nil }
+        }
+        .sheet(item: $routingGroupsPresentation) { presentation in
+            DashboardRoutingGroupsView(appViewModel: appViewModel,
+                                       configurationName: presentation.configurationName)
+                .onDisappear { routingGroupsRevision += 1 }
         }
     }
 
@@ -483,6 +497,10 @@ struct DashboardConfigurationView: View {
                         Spacer(minLength: 0)
                         HStack(spacing: 10) {
                             Button(text("查看", "View")) { previewSource(name) }
+                            Button(text("线路分组", "Routing groups")) {
+                                routingGroupsPresentation = RoutingGroupsPresentation(configurationName: name)
+                            }
+                            .disabled(appViewModel.dashboardConfigBusy || appViewModel.isRemoteTarget)
                             if remote {
                                 Button(text("编辑", "Edit")) {
                                     editingRemote = true
@@ -496,14 +514,15 @@ struct DashboardConfigurationView: View {
                                     editorError = nil
                                     editingName = name
                                 }.disabled(appViewModel.dashboardConfigBusy || appViewModel.isRemoteTarget || appViewModel.remoteConfigMenuState(for: name).phase == .refreshing)
-                                let enabled = appViewModel.remoteConfigSubscriptions[name]?.isEnabled ?? true
-                                Button(enabled ? text("停用", "Disable") : text("启用", "Enable")) {
-                                    Task {
-                                        await cardOperation(name, title: enabled ? text("停用失败", "Disable failed") : text("启用失败", "Enable failed")) {
-                                            await appViewModel.setDashboardSubscriptionEnabled(!enabled, name: name, changes: changes)
+                                if appViewModel.remoteConfigSubscriptions[name]?.isEnabled == false {
+                                    Button(text("启用", "Enable")) {
+                                        Task {
+                                            await cardOperation(name, title: text("启用失败", "Enable failed")) {
+                                                await appViewModel.setDashboardSubscriptionEnabled(true, name: name, changes: changes)
+                                            }
                                         }
-                                    }
-                                }.disabled(appViewModel.dashboardConfigBusy || appViewModel.isRemoteTarget)
+                                    }.disabled(appViewModel.dashboardConfigBusy || appViewModel.isRemoteTarget)
+                                }
                             } else {
                                 Button(text("导出", "Export")) { exportSource(name) }
                                     .disabled(appViewModel.dashboardConfigBusy || appViewModel.isRemoteTarget)
@@ -541,7 +560,18 @@ struct DashboardConfigurationView: View {
 
     private func sourceMenu(_ name: String, remote: Bool) -> some View {
         Menu {
-            if !remote {
+            if remote {
+                if appViewModel.remoteConfigSubscriptions[name]?.isEnabled ?? true {
+                    Button(text("停用", "Disable")) {
+                        Task {
+                            await cardOperation(name, title: text("停用失败", "Disable failed")) {
+                                await appViewModel.setDashboardSubscriptionEnabled(false, name: name, changes: changes)
+                            }
+                        }
+                    }
+                    Divider()
+                }
+            } else {
                 Button(text("显示文件位置", "Show in Finder")) {
                     if let url = appViewModel.configService.availableConfigs.first(where: { $0.lastPathComponent == name }) {
                         NSWorkspace.shared.activateFileViewerSelecting([url])

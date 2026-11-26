@@ -1,7 +1,7 @@
 {
   "version": 1,
   "created_at": "2026-11-19T16:38:21Z",
-  "updated_at": "2026-11-26T07:06:50Z",
+  "updated_at": "2026-11-26T16:06:32Z",
   "files": {
     ".gitattributes": {
       "role": "index",
@@ -65,9 +65,9 @@
     },
     "CHANGELOG.md": {
       "role": "index",
-      "sha256": "541b171b5b4eeb696a873659c54b9119f8b9d2200605077174d95b4811aab748",
-      "size": 68947,
-      "normalized_sha256": "541b171b5b4eeb696a873659c54b9119f8b9d2200605077174d95b4811aab748"
+      "sha256": "f0ed7a0f45c23964ad3aa0ba6431d16a477f550afb79e6b7292f2655d2c5afb9",
+      "size": 69529,
+      "normalized_sha256": "f0ed7a0f45c23964ad3aa0ba6431d16a477f550afb79e6b7292f2655d2c5afb9"
     },
     "ClashBar-Pencil-Migrated.pen": {
       "role": "index",
@@ -82,9 +82,9 @@
     },
     "ClashBar.xcodeproj/project.pbxproj": {
       "role": "index",
-      "sha256": "3a0dec85e5af65aa66848bbdd0b5437702a102ebf94fa47158d55b1b522b18b8",
-      "size": 89291,
-      "normalized_sha256": "3a0dec85e5af65aa66848bbdd0b5437702a102ebf94fa47158d55b1b522b18b8"
+      "sha256": "f2617b94b1c5ea867b34ac7af432a840284758ad3cf56cc2efb35a7c7487137a",
+      "size": 89961,
+      "normalized_sha256": "f2617b94b1c5ea867b34ac7af432a840284758ad3cf56cc2efb35a7c7487137a"
     },
     "ClashBar.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved": {
       "role": "index",
@@ -607,9 +607,9 @@
     },
     "Sources/ClashBar/Services/ConfigRuleMerger.swift": {
       "role": "index",
-      "sha256": "0075672f86ce82d80a44945b13dcb679a755dce934ebef93a72919e0946edc76",
-      "size": 8397,
-      "normalized_sha256": "0075672f86ce82d80a44945b13dcb679a755dce934ebef93a72919e0946edc76"
+      "sha256": "af3380bc6a17a0029b1de50b7b3d7ae5da32f91b804087bd0dd18ba0b42498b5",
+      "size": 13446,
+      "normalized_sha256": "af3380bc6a17a0029b1de50b7b3d7ae5da32f91b804087bd0dd18ba0b42498b5"
     },
     "Sources/ClashBar/Services/ConfigService.swift": {
       "role": "index",
@@ -622,6 +622,12 @@
       "sha256": "421c693add32cbaf3fb57c90eb97ca68be70374c89f2f8453ffc0c339f329cde",
       "size": 34096,
       "normalized_sha256": "421c693add32cbaf3fb57c90eb97ca68be70374c89f2f8453ffc0c339f329cde"
+    },
+    "Sources/ClashBar/Services/CustomRoutingGroups.swift": {
+      "role": "index",
+      "sha256": "5f195f1ad484b21ec01f193d2e2734793eafe552a78cabf6fa410cd342ad0faa",
+      "size": 6082,
+      "normalized_sha256": "5f195f1ad484b21ec01f193d2e2734793eafe552a78cabf6fa410cd342ad0faa"
     },
     "Sources/ClashBar/Services/EffectiveConfigTransaction.swift": {
       "role": "index",
@@ -709,9 +715,9 @@
     },
     "Sources/ClashBar/ViewModels/AppViewModel+EffectiveConfig.swift": {
       "role": "index",
-      "sha256": "4d2632100a227fd414b5ce663c1bf868798ccb51b49c774c0742778ca6065925",
-      "size": 15522,
-      "normalized_sha256": "4d2632100a227fd414b5ce663c1bf868798ccb51b49c774c0742778ca6065925"
+      "sha256": "661355ec962a8597decdd272f733f4b6d59cb829502b9e851d8fc868390acb83",
+      "size": 16776,
+      "normalized_sha256": "661355ec962a8597decdd272f733f4b6d59cb829502b9e851d8fc868390acb83"
     },
     "Sources/ClashBar/ViewModels/AppViewModel+Initialization.swift": {
       "role": "index",
@@ -925,21 +931,27 @@
     },
     "Sources/ClashBar/Views/Dashboard/DashboardConfigurationView.swift": {
       "role": "index",
-      "sha256": "0bc5926d17f575746e631298efa3f711f221cac7b4f13900edca85180781513e",
-      "size": 39455,
-      "normalized_sha256": "0bc5926d17f575746e631298efa3f711f221cac7b4f13900edca85180781513e"
+      "sha256": "57db95e09196b692c1c2adc54cb4eea98c6465962d682a33573fdb37166db205",
+      "size": 40941,
+      "normalized_sha256": "57db95e09196b692c1c2adc54cb4eea98c6465962d682a33573fdb37166db205"
     },
     "Sources/ClashBar/Views/Dashboard/DashboardCustomRulesView.swift": {
       "role": "index",
-      "sha256": "ebd8da9a7a5376a2781a5d21ad8df8d07a3b4df8217463cb57109e0bc6fa0f15",
-      "size": 33419,
-      "normalized_sha256": "ebd8da9a7a5376a2781a5d21ad8df8d07a3b4df8217463cb57109e0bc6fa0f15"
+      "sha256": "a0952e35173f15dcc381794d238fb5b5423daaf5a86220f80e1a8cea23be0512",
+      "size": 35266,
+      "normalized_sha256": "a0952e35173f15dcc381794d238fb5b5423daaf5a86220f80e1a8cea23be0512"
     },
     "Sources/ClashBar/Views/Dashboard/DashboardOverviewView.swift": {
       "role": "index",
       "sha256": "69571b6201ee763f7b866097a5207b1ede659112a89d4dba229fc485efdd9647",
       "size": 5367,
       "normalized_sha256": "69571b6201ee763f7b866097a5207b1ede659112a89d4dba229fc485efdd9647"
+    },
+    "Sources/ClashBar/Views/Dashboard/DashboardRoutingGroupsView.swift": {
+      "role": "index",
+      "sha256": "a5d3932d721d847f69bb282eee77ade2d0d9949e65ef3a59f13026731e652348",
+      "size": 31697,
+      "normalized_sha256": "a5d3932d721d847f69bb282eee77ade2d0d9949e65ef3a59f13026731e652348"
     },
     "Sources/ClashBar/Views/Dashboard/DashboardServiceStatusView.swift": {
       "role": "index",
@@ -1087,9 +1099,9 @@
     },
     "Tests/ClashBarTests/ConfigRuleMergerTests.swift": {
       "role": "index",
-      "sha256": "8e0df882f1d52822e5cc7927f7abde632e4032f52d79c3dcc82a23de440791e4",
-      "size": 9437,
-      "normalized_sha256": "8e0df882f1d52822e5cc7927f7abde632e4032f52d79c3dcc82a23de440791e4"
+      "sha256": "35d215bf47b54e806f71c89ef1a7c9ec132b46367f6be02be920b593a216e616",
+      "size": 13696,
+      "normalized_sha256": "35d215bf47b54e806f71c89ef1a7c9ec132b46367f6be02be920b593a216e616"
     },
     "Tests/ClashBarTests/ConnectionsSnapshotTests.swift": {
       "role": "index",
@@ -1111,9 +1123,9 @@
     },
     "Tests/ClashBarTests/DashboardRenderingTests.swift": {
       "role": "index",
-      "sha256": "e0546c4b927714bf00a9e3bb8264f9c5b090acff6b41a52083f9c0eead5360af",
-      "size": 18400,
-      "normalized_sha256": "e0546c4b927714bf00a9e3bb8264f9c5b090acff6b41a52083f9c0eead5360af"
+      "sha256": "d5bb8fdedf27b2759174d8b37b73388673c49b6c699f41e606b6980d99ce6c60",
+      "size": 23673,
+      "normalized_sha256": "d5bb8fdedf27b2759174d8b37b73388673c49b6c699f41e606b6980d99ce6c60"
     },
     "Tests/ClashBarTests/EffectiveConfigTransactionTests.swift": {
       "role": "index",
@@ -1195,9 +1207,9 @@
     },
     "aoci.code.txt": {
       "role": "index",
-      "sha256": "4b339601a380f86b7d4cd7fbfec55efe538f59dde87b9ca3012a634b30916d04",
-      "size": 63921,
-      "normalized_sha256": "4b339601a380f86b7d4cd7fbfec55efe538f59dde87b9ca3012a634b30916d04"
+      "sha256": "015adc96b051d2474185af778e40a40670e6be7f3e781bb9d7e5f859ba06816d",
+      "size": 65595,
+      "normalized_sha256": "015adc96b051d2474185af778e40a40670e6be7f3e781bb9d7e5f859ba06816d"
     },
     "aoci.meta.txt": {
       "role": "index",
@@ -2654,9 +2666,9 @@
     },
     "docs/product-requirements.md": {
       "role": "index",
-      "sha256": "34cf83614057abbafa31defbffe9ca87bbeafb05784deaad8fc710f0b99df81f",
-      "size": 11738,
-      "normalized_sha256": "34cf83614057abbafa31defbffe9ca87bbeafb05784deaad8fc710f0b99df81f"
+      "sha256": "d73b47c6069d5d24965943b9f437ea25deb13a9ef81529923b6f45353e0883a8",
+      "size": 11903,
+      "normalized_sha256": "d73b47c6069d5d24965943b9f437ea25deb13a9ef81529923b6f45353e0883a8"
     },
     "docs/public/_headers": {
       "role": "index",

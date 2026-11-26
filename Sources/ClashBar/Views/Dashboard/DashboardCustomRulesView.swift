@@ -22,6 +22,7 @@ struct DashboardCustomRulesView: View {
     @Binding var request: DashboardCustomRuleRequest?
     var testAllRequest: Int = 0
     @Binding var isTesting: Bool
+    var routingGroupsRevision: Int = 0
     @State private var operation: CustomRuleChange.Operation = .add
     @State private var type: RuleMatchType = .suffix
     @State private var match = ""
@@ -44,6 +45,8 @@ struct DashboardCustomRulesView: View {
     @State private var activeTestIDs: Set<UUID> = []
     @State private var testTask: Task<Void, Never>?
     @State private var detailedRuleID: UUID?
+    @State private var routingGroupsPresented = false
+    @State private var customRoutingGroups: [CustomRoutingGroup] = []
 
     private let ink = Color(red: 0.13, green: 0.20, blue: 0.25)
     private let muted = Color(red: 0.32, green: 0.42, blue: 0.49)
@@ -88,6 +91,12 @@ struct DashboardCustomRulesView: View {
         .onChange(of: testAllRequest) { _ in startTests(changes.filter(RuleTester.canTest)) }
         .onDisappear { cancelTests() }
         .onExitCommand { if request != nil { closeEditor() } }
+        .sheet(isPresented: $routingGroupsPresented) {
+            DashboardRoutingGroupsView(appViewModel: appViewModel,
+                                       configurationName: appViewModel.selectedConfigName)
+        }
+        .onChange(of: routingGroupsPresented) { presented in if !presented { loadOptions() } }
+        .onChange(of: routingGroupsRevision) { _ in loadOptions() }
     }
 
     private func errorMessage(_ error: String) -> some View {
@@ -228,6 +237,9 @@ struct DashboardCustomRulesView: View {
                 Spacer()
                 Text("\(changes.count) \(text("条 · 按优先级从上到下匹配", "· matched from top to bottom"))")
                     .font(.system(size: 11)).foregroundStyle(muted)
+                Button(text("线路分组", "Routing groups")) { routingGroupsPresented = true }
+                    .buttonStyle(RuleLinkStyle())
+                    .disabled(disabled || appViewModel.selectedConfigName == "-")
             }
             if changes.isEmpty {
                 Text(text("暂无自定义规则", "No custom rules yet")).font(.system(size: 12)).foregroundStyle(muted)
@@ -238,7 +250,7 @@ struct DashboardCustomRulesView: View {
                     HStack(spacing: 8) {
                         Text(text("类型", "Type")).frame(width: tableColumns.type, alignment: .leading)
                         Text(text("规则摘要", "Rule")).frame(maxWidth: .infinity, alignment: .leading)
-                        Text(text("线路", "Route")).frame(width: tableColumns.route, alignment: .leading)
+                        Text(text("目标线路", "Target")).frame(width: tableColumns.route, alignment: .leading)
                         Text(text("启用", "Enabled")).frame(width: tableColumns.enabled)
                         Text(text("测试状态", "Test Status")).frame(width: tableColumns.status)
                         Text(text("操作", "Actions")).frame(width: tableColumns.actions)
@@ -264,8 +276,11 @@ struct DashboardCustomRulesView: View {
 
     private func ruleRow(_ change: CustomRuleChange, index: Int) -> some View {
         let status = ruleTestStatus(change)
-        let chain = testResults[change.id]?.chain ?? []
-        let route = chain.first?.trimmedNonEmpty ?? "—"
+        let routeSelector = RuleRoute.selector(for: change.value)
+        let route = change.operation == .delete ? nil
+            : customRoutingGroups.first(where: { $0.ruleSelectors.contains(routeSelector) })?.name
+                ?? RuleRoute.target(in: change.value)
+        let routeLabel = route.map(policyLabel) ?? "—"
         return HStack(spacing: 8) {
             Text(operationShort(change.operation))
                 .font(.system(size: 11, weight: .medium))
@@ -274,8 +289,9 @@ struct DashboardCustomRulesView: View {
             Text(summary(change)).font(.system(size: 12, weight: .medium))
                 .truncationMode(.middle).help(summary(change))
                 .frame(maxWidth: .infinity, alignment: .leading)
-            Text(route).font(.system(size: 11)).foregroundStyle(muted)
-                .help(route == "—" ? text("测试后显示实际线路", "Actual route appears after testing") : chain.reversed().joined(separator: " → "))
+            Text(routeLabel).font(.system(size: 11)).foregroundStyle(muted)
+                .help(route.map { "\(text("配置目标线路", "Configured target route")): \(policyLabel($0)) · \(text("测试后可在详情查看实际线路", "Test details show the observed route"))" }
+                    ?? text("该规则已从生效配置移除", "This rule is removed from the effective configuration"))
                 .frame(width: tableColumns.route, alignment: .leading)
             Toggle(text("启用", "Enabled"), isOn: Binding(get: { change.isEnabled }, set: { setEnabled($0, id: change.id) }))
                 .labelsHidden()
@@ -378,11 +394,19 @@ struct DashboardCustomRulesView: View {
         guard !disabled, appViewModel.isRuntimeRunning, appViewModel.dashboardEffectiveRecord?.baseName == appViewModel.selectedConfigName,
               testingIDs.isEmpty, !candidates.isEmpty else { return }
         guard let client = try? appViewModel.clientOrThrow() else { return }
-        testingIDs = Set(candidates.map(\.id))
+        let routedCandidates = candidates.map { change -> CustomRuleChange in
+            guard change.operation != .delete,
+                  let group = customRoutingGroups.first(where: { $0.ruleSelectors.contains(RuleRoute.selector(for: change.value)) }),
+                  let routedValue = RuleRoute.replacingTarget(in: change.value, with: group.name) else { return change }
+            var routedChange = change
+            routedChange.value = routedValue
+            return routedChange
+        }
+        testingIDs = Set(routedCandidates.map(\.id))
         isTesting = true
-        for change in candidates { testResults.removeValue(forKey: change.id) }
+        for change in routedCandidates { testResults.removeValue(forKey: change.id) }
         testTask = Task {
-            await RuleTester.runBatch(candidates, measure: { change in
+            await RuleTester.runBatch(routedCandidates, measure: { change in
                 try await RuleTester.run(change: change, client: client)
             }, started: { id in
                 activeTestIDs.insert(id)
@@ -473,11 +497,12 @@ struct DashboardCustomRulesView: View {
         return change.operation == .delete ? text("旧规则 · ", "Base rule · ") + value : value
     }
     private func loadOptions() {
-        guard !appViewModel.isRemoteTarget else { baseRules = []; return }
+        guard !appViewModel.isRemoteTarget else { baseRules = []; customRoutingGroups = []; return }
         do {
             let snapshot = try appViewModel.agentRuleSnapshot()
             baseRules = snapshot.baseRules
             policies = snapshot.policies
+            customRoutingGroups = try appViewModel.customRoutingGroupStore.groups(for: appViewModel.selectedConfigName)
             if !policies.contains(policy) { policies.append(policy) }
         } catch { baseRules = []; localError = error.localizedDescription }
     }

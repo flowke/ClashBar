@@ -114,30 +114,50 @@ extension CustomRuleChange {
 }
 
 enum ConfigRuleMergeError: LocalizedError {
-    case invalidDocument, invalidRules, invalidProfile, emptyRule, missingOriginal(String)
+    case invalidDocument, invalidRules, invalidProfile, invalidProxyGroups, emptyRule, missingOriginal(String)
+    case invalidRoutingGroup(String), duplicateRoutingGroup(String), duplicateRuleAssignment(String)
 
     var errorDescription: String? {
         switch self {
         case .invalidDocument: "Configuration must be a YAML mapping."
         case .invalidRules: "The rules field must be a list of strings."
         case .invalidProfile: "The profile field must be a mapping."
+        case .invalidProxyGroups: "The proxy-groups field must be a list."
         case .emptyRule: "A rule cannot be empty."
         case .missingOriginal(let rule): "The original rule was not found: \(rule)"
+        case .invalidRoutingGroup(let name): "The routing group is invalid: \(name)"
+        case .duplicateRoutingGroup(let name): "A proxy group with this name already exists: \(name)"
+        case .duplicateRuleAssignment(let rule): "A rule is assigned to more than one custom routing group: \(rule)"
         }
     }
 }
 
 struct ConfigRuleMerger {
+    struct ProxyGroupDefinition: Equatable, Sendable {
+        var name: String
+        var type: String
+        var routes: [String]
+        var providers: [String]
+    }
+
     struct ResolvedRule {
         var value: String
         var origin: CustomRuleChange.Operation?
     }
 
     func rules(in data: Data) throws -> [String] {
-        guard let text = String(data: data, encoding: .utf8),
-              let document = try Yams.compose(yaml: text), document.mapping != nil else {
-            throw ConfigRuleMergeError.invalidDocument
-        }
+        try rules(in: document(from: data))
+    }
+
+    func routingConfiguration(in data: Data, changes: [CustomRuleChange]) throws
+        -> (proxyNames: Set<String>, proxyGroups: [ProxyGroupDefinition], rules: [String])
+    {
+        let document = try document(from: data)
+        return try (proxyNames(in: document), proxyGroups(in: document),
+                    resolve(rules: rules(in: document), changes: changes).map(\.value))
+    }
+
+    private func rules(in document: Node) throws -> [String] {
         guard let node = document["rules"] else { return [] }
         guard let sequence = node.sequence else { throw ConfigRuleMergeError.invalidRules }
         return try sequence.map {
@@ -146,27 +166,92 @@ struct ConfigRuleMerger {
         }
     }
 
-    func merge(_ data: Data, changes: [CustomRuleChange]) throws -> Data {
-        guard let text = String(data: data, encoding: .utf8),
-              var document = try Yams.compose(yaml: text), document.mapping != nil else {
-            throw ConfigRuleMergeError.invalidDocument
+    func merge(_ data: Data, changes: [CustomRuleChange], routingGroups: [CustomRoutingGroup] = []) throws -> Data {
+        var document = try document(from: data)
+        var result = try resolve(rules: rules(in: document), changes: changes)
+        let availableProxies = try proxyNames(in: document)
+        let existingGroupNames = try proxyGroupNames(in: document)
+        let reservedRoutes: Set<String> = ["DIRECT", "REJECT"]
+        let availableRoutes = availableProxies.union(existingGroupNames).union(reservedRoutes)
+        var assignedSelectors: [String: String] = [:]
+        var newGroups: [Node] = []
+        var knownGroupNames = Set(existingGroupNames).union(availableProxies).union(reservedRoutes)
+        for group in routingGroups {
+            let name = group.name.trimmingCharacters(in: .whitespacesAndNewlines)
+            let routeNames = Array(Set(group.routeNames.filter { !$0.isEmpty })).sorted()
+            guard !name.isEmpty, !routeNames.isEmpty else { throw ConfigRuleMergeError.invalidRoutingGroup(name) }
+            guard knownGroupNames.insert(name).inserted else { throw ConfigRuleMergeError.duplicateRoutingGroup(name) }
+            for selector in group.ruleSelectors {
+                guard assignedSelectors[selector] == nil else {
+                    throw ConfigRuleMergeError.duplicateRuleAssignment(selector)
+                }
+                assignedSelectors[selector] = name
+            }
+            let existingMembers = routeNames.filter { availableRoutes.contains($0) }
+            let members = existingMembers.isEmpty ? ["REJECT"] : existingMembers
+            newGroups.append(Node([
+                (Node("name"), Node(name, .implicit, .doubleQuoted)),
+                (Node("type"), Node("select", .implicit, .doubleQuoted)),
+                (Node("proxies"), Node(members.map { Node($0, .implicit, .doubleQuoted) })),
+            ]))
         }
-        let result = try resolve(rules: rules(in: data), changes: changes)
+        result = result.map { rule in
+            guard let groupName = assignedSelectors[RuleRoute.selector(for: rule.value)],
+                  let rewritten = RuleRoute.replacingTarget(in: rule.value, with: groupName) else { return rule }
+            return ResolvedRule(value: rewritten, origin: rule.origin)
+        }
         if changes.contains(where: \.isEnabled) || document["rules"] != nil {
             document["rules"] = Node(result.map { Node($0.value, .implicit, .doubleQuoted) })
+        }
+        if !newGroups.isEmpty {
+            var proxyGroups = document["proxy-groups"]?.sequence ?? []
+            if document["proxy-groups"] != nil, document["proxy-groups"]?.sequence == nil {
+                throw ConfigRuleMergeError.invalidProxyGroups
+            }
+            proxyGroups.append(contentsOf: newGroups)
+            document["proxy-groups"] = .sequence(proxyGroups)
         }
         try enableSelectionPersistence(in: &document)
         return Data(try Yams.serialize(node: document).utf8)
     }
 
-    func enablingSelectionPersistence(_ data: Data) throws -> Data? {
-        guard let text = String(data: data, encoding: .utf8),
-              var document = try Yams.compose(yaml: text), document.mapping != nil else {
-            throw ConfigRuleMergeError.invalidDocument
+    func proxyNames(in data: Data) throws -> [String] {
+        try proxyNames(in: document(from: data)).sorted()
+    }
+
+    func proxyGroupNames(in data: Data) throws -> [String] {
+        try proxyGroupNames(in: document(from: data))
+    }
+
+    func proxyGroups(in data: Data) throws -> [ProxyGroupDefinition] {
+        try proxyGroups(in: document(from: data))
+    }
+
+    private func proxyGroups(in document: Node) throws -> [ProxyGroupDefinition] {
+        guard let node = document["proxy-groups"] else { return [] }
+        guard let sequence = node.sequence else { throw ConfigRuleMergeError.invalidProxyGroups }
+        return sequence.compactMap { group in
+            guard let name = group["name"]?.string else { return nil }
+            let routes = group["proxies"]?.sequence?.compactMap(\.string) ?? []
+            let providers = group["use"]?.sequence?.compactMap(\.string) ?? []
+            return ProxyGroupDefinition(name: name, type: group["type"]?.string ?? "unknown",
+                                        routes: routes, providers: providers)
         }
+    }
+
+    func enablingSelectionPersistence(_ data: Data) throws -> Data? {
+        var document = try document(from: data)
         if document["profile"]?["store-selected"]?.scalar?.string == "true" { return nil }
         try enableSelectionPersistence(in: &document)
         return Data(try Yams.serialize(node: document).utf8)
+    }
+
+    private func document(from data: Data) throws -> Node {
+        guard let text = String(data: data, encoding: .utf8),
+              let document = try Yams.compose(yaml: text), document.mapping != nil else {
+            throw ConfigRuleMergeError.invalidDocument
+        }
+        return document
     }
 
     private func enableSelectionPersistence(in document: inout Node) throws {
@@ -200,5 +285,17 @@ struct ConfigRuleMerger {
             }
         }
         return additions + rules
+    }
+
+    private func proxyNames(in document: Node) throws -> Set<String> {
+        guard let node = document["proxies"] else { return [] }
+        guard let sequence = node.sequence else { throw ConfigRuleMergeError.invalidRules }
+        return Set(sequence.compactMap { $0["name"]?.string })
+    }
+
+    private func proxyGroupNames(in document: Node) throws -> [String] {
+        guard let node = document["proxy-groups"] else { return [] }
+        guard let sequence = node.sequence else { throw ConfigRuleMergeError.invalidProxyGroups }
+        return sequence.compactMap { $0["name"]?.string }
     }
 }

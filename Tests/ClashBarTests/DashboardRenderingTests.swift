@@ -231,6 +231,90 @@ final class DashboardRenderingTests: XCTestCase {
         session.invalidateAndCancel()
     }
 
+    func testRoutingGroupsOverviewScrollsWithThousandsOfRules() async throws {
+        _ = NSApplication.shared
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let directory = WorkingDirectoryManager(homeDirectory: root)
+        try directory.bootstrapDirectories()
+        let source = directory.configDirectoryURL.appendingPathComponent("Routing.yaml")
+        let rules = (0..<5_000).map { "  - DOMAIN,rule-\($0).example,DIRECT" }.joined(separator: "\n")
+        try Data("""
+        proxy-groups:
+          - name: Example Group
+            type: select
+            proxies: [DIRECT]
+        rules:
+        \(rules)
+        """.utf8).write(to: source)
+        let session = URLSessionFactory.makeEphemeralSession(options: .init(timeoutIntervalForRequest: 15, timeoutIntervalForResource: 30))
+        defer { session.invalidateAndCancel() }
+        let service = ConfigService(configManager: ConfigDirectoryManager(workingDirectoryManager: directory), configImportService: ConfigImportService())
+        service.setConfigDirectory(directory.configDirectoryURL)
+        let model = AppViewModel(dependencies: AppDependencies(
+            processManager: MihomoProcessManager(workingDirectoryManager: directory), configService: service,
+            systemProxyService: SystemProxyService(), tunPermissionService: TunPermissionService(),
+            launchAtLoginService: AppLaunchService(), workingDirectoryManager: directory,
+            networkReachabilityMonitor: NetworkReachabilityMonitor(), ssidMonitorService: SSIDMonitorService(),
+            remoteMachineStore: RemoteMachineStore(session: session),
+            proxyGroupIconCache: ProxyGroupIconCache(iconDirectory: directory.iconDirectoryURL, session: session),
+            webUIAssetService: WebUIAssetService(workingDirectoryManager: directory, session: session),
+            clashbarLogStore: AppLogStore(logFileURL: directory.logsDirectoryURL.appendingPathComponent("clashbar.log")),
+            mihomoLogStore: AppLogStore(logFileURL: directory.logsDirectoryURL.appendingPathComponent("mihomo.log"))))
+        let content = DashboardRoutingGroupsView(appViewModel: model, configurationName: source.lastPathComponent)
+        let hosting = NSHostingView(rootView: content.frame(width: 820, height: 680))
+        let window = NSWindow(contentRect: hosting.frame, styleMask: [.titled], backing: .buffered, defer: false)
+        window.contentView = hosting
+        window.setFrameOrigin(NSPoint(x: -10000, y: -10000))
+        window.orderFrontRegardless()
+        defer { window.orderOut(nil) }
+
+        func findScrollView(in view: NSView) -> NSScrollView? {
+            if let scrollView = view as? NSScrollView { return scrollView }
+            return view.subviews.lazy.compactMap { findScrollView(in: $0) }.first
+        }
+        for _ in 0..<100 {
+            hosting.layoutSubtreeIfNeeded()
+            if let height = findScrollView(in: hosting)?.documentView?.frame.height, height > 50_000 { break }
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        let scrollView = try XCTUnwrap(findScrollView(in: hosting))
+        let document = try XCTUnwrap(scrollView.documentView)
+        XCTAssertGreaterThan(document.frame.height, 50_000)
+        let clipView = scrollView.contentView
+        let headerPoint = NSPoint(x: clipView.bounds.midX,
+                                  y: clipView.isFlipped ? clipView.bounds.minY + 90 : clipView.bounds.maxY - 90)
+        let clickLocation = clipView.convert(headerPoint, to: nil)
+        let groupArea = NSRect(x: 22, y: hosting.bounds.maxY - 330, width: 700, height: 240)
+        func snapshotGroupArea() throws -> Data {
+            hosting.layoutSubtreeIfNeeded()
+            window.displayIfNeeded()
+            let bitmap = try XCTUnwrap(hosting.bitmapImageRepForCachingDisplay(in: groupArea))
+            hosting.cacheDisplay(in: groupArea, to: bitmap)
+            return try XCTUnwrap(bitmap.representation(using: .png, properties: [:]))
+        }
+        func clickGroupRow() throws {
+            for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
+                let event = try XCTUnwrap(NSEvent.mouseEvent(with: type, location: clickLocation, modifierFlags: [],
+                                                            timestamp: 0, windowNumber: window.windowNumber,
+                                                            context: nil, eventNumber: 0, clickCount: 1, pressure: 1))
+                window.sendEvent(event)
+            }
+        }
+        let collapsed = try snapshotGroupArea()
+        try clickGroupRow()
+        try await Task.sleep(for: .milliseconds(100))
+        XCTAssertNotEqual(try snapshotGroupArea(), collapsed)
+        try clickGroupRow()
+        try await Task.sleep(for: .milliseconds(100))
+        XCTAssertEqual(try snapshotGroupArea(), collapsed)
+        let offset = document.frame.midY
+        scrollView.contentView.scroll(to: NSPoint(x: 0, y: offset))
+        scrollView.reflectScrolledClipView(scrollView.contentView)
+        hosting.layoutSubtreeIfNeeded()
+        XCTAssertEqual(scrollView.contentView.bounds.minY, offset, accuracy: 1)
+    }
+
     func testSidebarUsesTransparentFullSizeTitlebarAndKeepsSystemWindowControls() throws {
         _ = NSApplication.shared
         let window = DashboardWindow(contentRect: NSRect(x: 0, y: 0, width: 1100, height: 740), styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView], backing: .buffered, defer: false)

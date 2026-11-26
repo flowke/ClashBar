@@ -8,6 +8,10 @@ extension AppViewModel {
             stateDirectory: workingDirectoryManager.stateDirectoryURL)
     }
 
+    var customRoutingGroupStore: CustomRoutingGroupStore {
+        CustomRoutingGroupStore(stateDirectoryURL: workingDirectoryManager.stateDirectoryURL)
+    }
+
     func refreshDashboardEffectiveConfig() {
         do {
             dashboardEffectiveRecord = try effectiveConfigTransaction.currentRecord()
@@ -25,7 +29,7 @@ extension AppViewModel {
 
     @discardableResult
     func applyDashboardConfiguration(baseName: String, changes: [CustomRuleChange], replacementSource: Data? = nil,
-                                     allowDisabled: Bool = false,
+                                     allowDisabled: Bool = false, routingGroups: [CustomRoutingGroup]? = nil,
                                      precondition: () throws -> Void = {}) async -> Bool {
         guard !dashboardConfigBusy else { return false }
         guard !isCoreActionProcessing else {
@@ -60,8 +64,11 @@ extension AppViewModel {
         }
         do {
             let original = try Data(contentsOf: source)
-            let data = try ConfigRuleMerger().merge(replacementSource ?? original, changes: changes)
+            let previousGroups = try customRoutingGroupStore.groups(for: baseName)
+            let groups = routingGroups ?? previousGroups
+            let data = try ConfigRuleMerger().merge(replacementSource ?? original, changes: changes, routingGroups: groups)
             var sourceWritten = false
+            var groupsWritten = false
             let record = try await effectiveConfigTransaction.commit(
                 data: data, baseName: baseName, changes: changes,
                 validate: { [self] candidate in
@@ -80,12 +87,21 @@ extension AppViewModel {
                     guard try Data(contentsOf: source) == original else {
                         throw CocoaError(.fileWriteFileExists)
                     }
-                    guard let replacementSource else { return }
-                    try replacementSource.write(to: source, options: .atomic)
-                    sourceWritten = true
+                    if let replacementSource {
+                        try replacementSource.write(to: source, options: .atomic)
+                        sourceWritten = true
+                    }
+                    if let routingGroups {
+                        try self.customRoutingGroupStore.save(routingGroups, for: baseName)
+                        groupsWritten = true
+                    }
                 },
                 rollback: { [self] in
                     var sourceError: Error?
+                    if groupsWritten {
+                        do { try customRoutingGroupStore.save(previousGroups, for: baseName) }
+                        catch { sourceError = error }
+                    }
                     if sourceWritten {
                         do { try original.write(to: source, options: .atomic) }
                         catch { sourceError = error }
@@ -227,14 +243,19 @@ extension AppViewModel {
         let source = directory.appendingPathComponent(name)
         let target = directory.appendingPathComponent(normalized)
         let subscription = remoteConfigSubscriptions[name]
+        var routingGroupsMoved = false
         do {
             guard !FileManager.default.fileExists(atPath: target.path) else { throw CocoaError(.fileWriteFileExists) }
             try FileManager.default.copyItem(at: source, to: target)
+            try customRoutingGroupStore.renameConfiguration(from: name, to: normalized)
+            routingGroupsMoved = true
             _ = configService.reloadConfigs()
             if let subscription { remoteConfigSubscriptions[normalized] = subscription }
             if name == selectedConfigName {
                 let changes = (try? effectiveConfigTransaction.currentRecord())?.changes ?? []
                 guard await applyDashboardConfiguration(baseName: normalized, changes: changes, allowDisabled: true) else {
+                    try? customRoutingGroupStore.renameConfiguration(from: normalized, to: name)
+                    routingGroupsMoved = false
                     remoteConfigSubscriptions[normalized] = nil
                     try? FileManager.default.removeItem(at: target)
                     _ = configService.reloadConfigs()
@@ -250,6 +271,7 @@ extension AppViewModel {
             syncConfigDisplayState()
             syncConfigSignatureSnapshotToMonitorBaseline()
         } catch {
+            if routingGroupsMoved { try? customRoutingGroupStore.renameConfiguration(from: normalized, to: name) }
             dashboardConfigError = error.localizedDescription
             persistRemoteConfigSubscriptions()
             restartRemoteConfigBackgroundTasksIfNeeded()

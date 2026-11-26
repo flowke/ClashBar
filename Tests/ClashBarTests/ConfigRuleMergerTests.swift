@@ -66,6 +66,88 @@ final class ConfigRuleMergerTests: XCTestCase {
         XCTAssertThrowsError(try ConfigRuleMerger().merge(Data("rules: nope".utf8), changes: []))
     }
 
+    func testRoutingGroupsRewriteRulesAndPreserveRuleOptions() throws {
+        let input = Data("""
+        proxies:
+          - name: Node A
+            type: ss
+            server: node.example
+            port: 443
+        proxy-groups:
+          - name: Existing Group
+            type: select
+            proxies: [Node A]
+        rules:
+          - RULE-SET,work-sites,Existing Group,no-resolve
+          - AND,((DOMAIN,one.example),(DOMAIN,two.example)),DIRECT
+        """.utf8)
+        let rules = try ConfigRuleMerger().rules(in: input)
+        let group = CustomRoutingGroup(
+            name: "Work Routes",
+            routeNames: ["Node A", "Missing Node"],
+            ruleSelectors: rules.map(RuleRoute.selector(for:))
+        )
+
+        let merged = try ConfigRuleMerger().merge(input, changes: [], routingGroups: [group])
+        let yaml = try XCTUnwrap(Yams.compose(yaml: String(decoding: merged, as: UTF8.self)))
+        XCTAssertEqual(yaml["rules"]?.sequence?.compactMap(\.string), [
+            "RULE-SET,work-sites,Work Routes,no-resolve",
+            "AND,((DOMAIN,one.example),(DOMAIN,two.example)),Work Routes",
+        ])
+        let groups = try XCTUnwrap(yaml["proxy-groups"]?.sequence)
+        XCTAssertEqual(groups.compactMap { $0["name"]?.string }, ["Existing Group", "Work Routes"])
+        XCTAssertEqual(groups.last?["proxies"]?.sequence?.compactMap(\.string), ["Node A"])
+    }
+
+    func testRoutingGroupFallsBackToRejectWhenAllSavedRoutesAreMissing() throws {
+        let input = Data("rules: ['DOMAIN,work.example,DIRECT']".utf8)
+        let group = CustomRoutingGroup(name: "Work Routes", routeNames: ["Removed Node"],
+                                       ruleSelectors: [RuleRoute.selector(for: "DOMAIN,work.example,DIRECT")])
+
+        let merged = try ConfigRuleMerger().merge(input, changes: [], routingGroups: [group])
+        let yaml = try XCTUnwrap(Yams.compose(yaml: String(decoding: merged, as: UTF8.self)))
+        XCTAssertEqual(yaml["proxy-groups"]?.sequence?.last?["proxies"]?.sequence?.compactMap(\.string), ["REJECT"])
+        XCTAssertEqual(group.routeNames, ["Removed Node"])
+        XCTAssertEqual(yaml["rules"]?.sequence?.compactMap(\.string), ["DOMAIN,work.example,Work Routes"])
+    }
+
+    func testRoutingGroupNamesCannotShadowNodesGroupsOrBuiltInRoutes() throws {
+        let input = Data("proxies: [{name: Node A}]\nproxy-groups: [{name: Existing, type: select, proxies: [Node A]}]\nrules: []".utf8)
+        for name in ["Node A", "Existing", "DIRECT", "REJECT"] {
+            let group = CustomRoutingGroup(name: name, routeNames: ["Node A"])
+            XCTAssertThrowsError(try ConfigRuleMerger().merge(input, changes: [], routingGroups: [group]))
+        }
+    }
+
+    func testRoutingGroupStoreDecodesLegacyProxyNamesAndScopesByConfiguration() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let legacy = #"{"groupsByConfiguration":{"one.yaml":[{"id":"00000000-0000-0000-0000-000000000001","name":"Work","proxyNames":["Node A"],"ruleSelectors":[]}]}}"#
+        try Data(legacy.utf8).write(to: root.appendingPathComponent("routing-groups.json"))
+        let store = CustomRoutingGroupStore(stateDirectoryURL: root)
+
+        XCTAssertEqual(try store.groups(for: "one.yaml").first?.routeNames, ["Node A"])
+        XCTAssertTrue(try store.groups(for: "two.yaml").isEmpty)
+        try store.save(try store.groups(for: "one.yaml"), for: "one.yaml")
+        let saved = try String(contentsOf: root.appendingPathComponent("routing-groups.json"), encoding: .utf8)
+        XCTAssertTrue(saved.contains("routeNames"))
+        XCTAssertFalse(saved.contains("proxyNames"))
+    }
+
+    func testProxyGroupsExposeTypeAndMembers() throws {
+        let input = Data("""
+        proxy-groups:
+          - name: Home
+            type: select
+            proxies: [Node A, DIRECT]
+        """.utf8)
+
+        XCTAssertEqual(try ConfigRuleMerger().proxyGroups(in: input), [
+            .init(name: "Home", type: "select", routes: ["Node A", "DIRECT"], providers: []),
+        ])
+    }
+
     func testTestURLPersistsWithoutEnteringGeneratedRulesAndOldRecordsDecode() throws {
         let old = Data(#"{"operation":"add","original":"","value":"DOMAIN,example.com,DIRECT","id":"00000000-0000-0000-0000-000000000001"}"#.utf8)
         let decoded = try JSONDecoder().decode(CustomRuleChange.self, from: old)
